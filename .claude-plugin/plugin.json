@@ -1,0 +1,8 @@
+{
+  "name": "scriptorium",
+  "version": "0.5.0",
+  "description": "Atelier de rédaction de haut niveau : rapport scientifique, article, long rapport, analyse stratégique, rapport de prospective et étude de cas. Dix-neuf compétences, cinq agents délégués, dix-sept scripts déterministes (style, sources, lisibilité, figures, charte, traçabilité, terminologie, nombres, citations BibTeX, diff, scorecard 0-100, empreinte IA, cohérence, tableaux, conformité au plan, mémoire de projet, audit consolidé), porte d'intégration continue éditoriale, hook d'application, charte graphique, et style maison à directives strictes.",
+  "author": { "name": "Marius Yvard" },
+  "keywords": ["redaction", "ecriture", "rapport-scientifique", "analyse-strategique", "prospective", "etude-de-cas", "imrad", "revue-adversariale", "style-editorial", "charte-graphique", "scorecard", "bibtex", "tracabilite", "empreinte-ia", "revue-litterature", "ci"],
+  "license": "MIT"
+}

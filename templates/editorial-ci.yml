@@ -1,0 +1,18 @@
+# Modele d'integration continue editoriale.
+# Copier dans .github/workflows/ d'un projet d'ecriture pour verrouiller
+# les documents contre un seuil de scorecard a chaque push.
+name: scriptorium-editorial
+on:
+  push:
+  pull_request:
+jobs:
+  scorecard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      # Adapter le chemin vers les scripts du plugin, et le glob des documents.
+      - name: Porte de scorecard
+        run: python3 chemin/vers/scriptorium/tools/check.py "docs/**/*.md" --seuil 85

@@ -1,0 +1,14 @@
+{
+  "police": "Georgia, 'Times New Roman', serif",
+  "police_titre": "Georgia, 'Times New Roman', serif",
+  "graisse_titre": 700,
+  "couleurs": {
+    "encre": "#16314E",
+    "trait": "#9AA7B8",
+    "fond": "#FFFFFF",
+    "accent": "#C8102E",
+    "palette": ["#EEF2F6", "#E7EDF3", "#F3EEE7", "#EDE7F0"]
+  },
+  "logo_texte": "ACME",
+  "rayon": 8
+}

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,runpy,os.path as p,sys; r=os.environ.get('CLAUDE_PLUGIN_ROOT') or '${CLAUDE_PLUGIN_ROOT}'; r='' if '$' in r else r; f=p.join(r,'hooks','scripts','lint-hook.py') if r else ''; runpy.run_path(f, run_name='__main__') if f and p.exists(f) else None\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -104,10 +104,72 @@ def valider(t):
     return err, warn
 
 
+def css(t):
+    """Emet une feuille de style de document derivee d'une charte normalisee.
+
+    Tokens en :root, proprietes logiques, mesure fluide, focus visible et
+    styles d'impression. Pas de !important ni de couleur pure (#000/#fff).
+    """
+    pal = t["palette"]
+    return f""":root {{
+  --police: {t['police']};
+  --police-titre: {t['police_titre']};
+  --graisse-titre: {t['graisse_titre']};
+  --encre: {t['encre']};
+  --trait: {t['trait']};
+  --fond: {t['fond']};
+  --accent: {t['accent']};
+  --rayon: {t['rayon']}px;
+  --pal-1: {pal[0]};
+  --pal-2: {pal[1]};
+  --pal-3: {pal[2]};
+  --pal-4: {pal[3]};
+}}
+*, *::before, *::after {{ box-sizing: border-box; }}
+body {{
+  font-family: var(--police);
+  color: var(--encre);
+  background: var(--fond);
+  line-height: 1.55;
+  max-inline-size: clamp(45ch, 90%, 75ch);
+  margin-inline: auto;
+  margin-block: 2rem;
+  padding-inline: 1.25rem;
+  text-align: justify;
+  text-wrap: pretty;
+}}
+h1, h2, h3 {{ font-family: var(--police-titre); font-weight: var(--graisse-titre); color: var(--encre); line-height: 1.2; text-wrap: balance; }}
+h1 {{ font-size: 2rem; border-block-end: 3px solid var(--accent); padding-block-end: .3rem; }}
+h2 {{ font-size: 1.4rem; margin-block-start: 2rem; }}
+h3 {{ font-size: 1.15rem; }}
+a {{ color: var(--accent); }}
+a:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; }}
+nav {{ background: var(--pal-1); border-radius: var(--rayon); padding: 1rem 1.25rem; }}
+nav a {{ text-decoration: none; }}
+figure {{ margin-block: 1.5rem; }}
+figure svg, figure img {{ max-inline-size: 100%; height: auto; }}
+figcaption {{ font-size: .9rem; color: var(--trait); border-block-start: 1px solid var(--trait); padding-block-start: .3rem; }}
+table {{ border-collapse: collapse; inline-size: 100%; margin-block: 1.5rem; }}
+caption {{ caption-side: top; font-weight: var(--graisse-titre); text-align: start; padding-block-end: .4rem; }}
+th, td {{ border: 1px solid var(--trait); padding: .5rem .6rem; text-align: start; }}
+thead th {{ background: var(--pal-2); }}
+blockquote {{ border-inline-start: 4px solid var(--accent); margin-block: 1rem; padding: .4rem 1rem; background: var(--pal-3); border-radius: var(--rayon); }}
+.encadre {{ background: var(--pal-4); border-radius: var(--rayon); padding: 1rem 1.25rem; margin-block: 1.5rem; }}
+code {{ font-family: ui-monospace, "Cascadia Code", monospace; }}
+@media print {{
+  @page {{ margin: 2cm; }}
+  body {{ max-inline-size: none; margin: 0; }}
+  h1, h2 {{ break-after: avoid; }}
+  figure, table {{ break-inside: avoid; }}
+  a {{ color: var(--encre); }}
+  *, *::before, *::after {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+}}"""
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Validation d'une charte graphique.")
     p.add_argument("fichier", help="chemin du JSON de charte")
-    p.add_argument("--format", choices=["text", "json"], default="text")
+    p.add_argument("--format", choices=["text", "json", "css"], default="text")
     a = p.parse_args(argv)
     try:
         t = charger(a.fichier)
@@ -118,6 +180,8 @@ def main(argv=None):
     if a.format == "json":
         print(json.dumps({"theme": t, "erreurs": err, "avertissements": warn},
                          ensure_ascii=False, indent=2))
+    elif a.format == "css":
+        print(css(t))
     else:
         print("Charte graphique normalisee :")
         for k, v in t.items():

@@ -20,4 +20,4 @@ Le dépôt Scriptorium exécute `.github/workflows/evals.yml` : compilation des 
 
 ## Seuils par discipline
 
-Le seuil par défaut est 85. Un profil de discipline (voir `consensus`) peut fixer un seuil propre dans `profil.json`, repris par la porte.
+Le seuil par défaut est 85. Un profil de discipline (voir `controler` (consensus)) peut fixer un seuil propre dans `profil.json`, repris par la porte.

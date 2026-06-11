@@ -15,7 +15,7 @@ Les fichiers du plugin désignent les outils par catégorie, avec un marqueur `~
 
 ## Dégradation gracieuse
 
-Sans connecteur, `sourcer` et l'agent `synthese-sources` s'appuient sur la recherche web seule, ce qui suffit pour la plupart des écrits. Si un gestionnaire de références ou une base de connaissances est connecté, ils l'interrogent en plus, pour réutiliser des sources déjà validées et des documents internes. Aucune compétence ne tombe en panne en l'absence de connecteur.
+Sans connecteur, `produire` (sourcer) et l'agent `synthese-sources` s'appuient sur la recherche web seule, ce qui suffit pour la plupart des écrits. Si un gestionnaire de références ou une base de connaissances est connecté, ils l'interrogent en plus, pour réutiliser des sources déjà validées et des documents internes. Aucune compétence ne tombe en panne en l'absence de connecteur.
 
 ## Vérification des sources
 

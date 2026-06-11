@@ -143,6 +143,11 @@ ad = auditd.auditer("# T\n\nUn texte court de test pour l audit consolide, avec 
 verifier("audit-doc : scorecard present", "total" in ad["scorecard"])
 
 
+cssout = theme.css(theme.charger({"accent": "#C8102E"}))
+verifier("theme : css derive de la charte (accent + impression)",
+         "--accent: #C8102E" in cssout and "@media print" in cssout)
+
+
 def main():
     passes = sum(1 for _, ok, _ in RESULTATS if ok)
     total = len(RESULTATS)

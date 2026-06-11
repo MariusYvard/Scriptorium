@@ -1,6 +1,6 @@
 # Scripts déterministes de Scriptorium
 
-Quatre outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `reviser`, `sourcer` et `schematiser` les appellent, et le hook les exécute après chaque écriture de document.
+Dix-sept outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
@@ -38,7 +38,7 @@ python3 readability.py FICHIER [--format text|json]
 Charge et valide une charte graphique (couleurs, polices, accent, palette), contrôle le contraste WCAG entre l'encre et les fonds. Une couleur mal formée est une erreur, un contraste sous 4,5:1 un avertissement.
 
 ```
-python3 theme.py charte.json [--format text|json]
+python3 theme.py charte.json [--format text|json|css]
 ```
 
 ## figures.py

@@ -1,7 +1,7 @@
 ---
 name: produire
 description: >
-  Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau (rapport scientifique IMRAD, article, long rapport professionnel, analyse stratégique, prospective, étude de cas) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources, formater les citations, bâtir la carte preuve-affirmation "trouve des sources", "vérifie ce fait", "ajoute des citations". revue-litterature : synthèse multi-sources, état de l'art, PRISMA. figure : schéma SVG (SWOT, PESTEL, 5 forces, BCG, Ansoff, chaîne de valeur). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI, chiffres significatifs. style : style maison, charte éditoriale, harmoniser le ton. charte : identité visuelle (couleurs, polices, logo). Adapté au chercheur, à l'ingénieur et à l'analyste géopolitique.
+  Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau (rapport scientifique IMRAD, article, long rapport professionnel, analyse stratégique, prospective, étude de cas) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources, formater les citations, bâtir la carte preuve-affirmation "trouve des sources", "vérifie ce fait", "ajoute des citations". revue-litterature : synthèse multi-sources, état de l'art, PRISMA. figure : schéma SVG (SWOT, PESTEL, 5 forces, BCG, Ansoff, chaîne de valeur). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI, chiffres significatifs. style : style maison, charte éditoriale, harmoniser le ton. charte : identité visuelle (couleurs, polices, logo). image : extraire et replacer les images d'un PDF, Word ou PowerPoint "récupère les images de ce PDF". Adapté au chercheur, à l'ingénieur et à l'analyste géopolitique.
 metadata:
   version: "0.6.0"
 ---
@@ -22,6 +22,7 @@ Si une action est passée en argument (par exemple `figure`), suivre directement
 - equation : poser des équations en LaTeX, contrôler unités SI et chiffres significatifs. Charger `references/equation.md`.
 - style : générer, appliquer ou faire respecter la charte éditoriale. Charger `references/style.md`.
 - charte : définir, appliquer ou valider une identité visuelle sur le texte et les figures. Charger `references/charte.md`.
+- image : extraire les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel), les cataloguer et les préparer au placement. Charger `references/image.md`.
 
 ## Genres et publics
 
@@ -37,7 +38,7 @@ Pour un document de plus de cinq pages ou à sections denses, déléguer la réd
 
 ## Scripts déterministes
 
-Les actions s'appuient sur le dossier `scripts/` : `figures.py` pour figure, `tables.py` pour tableau, `citations.py` et `verify-sources.py` pour sourcer, `theme.py` pour charte, `lint-style.py` et `readability.py` pour style. Voir `scripts/README.md`.
+Les actions s'appuient sur le dossier `scripts/` : `figures.py` pour figure, `tables.py` pour tableau, `citations.py` et `verify-sources.py` pour sourcer, `theme.py` pour charte, `images.py` pour image, `lint-style.py` et `readability.py` pour style. Voir `scripts/README.md`.
 
 ## Règles
 

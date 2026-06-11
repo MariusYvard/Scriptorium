@@ -1,8 +1,8 @@
 {
   "name": "scriptorium",
   "version": "0.6.0",
-  "description": "Atelier de rédaction de haut niveau pour le chercheur, l'ingénieur et l'analyste géopolitique. Quatre compétences à sous-commandes (atelier, produire, controler, livrer), six genres, cinq agents délégués, dix-sept scripts déterministes (style, sources, lisibilité, figures, charte, traçabilité, terminologie, nombres, citations BibTeX, diff, scorecard 0-100, empreinte IA, cohérence, tableaux, conformité au plan, mémoire de projet, audit consolidé), sorties Word, PDF et HTML piloté par la charte graphique, porte d'intégration continue éditoriale, hook d'application et style maison à directives strictes.",
+  "description": "Atelier de rédaction de haut niveau pour le chercheur, l'ingénieur et l'analyste géopolitique. Quatre compétences à sous-commandes (atelier, produire, controler, livrer), six genres, cinq agents délégués, dix-sept scripts déterministes (style, sources, lisibilité, figures, charte, traçabilité, terminologie, nombres, citations BibTeX, diff, scorecard 0-100, empreinte IA, cohérence, tableaux, conformité au plan, mémoire de projet, audit consolidé, extraction et placement d'images), sorties Word, PDF et HTML piloté par la charte graphique, porte d'intégration continue éditoriale, hook d'application et style maison à directives strictes.",
   "author": { "name": "Marius Yvard" },
-  "keywords": ["redaction", "ecriture", "rapport-scientifique", "ingenierie", "geopolitique", "analyse-strategique", "prospective", "etude-de-cas", "imrad", "revue-adversariale", "style-editorial", "charte-graphique", "html", "scorecard", "bibtex", "tracabilite", "empreinte-ia", "revue-litterature", "ci"],
+  "keywords": ["redaction", "ecriture", "rapport-scientifique", "ingenierie", "geopolitique", "analyse-strategique", "prospective", "etude-de-cas", "imrad", "revue-adversariale", "style-editorial", "charte-graphique", "html", "images", "scorecard", "bibtex", "tracabilite", "empreinte-ia", "revue-litterature", "ci"],
   "license": "MIT"
 }

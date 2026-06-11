@@ -95,3 +95,15 @@ Contraste du texte au moins 4,5:1 et 3:1 pour les composants (déjà contrôlé 
 Embarquer les figures SVG en ligne (produites par `produire`, action figure) : elles héritent de la charte et restent nettes à l'impression. La feuille `@media print` fixe les marges `@page`, évite les coupures dans les figures et tableaux (`break-inside: avoid`) et conserve les couleurs (`print-color-adjust: exact`). Le HTML sert alors de source pour un PDF fidèle à la charte.
 
 Contrôler le rendu avant remise. Le fond ne change pas, seule la forme s'ajoute.
+
+## Images importées (depuis un PDF ou un document source)
+
+Les images extraites d'un document source (voir `produire`, action image) se placent comme des figures de plein droit, à partir du manifeste enrichi.
+
+- Chaque image informative devient une figure numérotée, avec sa légende et sa source, au ratio d'origine (largeur et hauteur du manifeste) et bornée à la mesure du texte.
+- HTML : `<figure><img alt="..." width="W" height="H"><figcaption>Figure N. Légende. Source.</figcaption></figure>`, image embarquée en base64 pour garder le fichier autonome, `alt` repris du manifeste enrichi, coupure évitée entre image et légende.
+- Word : insérer via le skill `docx`, légende sous l'image.
+- PDF : via le skill `pdf`, ou par conversion du HTML.
+- Les images décoratives reçoivent un `alt` vide et ne sont pas numérotées. Les images vectorielles non converties ne sont pas insérées en l'état, elles sont signalées.
+
+La charte graphique cadre la légende et le filet, comme pour une figure générée. Une image n'est jamais recadrée au point de tromper.

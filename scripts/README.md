@@ -1,6 +1,6 @@
 # Scripts déterministes de Scriptorium
 
-Dix-sept outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Dix-huit outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
@@ -156,6 +156,15 @@ Audit consolidé d'un document : scorecard, empreinte IA, cohérence, audit de t
 
 ```
 python3 audit-doc.py FICHIER [--format text|json]
+```
+
+## images.py
+
+Extrait les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel, ODF), déduplique par empreinte, lit les dimensions dans l'en-tête, écrit un manifeste JSON. Le PDF passe par un backend optionnel (PyMuPDF, pdfimages, pypdf) ou, à défaut, par le skill pdf.
+
+```
+python3 images.py extract SOURCE --out DIR [--min-bytes N]
+python3 images.py manifest DIR
 ```
 
 ## tools/check.py

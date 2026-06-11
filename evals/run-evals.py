@@ -44,6 +44,7 @@ tab = charger("tables.py", "tables")
 planc = charger("plan-check.py", "plan_check")
 proj = charger("project.py", "project")
 auditd = charger("audit-doc.py", "audit_doc")
+imgs = charger("images.py", "images")
 
 
 def lire(nom):
@@ -146,6 +147,23 @@ verifier("audit-doc : scorecard present", "total" in ad["scorecard"])
 cssout = theme.css(theme.charger({"accent": "#C8102E"}))
 verifier("theme : css derive de la charte (accent + impression)",
          "--accent: #C8102E" in cssout and "@media print" in cssout)
+
+
+import tempfile as _tmp, zipfile as _zip
+_png = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+                     "1f15c4890000000d49444154789c6200010000050001"
+                     "0d0a2db40000000049454e44ae426082")
+_d = _tmp.mkdtemp(prefix="scriptorium_img_")
+_docx = os.path.join(_d, "t.docx")
+with _zip.ZipFile(_docx, "w") as _z:
+    _z.writestr("word/document.xml", "<x/>")
+    _z.writestr("word/media/image1.png", _png)
+    _z.writestr("word/media/image2.png", _png)
+_mi = imgs.extract(_docx, os.path.join(_d, "out"), 0)
+verifier("images : office 1 unique + 1 doublon", _mi["count"] == 1 and _mi["doublons"] == 1, f"c={_mi['count']} d={_mi['doublons']}")
+verifier("images : dimensions PNG 1x1 lues", any(i.get("largeur") == 1 and i.get("hauteur") == 1 for i in _mi["images"]))
+verifier("images : manifest ecrit", os.path.isfile(os.path.join(_d, "out", "manifest.json")))
+verifier("images : pdf sans backend renvoie une note", bool(imgs.extract(os.path.join(_d, "vide.pdf"), os.path.join(_d, "o2"))["notes"]))
 
 
 def main():

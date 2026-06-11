@@ -34,3 +34,13 @@ Le rapport d'audit consolidé (note sur 100, axes, signaux), plus une courte lis
 2. L'audit ne modifie pas le document, il l'évalue.
 3. Le scorecard est déterministe et reproductible, la note ne dépend pas de l'humeur du modèle.
 4. Classer les constats par priorité, du critique au mineur.
+
+## Inventaire des images
+
+Au-delà du texte, recenser les images du document source pour ne rien perdre à la reprise :
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/images.py extract FICHIER --out images/
+```
+
+Le manifeste liste les images, leurs dimensions et les doublons. Signaler leur nombre dans l'audit. Pour une reprise, les replacer via `produire` (image) puis `livrer` (document).

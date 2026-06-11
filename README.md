@@ -20,7 +20,7 @@ Quatre compétences à sous-commandes apparaissent sous le préfixe `scriptorium
 | Compétence | Sous-commandes | Rôle |
 | --- | --- | --- |
 | `atelier` | piloter, cadrer, projet | Point d'entrée : orchestration de A à Z, cadrage du sujet, mémoire de projet entre sessions |
-| `produire` | genre, sourcer, revue-litterature, figure, tableau, equation, style, charte | Produit le contenu et fixe la forme : rédaction des six genres, sources, figures, tableaux, équations, style maison, charte graphique |
+| `produire` | genre, sourcer, revue-litterature, figure, tableau, equation, style, charte, image | Produit le contenu et fixe la forme : rédaction des six genres, sources, figures, tableaux, équations, style maison, charte graphique, extraction et placement d'images |
 | `controler` | revue, contredire, consensus, humaniser, audit, relecteurs | Éprouve un écrit : revue adversariale, contradiction, vote de consensus, empreinte IA, audit d'un document existant, réponse aux relecteurs |
 | `livrer` | document, decliner | Met en forme (Word, PDF, HTML) et décline par canal (deck, résumé, abstract, post, communiqué) |
 
@@ -52,7 +52,7 @@ Le format natif de travail est le Markdown. La finalisation (`livrer` action doc
 - HTML autonome dont le CSS dérive de la charte graphique (couleurs, polices, accent, rayon), figures SVG embarquées, feuille d'impression. Le HTML offre la plus grande marge de mise en forme et sert de source pour un PDF fidèle à la charte.
 - Présentation (.pptx) via le skill `pptx` pour une soutenance ou un deck.
 
-Les figures sortent en SVG (PNG possible via cairosvg), les tableaux en Markdown, les équations en PDF via LaTeX.
+Les figures sortent en SVG (PNG possible via cairosvg), les tableaux en Markdown, les équations en PDF via LaTeX. Les images d'un PDF ou d'un document Office source sont extraites, dédupliquées et replacées, numérotées et à la charte.
 
 ## Agents délégués
 
@@ -66,7 +66,7 @@ Le travail lourd est confié à cinq agents lancés via l'outil Task.
 
 ## Garde-fous déterministes
 
-Dix-sept scripts en Python pur (bibliothèque standard) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Voir `scripts/README.md`. Une porte d'intégration continue éditoriale (`tools/check.py`) verrouille un document contre un seuil de scorecard, voir `docs/CI.md`.
+Dix-huit scripts en Python pur (bibliothèque standard) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Voir `scripts/README.md`. Une porte d'intégration continue éditoriale (`tools/check.py`) verrouille un document contre un seuil de scorecard, voir `docs/CI.md`.
 
 - `scripts/lint-style.py` : détecte les écarts au style maison.
 - `scripts/verify-sources.py` : nettoie les URL, repère les doublons, contrôle les DOI.
@@ -85,6 +85,7 @@ Dix-sept scripts en Python pur (bibliothèque standard) déplacent la rigueur du
 - `scripts/plan-check.py` : conformité du document au plan validé.
 - `scripts/project.py` : mémoire de projet (projet.json).
 - `scripts/audit-doc.py` : audit consolidé (scorecard, empreinte IA, cohérence, tableaux).
+- `scripts/images.py` : extrait les images d'un PDF ou d'un document Office, déduplique, lit les dimensions, écrit un manifeste.
 
 Un hook (`hooks/hooks.json`) lance le linter après chaque écriture de document et bloque la finalisation tant qu'un écart critique subsiste. Sur Windows, remplacer `python3` par `python` dans le hook si nécessaire.
 

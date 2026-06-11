@@ -1,8 +1,19 @@
 # Scriptorium
 
+[![evals](https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg)](https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml)
+
 Atelier de rédaction de haut niveau pour six genres d'écrits professionnels, académiques et stratégiques. Le plugin transforme une demande floue en document rigoureux, structuré et sourcé, en appliquant une méthodologie d'ingénierie textuelle, des garde-fous déterministes et un style maison à directives strictes.
 
 Version 0.5.0.
+
+## Installation
+
+Télécharger le fichier `.plugin` depuis la page des releases, puis l'installer.
+
+- Cowork : ouvrir `scriptorium-0.5.0.plugin` et accepter l'installation.
+- Claude Code : `/plugin marketplace add MariusYvard/Scriptorium`, puis installer le plugin `scriptorium` depuis ce marketplace.
+
+Les compétences apparaissent ensuite sous le préfixe `scriptorium:` (atelier, cadrer, rediger, reviser, sourcer, finaliser et les autres). Les scripts déterministes et le harnais d'évaluation tournent en Python sans dépendance (`python3 evals/run-evals.py`).
 
 ## Genres couverts
 

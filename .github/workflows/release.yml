@@ -1,0 +1,71 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Verifier que le tag correspond aux manifestes et au CHANGELOG
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          manifest="$(python3 -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])")"
+          market="$(python3 -c "import json;print(json.load(open('.claude-plugin/marketplace.json'))['metadata']['version'])")"
+          if [ "$version" != "$manifest" ]; then
+            echo "::error::Tag ${TAG_NAME} (${version}) ne correspond pas a plugin.json (${manifest})"
+            exit 1
+          fi
+          if [ "$version" != "$market" ]; then
+            echo "::error::Tag ${TAG_NAME} (${version}) ne correspond pas a marketplace.json (${market})"
+            exit 1
+          fi
+          if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md n'a pas de section pour ${version}"
+            exit 1
+          fi
+          echo "Tag ${TAG_NAME} = manifestes ${manifest} ; section CHANGELOG presente."
+
+      - name: Evals
+        run: python3 evals/run-evals.py
+
+      - name: Construire l'artefact .plugin
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          git archive --format=zip -o "scriptorium-${version}.plugin" HEAD
+          ls -la "scriptorium-${version}.plugin"
+
+      - name: Extraire les notes du CHANGELOG
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          awk -v v="$version" '$0 ~ "^## \\["v"\\]" {f=1; next} f && /^## \[/ {exit} f' CHANGELOG.md > release_notes.txt
+          echo "--- notes ---"
+          cat release_notes.txt
+
+      - name: Creer la Release GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          gh release create "$TAG_NAME" \
+            --title "Scriptorium $TAG_NAME" \
+            --notes-file release_notes.txt \
+            "scriptorium-${version}.plugin"

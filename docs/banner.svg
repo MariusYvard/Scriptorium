@@ -1,0 +1,42 @@
+<svg viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scriptorium, atelier de rédaction de haut niveau">
+  <style>
+    .bg{fill:#FBFAF6}
+    .ink{fill:#1F2A37}
+    .sub{fill:#5B6470}
+    .accent{fill:#B4532A}
+    .chip{fill:#FFFFFF;stroke:#DDD6C8;stroke-width:1.5}
+    .chiptext{fill:#1F2A37}
+    .flow{fill:#8A8275}
+    .foot{fill:#7A8290}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#0D1117}
+      .ink{fill:#E6EDF3}
+      .sub{fill:#9FB0C0}
+      .accent{fill:#E2703A}
+      .chip{fill:#161B22;stroke:#30363D}
+      .chiptext{fill:#E6EDF3}
+      .flow{fill:#8B98A6}
+      .foot{fill:#7D8A99}
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="1200" height="360"/>
+  <text class="ink" x="88" y="96" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700">Scriptorium</text>
+  <rect class="accent" x="90" y="116" width="72" height="6" rx="3"/>
+  <text class="sub" x="90" y="160" font-family="Georgia, 'Times New Roman', serif" font-size="26">Atelier de rédaction de haut niveau, du sujet flou au document remis.</text>
+  <text class="sub" x="90" y="192" font-family="Georgia, 'Times New Roman', serif" font-size="21">Pour le chercheur, l'ingénieur et l'analyste géopolitique.</text>
+  <g>
+    <rect class="chip" x="90" y="226" width="210" height="58" rx="12"/>
+    <text class="chiptext" x="195" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">atelier</text>
+    <rect class="chip" x="360" y="226" width="210" height="58" rx="12"/>
+    <text class="chiptext" x="465" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">produire</text>
+    <rect class="chip" x="630" y="226" width="210" height="58" rx="12"/>
+    <text class="chiptext" x="735" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">controler</text>
+    <rect class="chip" x="900" y="226" width="210" height="58" rx="12"/>
+    <text class="chiptext" x="1005" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">livrer</text>
+    <text class="flow" x="330" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
+    <text class="flow" x="600" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
+    <text class="flow" x="870" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
+  </g>
+  <text class="foot" x="90" y="324" font-family="Georgia, serif" font-size="19">cadrer &#8594; sourcer &#8594; rédiger &#8594; réviser &#8594; livrer</text>
+  <text class="foot" x="90" y="350" font-family="Georgia, serif" font-size="17">4 compétences à sous-commandes · 18 scripts déterministes · sorties Word, PDF, HTML, PowerPoint</text>
+</svg>

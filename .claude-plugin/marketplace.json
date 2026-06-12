@@ -2,18 +2,18 @@
   "name": "scriptorium-marketplace",
   "owner": { "name": "Marius Yvard" },
   "metadata": {
-    "description": "Atelier de rédaction de haut niveau pour le chercheur, l'ingénieur et l'analyste géopolitique.",
-    "version": "0.6.0"
+    "description": "Atelier de rédaction de haut niveau pour huit publics, onze genres professionnels, académiques, juridiques, médicaux et stratégiques.",
+    "version": "0.6.1"
   },
   "plugins": [
     {
       "name": "scriptorium",
       "source": "./",
-      "description": "Atelier de rédaction de haut niveau : quatre compétences à sous-commandes, six genres, agents délégués, scripts déterministes, sorties Word, PDF et HTML piloté par la charte graphique, style maison à directives strictes.",
-      "version": "0.6.0",
+      "description": "Atelier de rédaction de haut niveau : quatre compétences à sous-commandes, onze genres, huit publics, agents délégués, scripts déterministes, sorties Word, PDF et HTML piloté par la charte graphique, style maison à directives strictes.",
+      "version": "0.6.1",
       "author": { "name": "Marius Yvard" },
       "category": "writing",
-      "keywords": ["redaction", "ingenierie", "geopolitique", "analyse-strategique", "prospective", "imrad", "revue-adversariale", "charte-graphique", "html", "images"]
+      "keywords": ["redaction", "ingenierie", "geopolitique", "droit", "sante", "presentation", "analyse-strategique", "imrad", "charte-graphique", "html"]
     }
   ]
 }

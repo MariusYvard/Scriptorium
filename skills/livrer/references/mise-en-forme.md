@@ -46,6 +46,36 @@ Spécifications appliquées à l'étape de finalisation. Le fond est déjà vali
 - Verbatims mis en exergue, attribués.
 - Logo et contexte client en tête si la diffusion le permet.
 
+## Note de politique publique
+
+- Résumé exécutif en tête, recommandation comprise, une page maximum.
+- Tableau comparatif des options (coût, délai, impact, risque).
+- Encadrés pour les chiffres clés, sources officielles datées en notes.
+
+## Note et consultation juridique
+
+- Exposé des faits, puis plan IRAC (question, règle, application, conclusion).
+- Citations juridiques normalisées (article et code, décision avec juridiction et date).
+- Conclusion mise en exergue.
+
+## Cahier des charges et spécification
+
+- Exigences numérotées en tableau (identifiant, énoncé, priorité, critère d'acceptation).
+- Périmètre inclus et exclu en tête, glossaire des sigles.
+- Annexes pour interfaces et schémas.
+
+## Cas clinique et protocole
+
+- Données anonymisées, valeurs avec unités SI et dates.
+- Norme Vancouver, ligne directrice citée (CONSORT, PRISMA, STROBE).
+- Figures et tableaux de résultats numérotés.
+
+## Présentation
+
+- Sortie PowerPoint (skill pptx) ou HTML, une idée par diapositive, titre assertif.
+- Charte graphique appliquée, contraste élevé pour la projection.
+- Dernière diapositive : conclusion ou appel à l'action.
+
 ## Constantes de forme
 
 - Style maison respecté jusque dans les légendes et les notes.

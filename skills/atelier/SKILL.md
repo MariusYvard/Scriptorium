@@ -3,7 +3,7 @@ name: atelier
 description: >
   Point d'entrée d'un projet d'écrit : orchestration de bout en bout, cadrage du sujet et mémoire de projet entre sessions. Trois sous-commandes. piloter : produire un document complet de A à Z (cadrage, sourcing, rédaction, révision, finalisation) quand l'utilisateur dit "produis un rapport complet", "rédige de A à Z", "prends en charge tout l'écrit". cadrer : délimiter le sujet, formuler la problématique en question fermée, choisir le genre, bâtir le plan quand il dit "cadre mon rapport", "par où commencer", "quel plan", "formule ma problématique". projet : sauvegarder ou recharger le contexte (brief, charte, glossaire, sources, plan) quand il dit "charge mon projet", "reprends le projet", "où en étais-je". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.6.0"
+  version: "0.6.1"
 ---
 
 # Atelier (piloter, cadrer, projet)

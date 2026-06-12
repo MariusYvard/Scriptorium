@@ -24,6 +24,9 @@ Chaque profil cale la norme de citation, la structure attendue et la pondératio
 | Gestion et conseil | libre ou APA | résumé analytique, constat, diagnostic, recommandations | rapports sectoriels, données d'entreprise |
 | Médecine et santé | Vancouver | IMRAD, lignes directrices CONSORT ou PRISMA | essais cliniques, méta-analyses |
 | Analyse géopolitique et prospective | sources primaires datées | acteurs, rapports de force, scénarios contrastés | sources primaires, institutions, presse de référence recoupée |
+| Communication et marketing | libre ou APA | accroche, message clé, preuve, appel à l'action | études de marché, données d'usage, sources sectorielles |
+| Présentation et soutenance | selon le cadre | une idée par diapositive, fil narratif | données clés, figures sourcées |
+| Travail étudiant | APA 7 ou consigne | structure imposée par la consigne | cours, manuels, articles évalués |
 
 ## Usage
 

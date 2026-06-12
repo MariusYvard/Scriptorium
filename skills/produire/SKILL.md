@@ -1,9 +1,9 @@
 ---
 name: produire
 description: >
-  Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau (rapport scientifique IMRAD, article, long rapport professionnel, analyse stratégique, prospective, étude de cas) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources, formater les citations, bâtir la carte preuve-affirmation "trouve des sources", "vérifie ce fait", "ajoute des citations". revue-litterature : synthèse multi-sources, état de l'art, PRISMA. figure : schéma SVG (SWOT, PESTEL, 5 forces, BCG, Ansoff, chaîne de valeur). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI, chiffres significatifs. style : style maison, charte éditoriale, harmoniser le ton. charte : identité visuelle (couleurs, polices, logo). image : extraire et replacer les images d'un PDF, Word ou PowerPoint "récupère les images de ce PDF". Adapté au chercheur, à l'ingénieur et à l'analyste géopolitique.
+  Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau dans l'un des onze genres (rapport scientifique IMRAD, article, long rapport, analyse stratégique, prospective, étude de cas, note de politique publique, note juridique, cahier des charges, cas clinique, présentation) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources et des citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA. figure : schéma SVG (SWOT, PESTEL, BCG, chaîne de valeur). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale. charte : identité visuelle. image : extraire et replacer les images d'un PDF, Word ou PowerPoint "récupère les images de ce PDF". Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le consultant, le communicant et l'étudiant.
 metadata:
-  version: "0.6.0"
+  version: "0.6.1"
 ---
 
 # Produire (rédiger, sourcer, illustrer, styler)
@@ -26,7 +26,7 @@ Si une action est passée en argument (par exemple `figure`), suivre directement
 
 ## Genres et publics
 
-Six genres couvrent les trois publics. Le chercheur écrit un rapport scientifique (IMRAD, APA 7 ou Vancouver), un article ou une revue de littérature. L'ingénieur écrit un long rapport technique, une étude de cas ou un rapport scientifique, souvent avec équations et tableaux. L'analyste géopolitique écrit une analyse stratégique (PESTEL, jeu d'acteurs Mactor, 5 forces de Porter) ou un rapport de prospective (signaux faibles, scénarios contrastés). Adapter les exemples au domaine de l'utilisateur, la méthode ne change pas.
+Onze genres couvrent huit publics. Le chercheur écrit un rapport scientifique (IMRAD), un article ou une revue de littérature. L'ingénieur écrit un long rapport, une étude de cas, un cahier des charges ou une spécification, souvent avec équations et tableaux. L'analyste géopolitique écrit une analyse stratégique (PESTEL, jeu d'acteurs Mactor) ou une note de politique publique. Le juriste écrit une note ou une consultation (méthode IRAC). Le professionnel de santé écrit un cas clinique ou un protocole (CONSORT, PRISMA, STROBE). Le consultant et le dirigeant écrivent un long rapport décisionnel ou une étude de cas. Le communicant écrit un article ou un livre blanc. L'étudiant écrit un mémoire ou une présentation. Charger le playbook du genre dans `references/genre-*.md`. La méthode et le style maison ne changent pas, seuls la structure du genre et les exemples s'adaptent.
 
 ## Préalables
 

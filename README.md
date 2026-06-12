@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg" alt="evals"></a>
   <a href="https://github.com/MariusYvard/Scriptorium/releases"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
-  <img src="https://img.shields.io/badge/version-0.6.0-1f6feb" alt="version 0.6.0">
+  <img src="https://img.shields.io/badge/version-0.6.1-1f6feb" alt="version 0.6.1">
   <img src="https://img.shields.io/badge/licence-MIT-3da639" alt="licence MIT">
   <img src="https://img.shields.io/badge/python-stdlib%20pur-3776ab" alt="python stdlib pur">
   <img src="https://img.shields.io/badge/evals-37%2F37-2ea44f" alt="evals 37 sur 37">
@@ -29,7 +29,7 @@ Deux moteurs travaillent ensemble. Le modèle tranche le jugement : rédiger, cl
 
 ## Installation
 
-Télécharger `scriptorium-0.6.0.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
+Télécharger `scriptorium-0.6.1.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
 
 - Cowork : ouvrir le fichier `.plugin` et accepter l'installation.
 - Claude Code : `/plugin marketplace add MariusYvard/Scriptorium`, puis installer le plugin `scriptorium`.
@@ -41,7 +41,7 @@ Les compétences apparaissent sous le préfixe `scriptorium:`. Les scripts et le
 | Compétence | Sous-commandes | Rôle |
 | --- | --- | --- |
 | `atelier` | piloter · cadrer · projet | Point d'entrée. Orchestre la production de A à Z, cadre le sujet, garde le contexte du projet entre les sessions. |
-| `produire` | genre · sourcer · revue-litterature · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les six genres, trouve et vérifie les sources, génère figures et tableaux, pose les équations, applique style et charte, extrait les images d'un document source. |
+| `produire` | genre · sourcer · revue-litterature · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les onze genres, trouve et vérifie les sources, génère figures et tableaux, pose les équations, applique style et charte, extrait les images d'un document source. |
 | `controler` | revue · contredire · consensus · humaniser · audit · relecteurs | Éprouve un écrit. Revue adversariale, contradiction par le modèle de Toulmin, vote de consensus, détection d'empreinte IA, audit d'un document existant, réponse aux relecteurs. |
 | `livrer` | document · decliner | Met en forme le livrable (Word, PDF, HTML) et le décline par canal (présentation, résumé, abstract, post, communiqué). |
 
@@ -70,17 +70,22 @@ Dix-huit scripts en Python pur déplacent la rigueur du jugement du modèle vers
 
 Le catalogue complet est dans [`scripts/README.md`](scripts/README.md). Un hook lance le linter après chaque écriture et bloque la finalisation tant qu'un écart critique subsiste.
 
-## Six genres
+## Onze genres
 
-Rapport scientifique et mémoire (IMRAD, APA 7 ou Vancouver), article, long rapport professionnel, analyse stratégique (SWOT, PESTEL, 5 forces de Porter, BCG, Mactor, Ansoff), rapport de prospective (signaux faibles, scénarios contrastés), étude de cas d'affaires.
+Rapport scientifique et mémoire (IMRAD, APA 7 ou Vancouver), article, long rapport professionnel et décisionnel, analyse stratégique (SWOT, PESTEL, 5 forces de Porter, BCG, Mactor, Ansoff), rapport de prospective (signaux faibles, scénarios contrastés), étude de cas d'affaires, note de politique publique (policy brief), note et consultation juridique (méthode IRAC), cahier des charges et spécification technique, cas clinique et protocole de recherche (CONSORT, PRISMA, STROBE), présentation (soutenance et pitch).
 
-## Trois publics
+## Huit publics
 
 | Public | Genres de prédilection |
 | --- | --- |
 | Chercheur | Rapport scientifique IMRAD, article, revue de littérature. |
-| Ingénieur | Long rapport technique, étude de cas, rapport d'essais, équations et unités SI. |
-| Analyste géopolitique | Analyse stratégique (jeu d'acteurs Mactor, PESTEL), rapport de prospective. |
+| Ingénieur | Long rapport technique, cahier des charges, étude de cas, équations et unités SI. |
+| Analyste géopolitique | Analyse stratégique (Mactor, PESTEL), prospective, note de politique publique. |
+| Juriste | Note et consultation juridique (méthode IRAC). |
+| Professionnel de santé | Cas clinique, protocole de recherche (CONSORT, PRISMA, STROBE). |
+| Consultant et dirigeant | Long rapport décisionnel, étude de cas, analyse stratégique. |
+| Communicant et marketing | Article, livre blanc, présentation, contenu éditorial. |
+| Étudiant | Mémoire, dissertation, présentation de soutenance. |
 
 La méthode et le style maison ne changent pas, seuls le genre et les exemples s'adaptent au domaine.
 

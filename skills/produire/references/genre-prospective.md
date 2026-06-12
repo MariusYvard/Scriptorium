@@ -58,6 +58,11 @@ Plonger les décideurs dans les scénarios pour tester la robustesse des politiq
 - Les signaux faibles affirmés sans source ni date.
 - L'exercice qui reste descriptif et n'éclaire aucune décision.
 
+## Sources
+
+- Scenarios: Uncharted Waters Ahead, Pierre Wack, Harvard Business Review, 1985. https://hbr.org/1985/09/scenarios-uncharted-waters-ahead
+- The Futures Toolkit, Tools for Futures Thinking and Foresight Across UK Government, Government Office for Science, 2024. https://www.gov.uk/government/publications/futures-toolkit-for-policy-makers-and-analysts/the-futures-toolkit-html
+
 ## Publics et exemples
 
 Genre phare de l'analyste géopolitique, utile aussi à l'ingénieur pour anticiper une rupture technologique. Exemples : scénarios contrastés sur l'évolution d'une alliance régionale à dix ans ; signaux faibles d'une bascule industrielle.

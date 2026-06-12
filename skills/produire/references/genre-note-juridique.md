@@ -36,6 +36,11 @@ Le cœur du raisonnement. Appliquer la règle aux faits pas à pas. Qualifier ju
 - Citer une décision sans sa portée réelle (un obiter dictum pris pour un principe).
 - Présenter un avis comme une certitude quand le droit est incertain.
 
+## Sources
+
+- Organizing a Legal Discussion: IRAC, CRAC, CREAC, Writing Center, Columbia Law School, 2022. https://www.law.columbia.edu/sites/default/files/2022-06/WC%20Handout%20IRAC%2C%20CRAC%2C%20CREAC.revised%205.22.pdf
+- From Memo to Appellate Brief, Writing Center, Georgetown University Law Center, 2004. https://www.law.georgetown.edu/wp-content/uploads/2018/07/From-Memo-to-Appellate-Brief.pdf
+
 ## Publics et exemples
 
 Genre du juriste, de l'avocat et du service juridique. Exemples : une consultation sur la validité d'une clause, règle et jurisprudence à l'appui ; une note sur le risque contentieux d'une décision, avec recommandation.

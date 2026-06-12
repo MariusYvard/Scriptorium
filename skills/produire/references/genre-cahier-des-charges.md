@@ -38,6 +38,11 @@ Priorité : [obligatoire / recommandé / optionnel].
 - Des adjectifs non mesurables.
 - Oublier les exigences non fonctionnelles, souvent la cause des échecs.
 
+## Sources
+
+- IEEE/ISO/IEC 29148-2018, Systems and software engineering, requirements engineering, IEEE Standards Association, 2018. https://standards.ieee.org/ieee/29148/6937/
+- Guide to Writing Requirements V4 Summary Sheet, INCOSE Requirements Working Group, 2023. https://www.incose.org/docs/default-source/working-groups/requirements-wg/guidetowritingrequirements/incose_rwg_gtwr_v4_summary_sheet.pdf
+
 ## Publics et exemples
 
 Genre de l'ingénieur et du chef de projet. Exemples : le cahier des charges d'un capteur (exigences de précision, d'environnement, de conformité) ; la spécification d'une interface applicative (contrats, charges, sécurité, critères d'acceptation).

@@ -69,6 +69,11 @@ Conséquences : [ce qui devient plus facile, plus difficile, à revisiter]
 - Un résumé analytique qui raconte la démarche au lieu de livrer la décision.
 - Noyer la recommandation sous les annexes.
 
+## Sources
+
+- The Report Abstract and Executive Summary, Purdue Online Writing Lab, consulté 2026. https://owl.purdue.edu/owl/subject_specific_writing/writing_in_engineering/handbook_on_report_formats/abstracts_and_executive_summaries.html
+- The Shipley Proposal Guide (executive summary), Shipley Associates, v5.0. https://www.shipleywins.com/shipley-proposal-guide
+
 ## Publics et exemples
 
 Genre de prédilection de l'ingénieur et de l'analyste géopolitique : constat, diagnostic, recommandations budgétées. Exemples : un ingénieur rend un rapport de faisabilité technique chiffré ; un analyste produit un rapport de situation pays avec options et coûts.

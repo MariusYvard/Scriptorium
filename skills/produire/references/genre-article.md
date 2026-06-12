@@ -59,6 +59,11 @@ Tester : crée-t-elle la curiosité, promet-elle une valeur, est-elle précise, 
 - Le ton promotionnel (proscrire incontournable, révolutionnaire, qui change la donne).
 - La conclusion qui introduit un fait nouveau au lieu de synthétiser.
 
+## Sources
+
+- Recommendations for the Conduct, Reporting, Editing and Publication of Scholarly Work in Medical Journals (page de titre, résumé, références, soumission), ICMJE, 2026. https://www.icmje.org/recommendations/browse/manuscript-preparation/preparing-for-submission.html
+- Writing a Scientific Paper (Title, Abstract, Peer Review), University of California Irvine Libraries, 2026. https://guides.lib.uci.edu/scientificwriting
+
 ## Publics et exemples
 
 Le chercheur en tire une tribune ou un article de vulgarisation, l'analyste géopolitique une note d'opinion argumentée. Exemple : un analyste signe un article sur une recomposition régionale, accroche factuelle puis thèse défendue pas à pas.

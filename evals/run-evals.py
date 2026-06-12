@@ -166,6 +166,14 @@ verifier("images : manifest ecrit", os.path.isfile(os.path.join(_d, "out", "mani
 verifier("images : pdf sans backend renvoie une note", bool(imgs.extract(os.path.join(_d, "vide.pdf"), os.path.join(_d, "o2"))["notes"]))
 
 
+import glob as _glob
+_gdir = os.path.join(ICI, "..", "skills", "produire", "references")
+_genres = _glob.glob(os.path.join(_gdir, "genre-*.md"))
+verifier("genres : au moins 24 playbooks", len(_genres) >= 24, f"n={len(_genres)}")
+_sans_src = sorted(os.path.basename(f) for f in _genres if "## Sources" not in open(f, encoding="utf-8").read())
+verifier("genres : chaque playbook porte une section Sources", not _sans_src, f"sans={_sans_src}")
+
+
 def main():
     passes = sum(1 for _, ok, _ in RESULTATS if ok)
     total = len(RESULTATS)

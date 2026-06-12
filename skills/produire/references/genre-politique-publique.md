@@ -44,6 +44,11 @@ Option [n] : [intitulé]
 - Recommander sans chiffrer ni dire qui paie.
 - Confondre intention et résultat : un dispositif n'a pas l'effet annoncé par décret.
 
+## Sources
+
+- How to write a policy brief, IDRC, 2024. https://idrc-crdi.ca/en/funding/resources-idrc-grantees/how-write-policy-brief
+- Food Security Communications Toolkit (Preparing policy briefs), FAO, 2011. https://www.fao.org/4/i2195e/i2195e03.pdf
+
 ## Publics et exemples
 
 Genre du décideur public, du fonctionnaire et de l'analyste géopolitique. Exemples : une note sur l'opportunité d'une taxe, options chiffrées et effets distributifs ; une note de cadrage sur une réponse diplomatique à une crise régionale.

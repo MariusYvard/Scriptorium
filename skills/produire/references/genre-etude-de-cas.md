@@ -54,6 +54,11 @@ Chaque verbatim est attribué (fonction, entreprise) et vérifiable. Pas de cita
 - Le superlatif (incontournable, révolutionnaire) à la place de la donnée.
 - Confondre les caractéristiques de l'offre et les bénéfices pour le client.
 
+## Sources
+
+- The Case Method, Harvard Business School, consulté 2026. https://www.hbs.edu/mba/academic-experience/the-case-method
+- Case Development, Harvard Business School, consulté 2026. https://www.hbs.edu/faculty/research/Pages/case-development.aspx
+
 ## Publics et exemples
 
 L'ingénieur y documente un projet livré (contexte, problème, démarche, bénéfices mesurés), le chercheur un cas d'enseignement. Exemple : un ingénieur retrace une remédiation d'incident, gains chiffrés à l'appui.

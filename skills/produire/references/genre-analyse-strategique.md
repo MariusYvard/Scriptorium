@@ -57,6 +57,11 @@ Pour le choix de l'outil et la lecture de ses limites, charger `boite-outils-str
 - Le plan sans indicateur de pilotage.
 - Confondre opportunité de marché et force interne.
 
+## Sources
+
+- How Competitive Forces Shape Strategy, Michael E. Porter, Harvard Business Review, 1979. https://hbr.org/1979/03/how-competitive-forces-shape-strategy
+- Le SWOT, l'outil d'analyse stratégique pour développer votre activité, Bpifrance Création, 2025. https://bpifrance-creation.fr/encyclopedie/letude-marche/determiner-sa-strategie/swot-loutil-danalyse-strategique-developper
+
 ## Publics et exemples
 
 Genre phare de l'analyste géopolitique. Le jeu d'acteurs Mactor, le PESTEL et les 5 forces de Porter s'appliquent aux rapports de force entre États ou blocs autant qu'aux marchés. Exemple : cartographier les acteurs et leurs leviers dans un différend sur une route commerciale.

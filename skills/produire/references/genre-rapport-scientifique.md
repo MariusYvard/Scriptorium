@@ -68,6 +68,11 @@ Contrainte dure : toute affirmation de l'abstract et de l'introduction est véri
 - Mélanger présent et passé hors de la règle de temps.
 - Laisser une abréviation non définie à sa première apparition.
 
+## Sources
+
+- Recommendations for the Conduct, Reporting, Editing and Publication of Scholarly Work in Medical Journals (preparing a manuscript), ICMJE, 2026. https://www.icmje.org/recommendations/browse/manuscript-preparation/preparing-for-submission.html
+- Writing a Scientific Paper, University of California Irvine Libraries, 2026. https://guides.lib.uci.edu/scientificwriting
+
 ## Publics et exemples
 
 Genre central du chercheur, il sert aussi l'ingénieur pour un rapport d'essais ou une validation expérimentale. Exemples : un chercheur publie une étude IMRAD sur un protocole ; un ingénieur documente la qualification d'un matériau (méthode, résultats, incertitudes en unités SI).

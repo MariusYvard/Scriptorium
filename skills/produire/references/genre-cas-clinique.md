@@ -37,6 +37,13 @@ Suivre la ligne directrice du type d'étude : CONSORT pour un essai contrôlé r
 - Un critère de jugement principal flou ou multiple.
 - Citer une recommandation périmée sans vérifier sa version courante.
 
+## Sources
+
+- CARE Checklist, CARE Group, 2013. https://www.care-statement.org/checklist
+- CONSORT 2025 Statement, SPIRIT-CONSORT Group, 2025. https://www.consort-spirit.org/
+- STROBE Statement, STROBE Initiative, consulté 2026. https://www.strobe-statement.org/
+- The PRISMA 2020 statement, PRISMA Group, 2020. https://www.prisma-statement.org/prisma-2020
+
 ## Publics et exemples
 
 Genre du professionnel de santé, de l'interne et du chercheur clinicien. Exemples : un cas clinique de présentation atypique pour une revue ; un protocole d'essai randomisé conforme à CONSORT.

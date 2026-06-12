@@ -76,6 +76,60 @@ Spécifications appliquées à l'étape de finalisation. Le fond est déjà vali
 - Charte graphique appliquée, contraste élevé pour la projection.
 - Dernière diapositive : conclusion ou appel à l'action.
 
+## Demande de financement et proposition de recherche
+
+- Plan calé sur la grille de l'appel, limites de pages strictement respectées.
+- Objectifs sur une page, budget et chronogramme en annexe.
+
+## Dissertation et commentaire
+
+- Introduction (termes, problématique, annonce du plan), parties à transitions, conclusion.
+- Pas de page de garde lourde pour une copie d'examen.
+
+## Business plan
+
+- Résumé opérationnel d'une à deux pages en tête, prévisions financières en tableaux, pièces en annexe.
+
+## Proposition commerciale et réponse à appel d'offres
+
+- Plan miroir du règlement de consultation, réponse point par point, références et moyens en annexe.
+
+## Étude de marché
+
+- Synthèse des résultats en tête, tableaux de segmentation et de concurrence, méthode en annexe.
+
+## Documentation technique
+
+- Un document par mode (tutoriel, guide, référence, explication), sommaire, exemples de code en blocs.
+
+## Rapport d'incident et post-mortem
+
+- Résumé (impact, durée) en tête, chronologie horodatée, tableau des actions de suivi assignées.
+
+## Note d'analyse financière
+
+- Bandeau d'en-tête (recommandation, cours, objectif), tableaux de valorisation, sources datées et avertissement.
+
+## Rapport d'évaluation
+
+- Résumé exécutif, une section par critère du CAD, recommandations numérotées reliées aux constats.
+
+## Livre blanc
+
+- Couverture, sommaire, mise en page aérée, figures sourcées, entreprise mentionnée en fin de document.
+
+## Discours et allocution
+
+- Texte pour l'oral : phrases courtes, repères de respiration, durée estimée, pas de jargon non explicité.
+
+## Conclusions et mémoire contentieux
+
+- Parties attendues (questions, faits, discussion, dispositif), intertitres argumentatifs, demandes en clôture.
+
+## Rédaction de contrat
+
+- Préambule, définitions, articles numérotés, clauses énumérées, annexes ; "doit" pour les obligations.
+
 ## Constantes de forme
 
 - Style maison respecté jusque dans les légendes et les notes.

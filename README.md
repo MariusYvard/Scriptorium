@@ -5,15 +5,15 @@
 <p align="center">
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg" alt="evals"></a>
   <a href="https://github.com/MariusYvard/Scriptorium/releases"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
-  <img src="https://img.shields.io/badge/version-0.6.1-1f6feb" alt="version 0.6.1">
+  <img src="https://img.shields.io/badge/version-0.6.2-1f6feb" alt="version 0.6.2">
   <img src="https://img.shields.io/badge/licence-MIT-3da639" alt="licence MIT">
   <img src="https://img.shields.io/badge/python-stdlib%20pur-3776ab" alt="python stdlib pur">
-  <img src="https://img.shields.io/badge/evals-37%2F37-2ea44f" alt="evals 37 sur 37">
+  <img src="https://img.shields.io/badge/genres-24%20sourc%C3%A9s-8957e5" alt="24 genres sourcés">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini. Il applique une méthodologie d'ingénierie textuelle, déplace la rigueur vérifiable du jugement du modèle vers dix-huit scripts déterministes, et impose un style maison à directives strictes. Quatre compétences couvrent le cycle de vie complet, du cadrage à la livraison.
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini. Il applique une méthodologie d'ingénierie textuelle, déplace la rigueur vérifiable du jugement du modèle vers dix-huit scripts déterministes, et impose un style maison à directives strictes. Quatre compétences couvrent le cycle de vie complet, du cadrage à la livraison, sur vingt-quatre genres adossés chacun à des sources faisant autorité.
 
 ## Comment ça marche
 
@@ -29,7 +29,7 @@ Deux moteurs travaillent ensemble. Le modèle tranche le jugement : rédiger, cl
 
 ## Installation
 
-Télécharger `scriptorium-0.6.1.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
+Télécharger `scriptorium-0.6.2.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
 
 - Cowork : ouvrir le fichier `.plugin` et accepter l'installation.
 - Claude Code : `/plugin marketplace add MariusYvard/Scriptorium`, puis installer le plugin `scriptorium`.
@@ -41,7 +41,7 @@ Les compétences apparaissent sous le préfixe `scriptorium:`. Les scripts et le
 | Compétence | Sous-commandes | Rôle |
 | --- | --- | --- |
 | `atelier` | piloter · cadrer · projet | Point d'entrée. Orchestre la production de A à Z, cadre le sujet, garde le contexte du projet entre les sessions. |
-| `produire` | genre · sourcer · revue-litterature · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les onze genres, trouve et vérifie les sources, génère figures et tableaux, pose les équations, applique style et charte, extrait les images d'un document source. |
+| `produire` | genre · sourcer · revue-litterature · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les vingt-quatre genres, trouve et vérifie les sources, génère figures et tableaux, pose les équations, applique style et charte, extrait les images d'un document source. |
 | `controler` | revue · contredire · consensus · humaniser · audit · relecteurs | Éprouve un écrit. Revue adversariale, contradiction par le modèle de Toulmin, vote de consensus, détection d'empreinte IA, audit d'un document existant, réponse aux relecteurs. |
 | `livrer` | document · decliner | Met en forme le livrable (Word, PDF, HTML) et le décline par canal (présentation, résumé, abstract, post, communiqué). |
 
@@ -70,24 +70,38 @@ Dix-huit scripts en Python pur déplacent la rigueur du jugement du modèle vers
 
 Le catalogue complet est dans [`scripts/README.md`](scripts/README.md). Un hook lance le linter après chaque écriture et bloque la finalisation tant qu'un écart critique subsiste.
 
-## Onze genres
+## Vingt-quatre genres sourcés
 
-Rapport scientifique et mémoire (IMRAD, APA 7 ou Vancouver), article, long rapport professionnel et décisionnel, analyse stratégique (SWOT, PESTEL, 5 forces de Porter, BCG, Mactor, Ansoff), rapport de prospective (signaux faibles, scénarios contrastés), étude de cas d'affaires, note de politique publique (policy brief), note et consultation juridique (méthode IRAC), cahier des charges et spécification technique, cas clinique et protocole de recherche (CONSORT, PRISMA, STROBE), présentation (soutenance et pitch).
+Chaque genre est adossé à des sources faisant autorité, citées dans son playbook (`skills/produire/references/genre-*.md`).
 
-## Huit publics
+- Académique et recherche : rapport scientifique et mémoire (IMRAD), article, revue de littérature (PRISMA), demande de financement et proposition de recherche, dissertation et commentaire.
+- Entreprise et conseil : long rapport décisionnel, analyse stratégique (SWOT, PESTEL, 5 forces, Mactor), prospective, étude de cas, business plan, étude de marché, proposition commerciale et réponse à appel d'offres.
+- Technique : cahier des charges et spécification (IEEE 29148), documentation technique (Diátaxis), rapport d'incident et post-mortem.
+- Finance : note d'analyse financière et mémo d'investissement.
+- Public et droit : note de politique publique, rapport d'évaluation (critères OCDE/CAD), note et consultation juridique (IRAC), conclusions et mémoire contentieux, rédaction de contrat.
+- Santé : cas clinique et protocole de recherche (CARE, CONSORT, STROBE, PRISMA).
+- Communication : livre blanc, discours et allocution, présentation (soutenance et pitch).
+
+## Quatorze publics
 
 | Public | Genres de prédilection |
 | --- | --- |
-| Chercheur | Rapport scientifique IMRAD, article, revue de littérature. |
-| Ingénieur | Long rapport technique, cahier des charges, étude de cas, équations et unités SI. |
+| Chercheur | Rapport scientifique IMRAD, article, revue de littérature, demande de financement. |
+| Ingénieur | Cahier des charges, documentation technique, post-mortem, étude de cas. |
 | Analyste géopolitique | Analyse stratégique (Mactor, PESTEL), prospective, note de politique publique. |
-| Juriste | Note et consultation juridique (méthode IRAC). |
-| Professionnel de santé | Cas clinique, protocole de recherche (CONSORT, PRISMA, STROBE). |
-| Consultant et dirigeant | Long rapport décisionnel, étude de cas, analyse stratégique. |
-| Communicant et marketing | Article, livre blanc, présentation, contenu éditorial. |
-| Étudiant | Mémoire, dissertation, présentation de soutenance. |
+| Juriste | Note et consultation juridique (IRAC), conclusions contentieuses, contrat. |
+| Professionnel de santé | Cas clinique, protocole de recherche (CARE, CONSORT, STROBE). |
+| Consultant et dirigeant | Long rapport décisionnel, analyse stratégique, business plan. |
+| Communicant et marketing | Livre blanc, article, présentation, étude de marché. |
+| Étudiant | Dissertation et commentaire, mémoire, présentation de soutenance. |
+| Analyste financier | Note d'analyse financière, mémo d'investissement. |
+| Entrepreneur | Business plan, étude de marché, proposition commerciale. |
+| Enseignant | Support de cours, dissertation, présentation. |
+| Chef de projet | Cahier des charges, proposition commerciale, rapport d'évaluation. |
+| Agent public | Note de politique publique, rapport d'évaluation. |
+| Journaliste | Article, enquête, tribune. |
 
-La méthode et le style maison ne changent pas, seuls le genre et les exemples s'adaptent au domaine.
+La méthode et le style maison ne changent pas, seuls le genre et les exemples s'adaptent au domaine. Les profils de discipline (voir `controler` consensus) calibrent la norme de citation et le seuil d'exigence.
 
 ## Formats de sortie
 
@@ -103,7 +117,7 @@ Le travail lourd est confié à cinq agents lancés via l'outil Task : `redacteu
 
 ## Évaluations et release
 
-`evals/run-evals.py` relie des cas piégés à des attentes précises et vérifie que les garde-fous attrapent ce qu'ils doivent (37 cas). La publication est automatisée : un tag `vX.Y.Z` déclenche la vérification des versions, les evals, la construction du `.plugin` et la création de la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md) et [`CHANGELOG.md`](CHANGELOG.md).
+`evals/run-evals.py` relie des cas piégés à des attentes précises et vérifie que les garde-fous attrapent ce qu'ils doivent, et que chaque playbook de genre porte une section Sources. La publication est automatisée : un tag `vX.Y.Z` déclenche la vérification des versions, les evals, la construction du `.plugin` et la création de la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md) et [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Licence
 

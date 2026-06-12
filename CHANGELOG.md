@@ -11,6 +11,22 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.6.2] - 2026-06-12
+
+Treize genres et six publics supplémentaires, chaque genre adossé à des sources faisant autorité.
+
+### Added
+- Treize genres sourcés : demande de financement et proposition de recherche, dissertation et commentaire, business plan, proposition commerciale et réponse à appel d'offres, étude de marché, documentation technique (Diátaxis), rapport d'incident et post-mortem, note d'analyse financière, rapport d'évaluation (critères OCDE/CAD), livre blanc, discours et allocution, conclusions et mémoire contentieux, rédaction de contrat. Vingt-quatre genres au total.
+- Six publics : analyste financier, entrepreneur, enseignant, chef de projet, agent public, journaliste. Quatorze publics au total.
+- Section Sources dans chaque playbook, adossée à des standards et guides vérifiés (ICMJE, PRISMA 2020, IEEE/ISO/IEC 29148, INCOSE, Google SRE, CFA Institute, OCDE/CAD, IRAC, CARE, CONSORT, STROBE, Diátaxis, entre autres). Profils de discipline portés à quinze, avec leurs sources normatives.
+- Conventions de mise en forme pour les treize nouveaux genres.
+
+### Changed
+- Description et section publics de produire ouvertes aux vingt-quatre genres et quatorze publics.
+- evals portés à 39 cas (présence d'une section Sources dans chaque playbook).
+
+---
+
 ## [0.6.1] - 2026-06-12
 
 Cinq genres et cinq publics, README visuel, automatisation de release.

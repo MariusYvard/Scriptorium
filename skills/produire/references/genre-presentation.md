@@ -33,6 +33,11 @@ Une idée par diapositive. Le titre de chaque diapositive est une phrase asserti
 - La surcharge : trop de puces, trop de chiffres sur une seule diapositive.
 - Une figure illisible une fois projetée.
 
+## Sources
+
+- Assertion-Evidence Approach, Rethinking Scientific and Technical Presentations, Michael Alley, Pennsylvania State University. https://www.assertion-evidence.com
+- Scientific Presentations, the Assertion-Evidence Approach, Leonhard Center, Pennsylvania State University. https://writing.engr.psu.edu/research.html
+
 ## Publics et exemples
 
 Genre de l'étudiant, du commercial et du communicant. Exemples : une soutenance de mémoire (plan clair, résultats appuyés sur des figures) ; un pitch de vente (problème, bénéfice chiffré, preuve, appel à l'action).

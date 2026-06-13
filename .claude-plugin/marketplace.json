@@ -3,14 +3,14 @@
   "owner": { "name": "Marius Yvard" },
   "metadata": {
     "description": "Atelier de rédaction de haut niveau pour quatorze publics, vingt-quatre genres sourcés.",
-    "version": "0.6.2"
+    "version": "0.6.3"
   },
   "plugins": [
     {
       "name": "scriptorium",
       "source": "./",
       "description": "Atelier de rédaction de haut niveau : quatre compétences à sous-commandes, vingt-quatre genres adossés à des sources, quatorze publics, agents délégués, scripts déterministes, sorties Word, PDF et HTML piloté par la charte graphique, style maison à directives strictes.",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "author": { "name": "Marius Yvard" },
       "category": "writing",
       "keywords": ["redaction", "ingenierie", "geopolitique", "droit", "sante", "finance", "business-plan", "imrad", "prisma", "charte-graphique", "html"]

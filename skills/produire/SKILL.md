@@ -3,7 +3,7 @@ name: produire
 description: >
   Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-quatre genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources et des citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA. figure : schéma SVG (SWOT, PESTEL, BCG). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale. charte : identité visuelle. image : extraire et replacer les images d'un PDF, Word ou PowerPoint "récupère les images de ce PDF". Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
 metadata:
-  version: "0.6.2"
+  version: "0.6.3"
 ---
 
 # Produire (rédiger, sourcer, illustrer, styler)

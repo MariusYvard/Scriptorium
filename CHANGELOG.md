@@ -11,6 +11,18 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.6.3] - 2026-06-12
+
+Playbook pitch enrichi et sourcé.
+
+### Changed
+- Le genre présentation devient un playbook de pitch complet (soutenance, vente, levée de fonds) : cadres narratifs (cascade, Golden Circle de Sinek, Show and Tell de Roam), règle 10/20/30 de Kawasaki et répartition temporelle, conception des diapositives, délivrance non verbale (kinésique, proxémique, paraverbal), règle 7-38-55 de Mehrabian recadrée pour en éviter la surinterprétation, interactivité et brise-glaces calibrés par taille d'auditoire, régulation du trac, traitement des objections, études de cas (SécurClés, YouTube, Airbnb).
+
+### Added
+- Sources d'autorité sur la persuasion orale : Kawasaki (10/20/30), Sinek (Golden Circle), Mehrabian (7-38-55 et sa portée réelle), Ekman (micro-expressions), Roam (Show and Tell), Bpifrance et CCI.
+
+---
+
 ## [0.6.2] - 2026-06-12
 
 Treize genres et six publics supplémentaires, chaque genre adossé à des sources faisant autorité.

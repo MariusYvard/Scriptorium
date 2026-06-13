@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg" alt="evals"></a>
   <a href="https://github.com/MariusYvard/Scriptorium/releases"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
-  <img src="https://img.shields.io/badge/version-0.6.3-1f6feb" alt="version 0.6.2">
+  <img src="https://img.shields.io/badge/version-0.6.4-1f6feb" alt="version 0.6.2">
   <img src="https://img.shields.io/badge/licence-MIT-3da639" alt="licence MIT">
   <img src="https://img.shields.io/badge/python-stdlib%20pur-3776ab" alt="python stdlib pur">
   <img src="https://img.shields.io/badge/genres-24%20sourc%C3%A9s-8957e5" alt="24 genres sourcés">
@@ -29,7 +29,7 @@ Deux moteurs travaillent ensemble. Le modèle tranche le jugement : rédiger, cl
 
 ## Installation
 
-Télécharger `scriptorium-0.6.3.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
+Télécharger `scriptorium-0.6.4.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
 
 - Cowork : ouvrir le fichier `.plugin` et accepter l'installation.
 - Claude Code : `/plugin marketplace add MariusYvard/Scriptorium`, puis installer le plugin `scriptorium`.

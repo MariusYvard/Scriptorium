@@ -60,6 +60,27 @@ Erreurs fréquentes : l'improvisation (répéter en se chronométrant), la surve
 
 Le balayage des objections, employé avec parcimonie en milieu de pitch, formule une réticence pour y répondre avant qu'elle ne se verbalise. Sur le prix, déplacer le débat vers le coût du statu quo et le retour sur investissement. Sur le calendrier, valider la contrainte puis proposer les conditions d'un pilote court. Sur la concurrence, saluer la comparaison puis recentrer sur les critères de différenciation.
 
+## Humour : un levier à fort risque asymétrique
+
+L'humour bien employé capte l'attention, aide à mémoriser et détend l'orateur comme la salle (Aaker et Bagdonas). Mais le risque est asymétrique : une plaisanterie réussie élève peu le statut, une plaisanterie ratée l'abaisse fortement. La recherche de Bitterly, Brooks et Schweitzer montre qu'un humour approprié signale confiance et compétence et élève le statut perçu, tandis qu'un humour inapproprié signale de la confiance mais une faible compétence, et le dégrade. En contexte de décision, un effet de halo amplifie une ouverture ratée. L'humour est donc une option à haute discipline, jamais une improvisation, et toujours au service de la proposition de valeur.
+
+### Écrire une ligne, ne pas improviser
+
+Le rire de tribune est une architecture, pas un trait d'esprit spontané. Une formule transposable (Spitch) tient en quatre temps : attitude (l'angle émotionnel), sujet, prémisse (le point de vue), chute (l'information inattendue qui rompt la logique). Placer le mot qui fait rire ou le chiffre décisif en fin de phrase, pour libérer la tension au bon moment (Nihill). La règle de trois (deux éléments sérieux, un troisième décalé) et le détournement d'un acronyme connu sont des procédés fiables (Kerr).
+
+### Préférer l'autodérision et l'empathie de situation
+
+L'humour le plus sûr ne vise personne d'autre que soi ou la situation. L'autodérision mesurée humanise sans entamer l'autorité, le partage d'une difficulté réelle crée du lien. Proscrire la plaisanterie gratuite qui détourne de l'idée centrale, et la moquerie d'un tiers.
+
+### Deux risques à intégrer
+
+- Biais de genre : à humour égal, des observateurs lisent l'humour d'un homme comme fonctionnel et celui d'une femme comme perturbateur, ce qui élève le statut perçu du premier et abaisse celui de la seconde (Evans, Slaughter, Ellis et Rivin, Journal of Applied Psychology, 2019). Ce biais est systémique, pas une fatalité individuelle. Il invite à privilégier l'empathie de situation et l'autodérision sur la plaisanterie formelle, sans conclure qu'une oratrice devrait renoncer à l'humour.
+- Rire contraint : un orateur en position d'autorité qui use beaucoup d'humour peut pousser un auditoire en situation d'asymétrie à feindre l'amusement, au prix d'une usure émotionnelle (Harvard Business Review, 2025). Doser d'autant plus que le rapport de pouvoir est marqué.
+
+### Quand s'abstenir
+
+Tester la ligne sur un tiers, la couper en cas de doute. Un public hostile, un sujet grave, une culture inconnue, une audience très large où la référence ne passe pas : autant de cas où la sobriété l'emporte. Une plaisanterie n'est jamais obligatoire.
+
 ## Études de cas
 
 - SécurClés (Qui veut être mon associé ?, 2025) : accroche universelle (la copie de clés), problème chiffré (artisans passés de 10 000 à moins de 3 500 en dix ans), solution applicative à intelligence artificielle brevetée, et traitement proactif de l'objection de sécurité (anonymat, pas de stockage d'identité, validation par huissier).
@@ -91,6 +112,15 @@ Le balayage des objections, employé avec parcimonie en milieu de pitch, formule
 - Assertion-Evidence Approach, Rethinking Scientific and Technical Presentations, Michael Alley, Pennsylvania State University. https://www.assertion-evidence.com
 - Plan type de pitch pour présenter votre projet de création d'entreprise, Bpifrance Création, 2025. https://bpifrance-creation.fr/encyclopedie/porteur-projet-preparation-droits-obligations/preparation/plan-type-pitch-presenter
 - Comment préparer son pitch et communiquer sur son projet, CCI Lyon Métropole, 2025. https://www.lyon-metropole.cci.fr/blog/comment-preparer-son-pitch-et-communiquer-sur-son-projet
+
+- Humor, Seriously, Jennifer Aaker et Naomi Bagdonas, Currency, 2021. https://www.gsb.stanford.edu/faculty-research/books/humor-seriously
+- Why great leaders take humor seriously, Jennifer Aaker et Naomi Bagdonas, TED, 2021. https://www.ted.com/talks/jennifer_aaker_and_naomi_bagdonas_why_great_leaders_take_humor_seriously
+- Do You Talk Funny?, David Nihill, BenBella Books, 2016. https://benbellabooks.com/shop/do-you-talk-funny/
+- Risky Business: When Humor Increases and Decreases Status, T. B. Bitterly, A. W. Brooks, M. E. Schweitzer, Journal of Personality and Social Psychology, 2017. https://doi.org/10.1037/pspi0000079
+- Gender and the evaluation of humor at work, J. B. Evans, J. E. Slaughter, A. P. J. Ellis, J. M. Rivin, Journal of Applied Psychology, 2019. https://doi.org/10.1037/apl0000395
+- Research: When Laughing Becomes Labor, Harvard Business Review, 2025. https://hbr.org/2025/03/research-when-laughing-becomes-labor
+- Pitch Anything, Oren Klaff, McGraw Hill, 2011. https://www.mheducation.com/highered/mhp/product/pitch-anything-innovative-method-presenting-persuading-winning-deal.html
+- 40 Ways to Add Humor to Your Talk or Presentation, Mike Kerr, consulté 2026. https://mikekerr.com/free-articles/humour-in-the-workplace-articles/40-ways-to-add-humor-to-your-talk-or-presentation/
 
 ## Publics et exemples
 

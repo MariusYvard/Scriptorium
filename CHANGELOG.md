@@ -11,6 +11,15 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.6.4] - 2026-06-12
+
+Volet humour ajouté au playbook pitch, traité comme un levier à risque.
+
+### Added
+- Section Humour du genre présentation : mécanique d'écriture (formule attitude-sujet-prémisse-chute, règle de trois, mot-clé en fin de phrase), autodérision et empathie de situation. Traitement rigoureux des risques : downside asymétrique (Bitterly, Brooks et Schweitzer, 2017), biais de genre (Evans et al., Journal of Applied Psychology, 2019), rire contraint sous asymétrie de pouvoir (Harvard Business Review, 2025). Sources ajoutées (Aaker et Bagdonas, Nihill, Klaff, Kerr).
+
+---
+
 ## [0.6.3] - 2026-06-12
 
 Playbook pitch enrichi et sourcé.

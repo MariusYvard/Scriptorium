@@ -11,6 +11,12 @@ Présentation orale brève qui vise une décision : acheter, investir, s'engager
 
 Pour un enjeu élevé (levée de fonds, débat, comité), charger `references/pitch-narratif.md` : sparkline, structures narratives comparées, cadrage de valeur (Lakoff, recadrage moral de Haidt), ancrage, approche dramaturgique et éthique du cadrage.
 
+## Ancrer une valeur fondamentale
+
+Un projet présenté comme une simple idée d'affaires mobilise peu. Le rattacher à une valeur fondamentale à laquelle personne ne s'oppose (liberté, dignité, équité, sécurité, durabilité) donne une raison d'adhérer au-delà du gain. La valeur est universelle même si les conceptions et les moyens d'y parvenir divergent, ce qui en fait un point d'accord de départ. C'est l'application concrète du recadrage moral : choisir la valeur qui parle à l'auditoire et formuler le projet dans ses termes (voir `references/pitch-narratif.md`).
+
+Garde-fou éthique : la valeur doit être réellement servie par le projet, pas plaquée en vernis. Une valeur invoquée sans fondement, par exemple un projet polluant drapé d'écologie, se retourne contre l'orateur dès la première question. Lier la valeur à une preuve concrète du projet.
+
 ## Temporalité et grammaire
 
 Employer le présent de l'indicatif pour la proposition de valeur. Le futur et le conditionnel projettent l'offre dans l'incertitude, le présent affirme la traction et la maîtrise. La règle 10/20/30 de Kawasaki sert de garde-fou : au plus dix diapositives, vingt minutes, aucune police sous trente points. Répartition pour un format de dix minutes :
@@ -57,6 +63,10 @@ Tester la ligne sur un tiers, la couper en cas de doute. Un public hostile, un s
 - SécurClés (Qui veut être mon associé ?, 2025) : accroche universelle (la copie de clés), problème chiffré (artisans passés de 10 000 à moins de 3 500 en dix ans), solution applicative à intelligence artificielle brevetée, et traitement proactif de l'objection de sécurité (anonymat, pas de stockage d'identité, validation par huissier).
 - YouTube (2005) et Airbnb (tour d'amorçage) : dix diapositives sobres, un problème réel posé puis résolu, sans jargon. Une proposition de valeur claire portée par une équipe complémentaire surpasse l'accumulation de détails techniques.
 
+## Soigner l'ouverture et la clôture
+
+On retient mieux le début et la fin d'une intervention que son milieu (effet de position sérielle, Murdock), et le souvenir d'un échange est dominé par son moment le plus fort et par sa fin (règle du pic et de la fin, Kahneman). L'ouverture installe la crédibilité dans les trente premières secondes, la clôture est ce qui reste. Terminer sur l'appel à l'action et la valeur fondamentale, pas sur un "merci" ni une diapositive de contact. Préparer la dernière phrase aussi soigneusement que la première.
+
 ## Barre de qualité
 
 - Un cadre narratif explicite, une accroche dans les trente premières secondes.
@@ -64,6 +74,8 @@ Tester la ligne sur un tiers, la couper en cas de doute. Un public hostile, un s
 - Règle 10/20/30 respectée.
 - Objections anticipées avec parcimonie.
 - Un appel à l'action précis en clôture, jamais un "merci" seul.
+- Le projet est rattaché à une valeur fondamentale, servie par une preuve concrète.
+- L'ouverture et la clôture sont préparées mot pour mot.
 
 ## Pièges à éviter
 
@@ -71,6 +83,8 @@ Tester la ligne sur un tiers, la couper en cas de doute. Un public hostile, un s
 - La survente et les promesses irréalistes.
 - Le flou de cible, vouloir s'adresser à tout le monde.
 - La coordination défaillante entre associés.
+- La valeur fondamentale plaquée sans preuve.
+- Une clôture faible qui gâche la dernière impression.
 
 ## Sources
 
@@ -87,6 +101,9 @@ Tester la ligne sur un tiers, la couper en cas de doute. Un public hostile, un s
 - Research: When Laughing Becomes Labor, Harvard Business Review, 2025. https://hbr.org/2025/03/research-when-laughing-becomes-labor
 - Pitch Anything, Oren Klaff, McGraw Hill, 2011. https://www.mheducation.com/highered/mhp/product/pitch-anything-innovative-method-presenting-persuading-winning-deal.html
 - 40 Ways to Add Humor to Your Talk or Presentation, Mike Kerr, consulté 2026. https://mikekerr.com/free-articles/humour-in-the-workplace-articles/40-ways-to-add-humor-to-your-talk-or-presentation/
+
+- The serial position effect of free recall, Bennet B. Murdock Jr., Journal of Experimental Psychology, 1962. https://doi.org/10.1037/h0045106
+- When More Pain Is Preferred to Less, Adding a Better End (règle du pic et de la fin), Daniel Kahneman et al., Psychological Science, 1993. https://doi.org/10.1111/j.1467-9280.1993.tb00589.x
 
 ## Publics et exemples
 

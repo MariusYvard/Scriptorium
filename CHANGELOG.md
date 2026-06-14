@@ -11,6 +11,15 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.6.7] - 2026-06-12
+
+Pitch : ancrage dans une valeur fondamentale et soin de la clôture.
+
+### Added
+- genre-pitch.md gagne deux principes. L'ancrage du projet dans une valeur fondamentale universelle (application concrète du recadrage moral, avec un garde-fou éthique contre la valeur plaquée sans preuve). Et le soin de l'ouverture et de la clôture, adossé à l'effet de position sérielle (Murdock, 1962) et à la règle du pic et de la fin (Kahneman et al., 1993). Deux sources primaires ajoutées.
+
+---
+
 ## [0.6.6] - 2026-06-12
 
 Scission du genre présentation en deux playbooks distincts.

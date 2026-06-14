@@ -11,6 +11,18 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.6.5] - 2026-06-12
+
+Module narratif et cadrage de valeur pour le pitch.
+
+### Added
+- references/pitch-narratif.md, boîte à outils rattachée au genre présentation : paradigme narratif (Fisher), sparkline (Duarte) et lecture du keynote iPhone, structures comparées (Freytag, sept points, SCR de Minto et McKinsey, étude de cas), cadrage de valeur (Lakoff, fondations morales de Haidt et recadrage moral de Feinberg et Willer, épisodique contre thématique de FrameWorks, ancrage de Tversky et Kahneman), approche dramaturgique du pitch et éthique du cadrage (rhétorique invitationnelle de Foss et Griffin). Dix-huit sources vérifiées.
+
+### Changed
+- Recadrages de rigueur : la base limbique du Golden Circle est présentée comme une vulgarisation et non une neuroscience établie ; la règle dite des neuf minutes est corrigée en règle des dix minutes (Medina, via Gallo) ; les fondations morales sont données avec exactitude (cinq canoniques, la liberté restant une candidate) ; la recherche sur les émotions faciales est située sur des pitchs de financement participatif.
+
+---
+
 ## [0.6.4] - 2026-06-12
 
 Volet humour ajouté au playbook pitch, traité comme un levier à risque.

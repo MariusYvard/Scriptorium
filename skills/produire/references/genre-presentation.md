@@ -13,6 +13,8 @@ Une idée par diapositive. Le titre de chaque diapositive est une phrase asserti
 - Show and Tell (Roam) : poser des bases communes, amener le problème, projeter une vision, comparer une option lourde à la solution proposée, anticiper les bénéfices.
 - Levée de fonds : problème, solution, marché, modèle économique, traction, équipe, demande.
 
+Pour un enjeu élevé (levée de fonds, débat, présentation exécutive), charger `references/pitch-narratif.md` : sparkline, structures narratives comparées, cadrage de valeur (Lakoff, recadrage moral de Haidt), ancrage, approche dramaturgique et éthique du cadrage.
+
 ## Temporalité et grammaire
 
 Employer le présent de l'indicatif pour la proposition de valeur. Le futur et le conditionnel projettent l'offre dans l'incertitude, le présent affirme la traction et la maîtrise.

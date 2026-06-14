@@ -11,6 +11,18 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.6.6] - 2026-06-12
+
+Scission du genre présentation en deux playbooks distincts.
+
+### Changed
+- Le genre présentation est scindé en deux. Présentation et soutenance (genre-presentation.md) est allégé et centré sur la conception de diapositives, le non-verbal, l'interactivité et le trac. Pitch commercial et levée de fonds (genre-pitch.md) regroupe les cadres narratifs, la règle 10/20/30, le traitement des objections, l'humour, les études de cas et le renvoi au module pitch-narratif. Vingt-cinq genres au total.
+
+### Added
+- references/genre-pitch.md. Le pitch renvoie au genre présentation pour la délivrance non verbale commune, afin d'éviter la redite.
+
+---
+
 ## [0.6.5] - 2026-06-12
 
 Module narratif et cadrage de valeur pour le pitch.

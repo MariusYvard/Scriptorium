@@ -3,7 +3,7 @@ name: controler
 description: >
   Éprouve, contrôle et corrige un écrit avant publication. Six sous-commandes. revue : revue adversariale et contrôle qualité (carte preuve-affirmation, sévérité, verdict, auto-revue cinq dimensions) "révise mon texte", "ce texte est-il prêt", "critique mon écrit". contredire : contradiction la plus forte d'une thèse, modèle de Toulmin, points de rupture "joue l'avocat du diable", "conteste ma thèse", "où est la faille". consensus : vote de trois agents ancré sur le scorecard, profils de discipline "revue par consensus", "double validation". humaniser : détecter et corriger l'empreinte d'un texte généré "ça sonne IA", "enlève les tics d'écriture". audit : noter un PDF ou Word existant (scorecard, contrôles) "audite ce document", "note ce rapport". relecteurs : réponse point par point aux relecteurs et version en modifications suivies. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.6.5"
+  version: "0.6.6"
 ---
 
 # Contrôler (réviser, contredire, valider, humaniser, auditer)

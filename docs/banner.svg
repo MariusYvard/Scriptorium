@@ -23,7 +23,7 @@
   <text class="ink" x="88" y="96" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700">Scriptorium</text>
   <rect class="accent" x="90" y="116" width="72" height="6" rx="3"/>
   <text class="sub" x="90" y="160" font-family="Georgia, 'Times New Roman', serif" font-size="26">Atelier de rédaction de haut niveau, du sujet flou au document remis.</text>
-  <text class="sub" x="90" y="192" font-family="Georgia, 'Times New Roman', serif" font-size="21">Vingt-quatre genres sourcés, quatorze publics, du chercheur au juriste.</text>
+  <text class="sub" x="90" y="192" font-family="Georgia, 'Times New Roman', serif" font-size="21">Vingt-cinq genres sourcés, quatorze publics, du chercheur au juriste.</text>
   <g>
     <rect class="chip" x="90" y="226" width="210" height="58" rx="12"/>
     <text class="chiptext" x="195" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">atelier</text>
@@ -38,5 +38,5 @@
     <text class="flow" x="870" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
   </g>
   <text class="foot" x="90" y="324" font-family="Georgia, serif" font-size="19">cadrer &#8594; sourcer &#8594; rédiger &#8594; réviser &#8594; livrer</text>
-  <text class="foot" x="90" y="350" font-family="Georgia, serif" font-size="17">4 compétences · 24 genres sourcés · 18 scripts déterministes · Word, PDF, HTML, PowerPoint</text>
+  <text class="foot" x="90" y="350" font-family="Georgia, serif" font-size="17">4 compétences · 25 genres sourcés · 18 scripts déterministes · Word, PDF, HTML, PowerPoint</text>
 </svg>

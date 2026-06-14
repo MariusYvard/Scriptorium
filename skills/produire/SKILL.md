@@ -1,9 +1,9 @@
 ---
 name: produire
 description: >
-  Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-quatre genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources et des citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA. figure : schéma SVG (SWOT, PESTEL, BCG). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale. charte : identité visuelle. image : extraire et replacer les images d'un PDF, Word ou PowerPoint "récupère les images de ce PDF". Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
+  Produit le contenu d'un document et fixe ses règles d'écriture. Huit sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-cinq genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer et vérifier des sources et des citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA. figure : schéma SVG (SWOT, PESTEL, BCG). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale. charte : identité visuelle. image : extraire et replacer les images d'un PDF, Word ou PowerPoint "récupère les images de ce PDF". Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
 metadata:
-  version: "0.6.5"
+  version: "0.6.6"
 ---
 
 # Produire (rédiger, sourcer, illustrer, styler)
@@ -26,10 +26,10 @@ Si une action est passée en argument (par exemple `figure`), suivre directement
 
 ## Genres et publics
 
-Vingt-quatre genres couvrent quatorze publics, et chaque playbook (`references/genre-*.md`) porte ses sources.
+Vingt-cinq genres couvrent quatorze publics, et chaque playbook (`references/genre-*.md`) porte ses sources.
 
 - Académique et recherche : rapport scientifique (IMRAD), article, revue de littérature, demande de financement, dissertation, pour le chercheur, l'enseignant et l'étudiant.
-- Entreprise et conseil : long rapport, analyse stratégique, prospective, étude de cas, business plan, étude de marché, proposition commerciale, pour le consultant, le dirigeant et l'entrepreneur.
+- Entreprise et conseil : long rapport, analyse stratégique, prospective, étude de cas, business plan, étude de marché, proposition commerciale, pitch, pour le consultant, le dirigeant et l'entrepreneur.
 - Technique : cahier des charges, documentation technique, rapport d'incident et post-mortem, pour l'ingénieur, le développeur et le chef de projet.
 - Finance : note d'analyse financière et mémo d'investissement, pour l'analyste financier.
 - Public et droit : note de politique publique, rapport d'évaluation, note juridique, conclusions contentieuses, contrat, pour l'analyste géopolitique, l'agent public, le juriste et l'avocat.

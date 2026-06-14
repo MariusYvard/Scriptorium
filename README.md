@@ -5,15 +5,15 @@
 <p align="center">
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg" alt="evals"></a>
   <a href="https://github.com/MariusYvard/Scriptorium/releases"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
-  <img src="https://img.shields.io/badge/version-0.6.5-1f6feb" alt="version 0.6.2">
+  <img src="https://img.shields.io/badge/version-0.6.6-1f6feb" alt="version 0.6.2">
   <img src="https://img.shields.io/badge/licence-MIT-3da639" alt="licence MIT">
   <img src="https://img.shields.io/badge/python-stdlib%20pur-3776ab" alt="python stdlib pur">
-  <img src="https://img.shields.io/badge/genres-24%20sourc%C3%A9s-8957e5" alt="24 genres sourcés">
+  <img src="https://img.shields.io/badge/genres-25%20sourc%C3%A9s-8957e5" alt="24 genres sourcés">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini. Il applique une méthodologie d'ingénierie textuelle, déplace la rigueur vérifiable du jugement du modèle vers dix-huit scripts déterministes, et impose un style maison à directives strictes. Quatre compétences couvrent le cycle de vie complet, du cadrage à la livraison, sur vingt-quatre genres adossés chacun à des sources faisant autorité.
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini. Il applique une méthodologie d'ingénierie textuelle, déplace la rigueur vérifiable du jugement du modèle vers dix-huit scripts déterministes, et impose un style maison à directives strictes. Quatre compétences couvrent le cycle de vie complet, du cadrage à la livraison, sur vingt-cinq genres adossés chacun à des sources faisant autorité.
 
 ## Comment ça marche
 
@@ -29,7 +29,7 @@ Deux moteurs travaillent ensemble. Le modèle tranche le jugement : rédiger, cl
 
 ## Installation
 
-Télécharger `scriptorium-0.6.5.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
+Télécharger `scriptorium-0.6.6.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases), puis l'installer.
 
 - Cowork : ouvrir le fichier `.plugin` et accepter l'installation.
 - Claude Code : `/plugin marketplace add MariusYvard/Scriptorium`, puis installer le plugin `scriptorium`.
@@ -41,7 +41,7 @@ Les compétences apparaissent sous le préfixe `scriptorium:`. Les scripts et le
 | Compétence | Sous-commandes | Rôle |
 | --- | --- | --- |
 | `atelier` | piloter · cadrer · projet | Point d'entrée. Orchestre la production de A à Z, cadre le sujet, garde le contexte du projet entre les sessions. |
-| `produire` | genre · sourcer · revue-litterature · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les vingt-quatre genres, trouve et vérifie les sources, génère figures et tableaux, pose les équations, applique style et charte, extrait les images d'un document source. |
+| `produire` | genre · sourcer · revue-litterature · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les vingt-cinq genres, trouve et vérifie les sources, génère figures et tableaux, pose les équations, applique style et charte, extrait les images d'un document source. |
 | `controler` | revue · contredire · consensus · humaniser · audit · relecteurs | Éprouve un écrit. Revue adversariale, contradiction par le modèle de Toulmin, vote de consensus, détection d'empreinte IA, audit d'un document existant, réponse aux relecteurs. |
 | `livrer` | document · decliner | Met en forme le livrable (Word, PDF, HTML) et le décline par canal (présentation, résumé, abstract, post, communiqué). |
 
@@ -70,7 +70,7 @@ Dix-huit scripts en Python pur déplacent la rigueur du jugement du modèle vers
 
 Le catalogue complet est dans [`scripts/README.md`](scripts/README.md). Un hook lance le linter après chaque écriture et bloque la finalisation tant qu'un écart critique subsiste.
 
-## Vingt-quatre genres sourcés
+## Vingt-cinq genres sourcés
 
 Chaque genre est adossé à des sources faisant autorité, citées dans son playbook (`skills/produire/references/genre-*.md`).
 
@@ -80,7 +80,7 @@ Chaque genre est adossé à des sources faisant autorité, citées dans son play
 - Finance : note d'analyse financière et mémo d'investissement.
 - Public et droit : note de politique publique, rapport d'évaluation (critères OCDE/CAD), note et consultation juridique (IRAC), conclusions et mémoire contentieux, rédaction de contrat.
 - Santé : cas clinique et protocole de recherche (CARE, CONSORT, STROBE, PRISMA).
-- Communication : livre blanc, discours et allocution, présentation (soutenance et pitch).
+- Communication : livre blanc, discours et allocution, présentation (soutenance), pitch (commercial et levée de fonds).
 
 ## Quatorze publics
 
@@ -95,7 +95,7 @@ Chaque genre est adossé à des sources faisant autorité, citées dans son play
 | Communicant et marketing | Livre blanc, article, présentation, étude de marché. |
 | Étudiant | Dissertation et commentaire, mémoire, présentation de soutenance. |
 | Analyste financier | Note d'analyse financière, mémo d'investissement. |
-| Entrepreneur | Business plan, étude de marché, proposition commerciale. |
+| Entrepreneur | Business plan, étude de marché, proposition commerciale, pitch. |
 | Enseignant | Support de cours, dissertation, présentation. |
 | Chef de projet | Cahier des charges, proposition commerciale, rapport d'évaluation. |
 | Agent public | Note de politique publique, rapport d'évaluation. |

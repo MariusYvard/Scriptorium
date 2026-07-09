@@ -7,6 +7,13 @@ mais absentes de la bibliographie (citations pendantes), references listees
 mais jamais citees (orphelines), figures et tableaux definis mais non appeles
 dans le texte, et appels a une figure ou un tableau inexistant.
 
+Compte aussi les tags normalises de lacune ([LACUNE MATERIELLE] et
+[PREUVE FAIBLE], casse stricte) par section, pour exposer une donnee que
+scorecard.py peut consommer comme il consomme deja les autres cles de ce
+module. Un tag bien forme est un signal honnete de l'auteur, jamais une
+penalite : seules les variantes de casse mal formees comptent comme un
+probleme, puisqu'elles echappent silencieusement au reperage par grep.
+
 Usage : python3 traceability.py FICHIER [--format text|json]
 Module importable : analyser(texte) -> dict.
 """
@@ -16,6 +23,12 @@ import re
 import sys
 
 HEAD_REF = re.compile(r'(?im)^\s{0,3}#{1,6}\s*(r[ée]f[ée]rences?|bibliographie|references|bibliography)\b')
+HEAD_SECTION = re.compile(r'(?im)^\s{0,3}(#{1,6})\s+(.+?)\s*$')
+
+TAG_LACUNE_STRICT = re.compile(r'\[LACUNE MATERIELLE\]')
+TAG_PREUVE_STRICT = re.compile(r'\[PREUVE FAIBLE\]')
+TAG_LACUNE_LARGE = re.compile(r'\[LACUNE MATERIELLE\]', re.I)
+TAG_PREUVE_LARGE = re.compile(r'\[PREUVE FAIBLE\]', re.I)
 
 
 def separer_biblio(texte):
@@ -64,6 +77,45 @@ def compter(corps, kind):
     return definis_non_appeles, appeles_non_definis
 
 
+def _sections(texte):
+    """Decoupe le texte en sections par titre Markdown. Retourne une liste de
+    (titre, contenu) ; le contenu avant le premier titre porte le titre
+    "(preambule)"."""
+    matches = list(HEAD_SECTION.finditer(texte))
+    if not matches:
+        return [("(préambule)", texte)]
+    out = []
+    if matches[0].start() > 0:
+        out.append(("(préambule)", texte[:matches[0].start()]))
+    for i, m in enumerate(matches):
+        fin = matches[i + 1].start() if i + 1 < len(matches) else len(texte)
+        out.append((m.group(2).strip(), texte[m.start():fin]))
+    return out
+
+
+def tags_lacune(texte):
+    """Compte les tags [LACUNE MATERIELLE] et [PREUVE FAIBLE], casse stricte,
+    signale les variantes de casse mal formees, et ventile par section."""
+    lacune_stricte = len(TAG_LACUNE_STRICT.findall(texte))
+    preuve_stricte = len(TAG_PREUVE_STRICT.findall(texte))
+    lacune_large = TAG_LACUNE_LARGE.findall(texte)
+    preuve_large = TAG_PREUVE_LARGE.findall(texte)
+    variantes = [t for t in lacune_large if t != "[LACUNE MATERIELLE]"]
+    variantes += [t for t in preuve_large if t != "[PREUVE FAIBLE]"]
+    par_section = {}
+    for titre, contenu in _sections(texte):
+        n_lac = len(TAG_LACUNE_STRICT.findall(contenu))
+        n_pre = len(TAG_PREUVE_STRICT.findall(contenu))
+        if n_lac or n_pre:
+            par_section[titre] = {"lacune_materielle": n_lac, "preuve_faible": n_pre}
+    return {
+        "tags_lacune_materielle": lacune_stricte,
+        "tags_preuve_faible": preuve_stricte,
+        "tags_variantes_mal_formees": variantes,
+        "tags_par_section": par_section,
+    }
+
+
 def analyser(texte):
     corps, biblio = separer_biblio(texte)
     definies = refs_numerotees(biblio)
@@ -72,7 +124,7 @@ def analyser(texte):
     orphelines = sorted(definies - citees) if definies else []
     fig_nc, fig_nd = compter(corps, 'figure')
     tab_nc, tab_nd = compter(corps, 'tableau')
-    return {
+    resultat = {
         "biblio_presente": bool(biblio),
         "references_definies": sorted(definies),
         "citations_pendantes": pendantes,
@@ -82,6 +134,8 @@ def analyser(texte):
         "tableaux_definis_non_appeles": tab_nc,
         "tableaux_appeles_non_definis": tab_nd,
     }
+    resultat.update(tags_lacune(texte))
+    return resultat
 
 
 def problemes(d):
@@ -98,6 +152,8 @@ def problemes(d):
         p.append(f"Tableaux appeles mais non definis : {d['tableaux_appeles_non_definis']}")
     if d["tableaux_definis_non_appeles"]:
         p.append(f"Tableaux definis mais jamais appeles : {d['tableaux_definis_non_appeles']}")
+    if d["tags_variantes_mal_formees"]:
+        p.append(f"Tags de lacune mal formes (casse non conforme) : {d['tags_variantes_mal_formees']}")
     return p
 
 
@@ -114,10 +170,16 @@ def main(argv=None):
     else:
         print("Tracabilite")
         print(f"  biblio presente : {d['biblio_presente']} | references definies : {len(d['references_definies'])}")
+        print(f"  tags [LACUNE MATERIELLE] : {d['tags_lacune_materielle']} | "
+              f"tags [PREUVE FAIBLE] : {d['tags_preuve_faible']}")
         if not p:
             print("  Aucun probleme de tracabilite.")
         for x in p:
             print(f"  - {x}")
+        if d["tags_par_section"]:
+            print("  Repartition par section :")
+            for titre, c in d["tags_par_section"].items():
+                print(f"    {titre} : lacune={c['lacune_materielle']} preuve_faible={c['preuve_faible']}")
     return 1 if p else 0
 
 

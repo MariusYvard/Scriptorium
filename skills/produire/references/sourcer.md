@@ -12,6 +12,8 @@ Partir de la commande de preuve issue du cadrage : chaque sous-partie a un messa
 
 ## 2. Chercher
 
+Si l'utilisateur fournit sa propre bibliothèque (export BibTeX, Zotero), la consulter en premier : voir `references/corpus-utilisateur.md`. Le corpus personnel se crible aux mêmes critères que toute source externe, la recherche vient combler les manques, rien n'en est écarté en silence.
+
 Utiliser la recherche web pour les faits du monde présent (chiffres, dates, acteurs en poste, prix, état d'une loi). Ne jamais répondre de mémoire sur un fait susceptible d'avoir changé. Si une base de connaissances ou un gestionnaire de références est connecté, l'interroger aussi, sans en dépendre.
 
 ## 3. Pondérer les sources
@@ -24,6 +26,8 @@ Classer chaque source par fiabilité, puis par récence. Voir `references/ponder
 - Source périmée ou invérifiable : exclue.
 
 Facteur de récence : une donnée de moins de six mois prime, une donnée de plus de deux ans est traitée avec prudence sauf si elle reste la référence officielle.
+
+Pour une classification plus fine (sept niveaux de preuve, fiche de notation A-F sur six critères, ajustement par domaine), voir `references/hierarchie-preuve.md`. La note globale d'une source est son critère le plus faible, jamais une moyenne.
 
 ## 4. Trianguler
 
@@ -48,6 +52,8 @@ Relier chaque affirmation majeure à sa preuve dans un tableau de contrôle. C'e
 
 Appliquer la norme demandée (APA 7 ou Vancouver pour l'académique, notes ou références numérotées sinon). Voir `references/formats-citation.md`. Nettoyer chaque URL : retirer les paramètres de suivi (utm_ et autres). Vérifier que chaque lien et chaque DOI résout bien vers la ressource citée.
 
+Chaque citation porte une ancre : une citation exacte de 25 mots au plus, ou une localisation (page, section, paragraphe), portée par le champ `annote` ou `note` du BibTeX. Une citation sans ancre est un signal à corriger, pas une simple formalité : elle rend vérifiable le lien affirmation-source, pas seulement l'existence de la source. Voir `scripts/citations.py`.
+
 ## Vérification déterministe
 
 Avant de livrer la bibliographie, la passer au script de vérification. Il retire les paramètres de suivi, repère les doublons et contrôle la syntaxe des DOI.
@@ -57,6 +63,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify-sources.py FICHIER
 ```
 
 La résolution réseau des liens est optionnelle (`--check-links`). Corriger les URL signalées avant de formater la bibliographie.
+
+Pour une vérification approfondie de l'existence des références (triangulation Crossref, OpenAlex, Semantic Scholar, verdicts gradués, signaux de contamination), utiliser `--reseau` et voir `references/integrite-sources.md`. Une référence qui ne se vérifie pas ne se cite pas.
 
 Pour une bibliographie au format BibTeX, employer le moteur de citations : il formate en APA 7 ou Vancouver, déduplique par DOI, et peut récupérer une référence depuis son DOI (réseau, optionnel).
 

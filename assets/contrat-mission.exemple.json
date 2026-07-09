@@ -1,0 +1,75 @@
+{
+  "mission": "rapport-analyse-strategique-marche-x",
+  "genre": "analyse-strategique",
+  "date_creation": "2026-07-08",
+  "dimensions": [
+    {"nom": "Preuve et rigueur", "description": "Chaque affirmation centrale est etayee par une source datee et verifiee"},
+    {"nom": "Structure et clarte", "description": "Le plan valide au cadrage est respecte, la progression va du connu vers l'inconnu"},
+    {"nom": "Style maison", "description": "Conformite aux directives strictes : lexique, ponctuation, registre"},
+    {"nom": "Perimetre", "description": "Le document tient le perimetre valide au cadrage, sans derive de contenu"}
+  ],
+  "conditions_echec": [
+    {
+      "id": "F1",
+      "severite": "critique",
+      "quantificateur": "au moins un",
+      "description": "Une affirmation centrale n'est appuyee par aucune source verifiee",
+      "action": "bloquer la finalisation, retour a produire (sourcer)"
+    },
+    {
+      "id": "F2",
+      "severite": "critique",
+      "quantificateur": "au moins un",
+      "description": "Une reference citee est fabriquee ou reste inverifiable apres controle",
+      "action": "bloquer la finalisation, retirer ou remplacer la reference"
+    },
+    {
+      "id": "F3",
+      "severite": "majeur",
+      "quantificateur": "au moins un",
+      "description": "Une section obligatoire du genre analyse-strategique est absente",
+      "action": "signaler, completer avant la revision"
+    },
+    {
+      "id": "F4",
+      "severite": "majeur",
+      "quantificateur": "majorite",
+      "description": "Un ecart de style est juge majeur par au moins deux voix du consensus",
+      "action": "signaler, corriger avant finalisation"
+    },
+    {
+      "id": "F5",
+      "severite": "majeur",
+      "quantificateur": "au moins un",
+      "description": "Le document depasse le perimetre valide au cadrage",
+      "action": "signaler, encadrer ou retirer le contenu hors perimetre"
+    },
+    {
+      "id": "F6",
+      "severite": "mineur",
+      "quantificateur": "majorite",
+      "description": "La longueur de phrase ou de paragraphe reste monotone sur une section entiere",
+      "action": "signaler, corriger si le temps le permet"
+    },
+    {
+      "id": "F7",
+      "severite": "mineur",
+      "quantificateur": "au moins un",
+      "description": "Un tic d'ecriture caracteristique d'un texte genere est detecte",
+      "action": "signaler, corriger a la marge"
+    },
+    {
+      "id": "F8",
+      "severite": "signal",
+      "quantificateur": "au moins un",
+      "description": "Un preprint recent cite reste absent de tous les index bibliographiques consultes",
+      "action": "noter, verifier si une version revue existe avant la finalisation"
+    }
+  ],
+  "verdict_reserve": "VERDICT",
+  "agregation": {
+    "accepter": "aucune condition critique declenchee, au plus deux conditions majeures non resolues",
+    "reviser": "trois conditions majeures non resolues ou plus, ou une condition critique deja corrigee en cours de revue",
+    "refuser": "au moins une condition critique non resolue au moment du verdict"
+  }
+}

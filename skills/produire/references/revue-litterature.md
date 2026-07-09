@@ -26,15 +26,19 @@ Une ligne par fait, une colonne d'attribution. Plusieurs sources qui concordent 
 | ... | [3], [7] | élevé | concordance |
 ```
 
+Pour une matrice source x thème avec des seuils de convergence explicites (fort, modéré, faible, contesté, lacune), voir `references/discipline-synthese.md`.
+
 ## 4. Synthétiser par thème
 
 Organiser par thème, pas par source. Chaque thème regroupe les faits convergents, signale les désaccords entre sources, et conclut sur l'état des connaissances. Ne pas juxtaposer des résumés d'articles, c'est une synthèse, pas une liste.
+
+Éviter les trois anti-patterns nommés dans `references/discipline-synthese.md`, chacun avec un exemple bon et mauvais : le résumé séquentiel, le cherry-picking, la contradiction non résolue laissée sans arbitrage. Typer chaque manque identifié selon les cinq catégories de lacune du même fichier (empirique, méthodologique, théorique, temporelle, géographique) plutôt que de le mentionner vaguement.
 
 ## Format de sortie
 
 1. Le schéma de sélection PRISMA (identifiées, écartées, retenues).
 2. Le tableau de preuves dédupliqué, attribué.
-3. La synthèse thématique, avec les zones de désaccord et les lacunes.
+3. La synthèse thématique, avec les zones de désaccord et les lacunes typées.
 4. La bibliographie formatée (voir `produire` (sourcer)).
 
 ## Règles

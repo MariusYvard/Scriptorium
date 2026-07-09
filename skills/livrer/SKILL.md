@@ -1,9 +1,9 @@
 ---
 name: livrer
 description: >
-  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF ou HTML selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS dérivé de la charte graphique pour le HTML "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "finalise le document". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, résumé d'une page, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
+  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF ou HTML selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS dérivé de la charte graphique pour le HTML "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "finalise le document". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.6.7"
+  version: "0.7.0"
 ---
 
 # Livrer (mettre en forme, décliner)
@@ -15,7 +15,7 @@ Transforme un texte validé en livrable abouti, puis le décline par canal. N'in
 Si une action est passée en argument (par exemple `decliner`), suivre directement sa section. Sinon, déduire l'action de la demande.
 
 - document : mise en forme aboutie en Word, PDF ou HTML selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes numérotées, résumé ou abstract). Charger `references/document.md`.
-- decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, résumé d'une page, abstract, post professionnel, communiqué). Charger `references/decliner.md`.
+- decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué). Charger `references/decliner.md`.
 
 ## Formats de sortie
 

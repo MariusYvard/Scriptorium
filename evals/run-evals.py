@@ -174,6 +174,143 @@ _sans_src = sorted(os.path.basename(f) for f in _genres if "## Sources" not in o
 verifier("genres : chaque playbook porte une section Sources", not _sans_src, f"sans={_sans_src}")
 
 
+# --- v0.7.0 : integrite des sources, comite de revue, atelier ---
+
+ctmp = charger("check-temporel.py", "check_temporel")
+import re as _re
+import json as _json
+
+# Ancres de citation (fixture a double usage)
+_bib = _re.search(r"```bibtex\n(.*?)```", lire("citations-sans-ancre.md"), _re.S).group(1)
+_ent = cita.parser_bibtex(_bib)
+_ra = cita.rapport_ancrage(_ent)
+verifier("citations : la fixture d'ancrage porte 3 entrees", len(_ent) == 3, f"n={len(_ent)}")
+verifier("citations : l'entree sans ancre est seule reperee",
+         _ra["sans_ancre"] == ["orphan2024"], f"sans={_ra['sans_ancre']}")
+for _s in ("apa", "vancouver", "chicago", "mla", "ieee"):
+    verifier(f"citations : format {_s} rend chaque entree",
+             all(cita.FORMATS[_s](e) for e in _ent))
+
+# Tags de lacune normalises (fixture a double usage)
+_dt = trac.analyser(lire("lacunes-tagguees.md"))
+verifier("traceability : 2 tags LACUNE MATERIELLE comptes",
+         _dt["tags_lacune_materielle"] == 2, f"n={_dt['tags_lacune_materielle']}")
+verifier("traceability : 1 tag PREUVE FAIBLE compte",
+         _dt["tags_preuve_faible"] == 1, f"n={_dt['tags_preuve_faible']}")
+verifier("traceability : la variante mal casse est signalee",
+         len(_dt["tags_variantes_mal_formees"]) == 1, f"v={_dt['tags_variantes_mal_formees']}")
+
+# Verification temporelle
+_ct = ctmp.analyser("Le lancement a eu lieu en 2099.")
+verifier("temporel : futur presente comme passe detecte",
+         any(c["type"] == "futur-au-passe" for c in _ct["constats"]))
+_ct2 = ctmp.analyser("La reforme de 2022 a permis la croissance de 2018.")
+verifier("temporel : inversion causale detectee",
+         any(c["type"] == "inversion-causale" for c in _ct2["constats"]))
+_ct3 = ctmp.analyser("L'etude de 2020 precede la synthese publiee en 2024.")
+verifier("temporel : chronologie saine sans faux positif",
+         not any(c["type"] in ("futur-au-passe", "inversion-causale") for c in _ct3["constats"]),
+         f"constats={[c['type'] for c in _ct3['constats']]}")
+
+# Scorecard : plancher par axe et decision editoriale
+_scp = score.evaluer(lire("style-mauvais.md"))
+verifier("scorecard : decision editoriale rendue", "decision_editoriale" in _scp)
+verifier("scorecard : un axe effondre plafonne la decision a refus",
+         _scp["decision_editoriale"]["decision"] == "refus"
+         and "Style" in _scp["decision_editoriale"]["axes_effondres"],
+         f"decision={_scp['decision_editoriale']}")
+
+# Trajectoire entre deux revues (fixtures a double usage)
+_tj = score.trajectoire(_json.loads(lire("rapport-regression-avant.json")),
+                        _json.loads(lire("rapport-regression-apres.json")))
+verifier("trajectoire : regression d'axe detectee sous -3",
+         "Style" in _tj["regressions"], f"reg={_tj['regressions']}")
+verifier("trajectoire : delta total negatif rapporte",
+         _tj["delta_total"] < 0, f"delta={_tj['delta_total']}")
+
+# Journal de projet : hash, transitions, reprise unique
+_dp = proj.charger("/tmp/inexistant_scriptorium_v070.json")
+verifier("project : hash de continuite deterministe sur 12 hexadecimaux",
+         proj._hash_continuite(_dp.get("journal", [])) == proj._hash_continuite(_dp.get("journal", []))
+         and len(proj._hash_continuite([])) == 12)
+proj.changer_etat(_dp, "cadrage", "en_cours")
+try:
+    proj.changer_etat(_dp, "redaction", "termine")
+    _illegale = False
+except ValueError:
+    _illegale = True
+verifier("project : transition illegale refusee", _illegale)
+proj.poser_frontiere(_dp, "fin de cadrage")
+_hf = _dp["journal"][-1]["hash"]
+proj.reprendre(_dp, _hf)
+try:
+    proj.reprendre(_dp, _hf)
+    _double = False
+except ValueError:
+    _double = True
+verifier("project : double reprise du meme hash refusee", _double)
+
+# Friction des outrepassements (3 crans)
+_ok1 = True
+try:
+    proj.valider_justification(1, None)
+except ValueError:
+    _ok1 = False
+verifier("friction : cran 1 passe sans justification", _ok1)
+try:
+    proj.valider_justification(2, "")
+    _cran2 = False
+except ValueError:
+    _cran2 = True
+verifier("friction : cran 2 exige une justification", _cran2)
+try:
+    proj.valider_justification(3, "trop court")
+    _cran3 = False
+except ValueError:
+    _cran3 = True
+verifier("friction : cran 3 exige 100 caracteres", _cran3)
+
+# Lint de prompt : les fichiers du plugin comme donnees
+for _skill in ("atelier", "produire", "controler", "livrer"):
+    _p = os.path.join(ICI, "..", "skills", _skill, "SKILL.md")
+    _txt = open(_p, encoding="utf-8").read()
+    _refs = set(_re.findall(r"`references/([a-z0-9-]+\.md)`", _txt))
+    _manq = sorted(r for r in _refs
+                   if not os.path.isfile(os.path.join(ICI, "..", "skills", _skill, "references", r)))
+    verifier(f"routeur {_skill} : chaque reference citee existe", not _manq, f"manquantes={_manq}")
+
+for _a in sorted(_glob.glob(os.path.join(ICI, "..", "agents", "*.md"))):
+    _t = open(_a, encoding="utf-8").read()
+    _fm = _t.split("---")[1] if _t.startswith("---") else ""
+    verifier(f"agent {os.path.basename(_a)} : frontmatter name et description",
+             "name:" in _fm and "description:" in _fm)
+
+_perimes = []
+for _f in (_glob.glob(os.path.join(ICI, "..", "agents", "*.md"))
+           + _glob.glob(os.path.join(ICI, "..", "skills", "*", "references", "*.md"))
+           + _glob.glob(os.path.join(ICI, "..", "skills", "*", "SKILL.md"))):
+    _t = open(_f, encoding="utf-8").read()
+    for _old in ("skills/rediger/", "skills/reviser/", "skills/style-maison/"):
+        if _old in _t:
+            _perimes.append((os.path.basename(_f), _old))
+verifier("lint de prompt : aucun chemin de competence perime", not _perimes, f"{_perimes}")
+
+_avec_sources = [
+    ("produire", ("integrite-sources.md", "hierarchie-preuve.md", "corpus-utilisateur.md",
+                  "discipline-synthese.md", "credit-divulgation.md", "veille.md")),
+    ("controler", ("contrat-notation.md", "lettre-decision.md", "biais-relecteur.md",
+                   "sante-dialogue.md", "sophismes-causalite.md", "plagiat.md")),
+    ("atelier", ("cadre-finer.md", "boite-socratique.md")),
+]
+_sans = []
+for _skill, _fichiers in _avec_sources:
+    for _n in _fichiers:
+        _p = os.path.join(ICI, "..", "skills", _skill, "references", _n)
+        if "## Sources" not in open(_p, encoding="utf-8").read():
+            _sans.append(_n)
+verifier("lint de prompt : chaque nouvelle reference sourcee porte sa section Sources",
+         not _sans, f"sans={_sans}")
+
 def main():
     passes = sum(1 for _, ok, _ in RESULTATS if ok)
     total = len(RESULTATS)

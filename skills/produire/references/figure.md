@@ -32,7 +32,21 @@ TYPE : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`. Le SVG est portable. 
 
 Si une charte graphique existe (`charte-graphique.json` dans le dossier de travail, voir la compétence `produire` (charte)), l'ajouter avec `--theme charte-graphique.json`. La figure suit alors l'identité visuelle : couleurs, police, filet d'accent, filigrane. Toutes les figures d'un même document partagent la charte.
 
-## 4. Appliquer le regard critique qualitatif
+## 4. Vérifier le rendu visuellement
+
+Avant toute livraison, ouvrir le fichier de figure produit (le SVG ou son export PNG) et l'examiner, comme `produire` (image) le fait déjà pour les images extraites d'un document existant. L'audit déterministe de l'étape 2 ne voit que les données, jamais le rendu final : cette étape regarde l'objet réellement livré.
+
+Vérifier cinq points sur le rendu ouvert.
+
+1. Chaque axe porte un titre et son unité, pas seulement une échelle de chiffres nus.
+2. La légende est complète : tout élément codé par couleur, forme ou motif y figure.
+3. Le texte reste lisible à la taille réelle d'insertion, pas seulement agrandi à l'écran pendant la production.
+4. La figure correspond au passage du texte qui la cite : mêmes valeurs, même conclusion, aucun écart entre ce que dit le texte et ce que montre la figure.
+5. Le contraste entre le texte, les éléments graphiques et le fond reste suffisant à la lecture.
+
+Toute figure qui échoue un seul de ces points est refaite avant livraison, jamais livrée avec une réserve mentionnée en passant.
+
+## 5. Appliquer le regard critique qualitatif
 
 L'audit déterministe ne voit pas tout. Compléter par une lecture humaine, à l'oeil, sur cinq points.
 
@@ -44,13 +58,13 @@ L'audit déterministe ne voit pas tout. Compléter par une lecture humaine, à l
 
 Voir la liste complète dans `references/figures-catalogue.md`.
 
-## 5. Insérer
+## 6. Insérer
 
 Numéroter la figure, lui donner un titre et citer sa source. La placer près du passage qu'elle illustre. Renvoyer à elle dans le texte (« voir figure 2 »).
 
 ## Format de sortie
 
-Le fichier SVG (ou PNG), le rapport d'audit déterministe, et la note de regard critique qualitatif sur les cinq points. Si la figure illustre une affirmation, vérifier que la donnée de la figure correspond à la carte preuve-affirmation.
+Le fichier SVG (ou PNG), le rapport d'audit déterministe, la vérification visuelle du rendu (étape 4) et la note de regard critique qualitatif sur les cinq points de l'étape 5. Si la figure illustre une affirmation, vérifier que la donnée de la figure correspond à la carte preuve-affirmation.
 
 ## Règles
 
@@ -59,3 +73,4 @@ Le fichier SVG (ou PNG), le rapport d'audit déterministe, et la note de regard 
 3. La couleur n'est jamais le seul porteur de sens.
 4. Une figure, un message. Résumer ce qui déborde.
 5. La donnée d'une figure est sourcée comme une affirmation du texte.
+6. Toute figure qui échoue la vérification visuelle du rendu est refaite, jamais livrée avec une réserve.

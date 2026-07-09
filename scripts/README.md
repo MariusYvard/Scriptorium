@@ -1,6 +1,6 @@
 # Scripts déterministes de Scriptorium
 
-Dix-huit outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Dix-neuf outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
@@ -17,13 +17,13 @@ Code de sortie 1 si un constat critique est présent (ou majeur avec `--strict`)
 
 ## verify-sources.py
 
-Extrait les URL et les DOI, retire les paramètres de suivi, repère les doublons, contrôle la syntaxe des DOI. La résolution réseau est optionnelle.
+Extrait les URL et les DOI, retire les paramètres de suivi, repère les doublons, contrôle la syntaxe des DOI. La résolution réseau est optionnelle, en deux niveaux.
 
 ```
-python3 verify-sources.py FICHIER [--format text|json] [--check-links]
+python3 verify-sources.py FICHIER [--format text|json] [--check-links] [--reseau]
 ```
 
-`--check-links` est désactivé par défaut. Code de sortie 1 si une URL est à nettoyer, un doublon existe, un DOI est douteux ou (avec `--check-links`) un lien ne résout pas.
+`--check-links` vérifie que les URL résolvent. `--reseau` va plus loin : il triangule chaque DOI contre Crossref, OpenAlex et Semantic Scholar (similarité de titre, seuil 0,70), rend un verdict gradué par référence (verifie, plausible, inverifiable, fabrique) et signale les sources potentiellement contaminées (année récente, absente des index interrogés). Un index qui ne répond pas est omis du verdict, jamais compté contre une référence. OpenAlex exige une clé (`--openalex-cle` ou `OPENALEX_API_KEY`), sinon il est simplement omis. Code de sortie 1 si une URL est à nettoyer, un doublon existe, un DOI est douteux ou (réseau actif) un lien ne résout pas.
 
 ## readability.py
 
@@ -62,7 +62,7 @@ Formats de données attendus :
 
 ## traceability.py
 
-Boucle la traçabilité : références citées mais absentes de la bibliographie, références listées mais jamais citées, figures et tableaux définis mais non appelés, appels à un objet inexistant.
+Boucle la traçabilité : références citées mais absentes de la bibliographie, références listées mais jamais citées, figures et tableaux définis mais non appelés, appels à un objet inexistant. Compte aussi les tags de lacune normalisés `[LACUNE MATERIELLE]` et `[PREUVE FAIBLE]` (casse stricte), ventilés par section, et signale toute variante mal formée.
 
 ```
 python3 traceability.py FICHIER [--format text|json]
@@ -86,11 +86,22 @@ python3 numbers.py FICHIER [--format text|json]
 
 ## citations.py
 
-Lit du BibTeX, formate en APA 7 ou Vancouver, déduplique par DOI. La récupération d'une référence depuis un DOI (Crossref) est réseau et optionnelle.
+Lit du BibTeX, formate en APA 7, Vancouver, Chicago (auteur-date), MLA ou IEEE, déduplique par DOI, bascule une bibliographie d'un format à l'autre. Chaque entrée peut porter une ancre (champ `note` ou `annote` : citation exacte de 25 mots au plus, ou localisation précise type `p. 12`, `section 3.2`) ; le rapport d'ancrage liste les entrées sans ancre exploitable. La récupération d'une référence depuis un DOI (Crossref) est réseau et optionnelle.
 
 ```
-python3 citations.py FICHIER.bib --to apa|vancouver [--dedupe]
+python3 citations.py FICHIER.bib --to apa|vancouver|chicago|mla|ieee [--dedupe] [--exiger-ancres]
+python3 citations.py FICHIER.bib --bascule apa ieee
 python3 citations.py --doi 10.xxxx/yyyy
+```
+
+`--exiger-ancres` renvoie un code de sortie 1 si une entrée n'a pas d'ancre.
+
+## check-temporel.py
+
+Détecte cinq défaillances chronologiques qui survivent à une relecture humaine : date future présentée comme passée, version citée avant sa date connue (glossaire `--versions` optionnel), inversion causale (la cause datée après son effet dans la même phrase), langage à péremption (« le plus récent », « à ce jour », à ancrer par une date), chaîne de dates incohérente dans une référence. Consultatif par défaut, bloquant avec `--strict`.
+
+```
+python3 check-temporel.py FICHIER [--date-reference AAAA-MM-JJ] [--versions versions.json] [--format text|json] [--strict]
 ```
 
 ## diff-versions.py
@@ -103,10 +114,11 @@ python3 diff-versions.py ANCIEN.md NOUVEAU.md [--format text|json]
 
 ## scorecard.py
 
-Agrège les sorties des scripts en une note de 0 à 100 sur cinq axes (style, sources, traçabilité, terminologie et nombres, lisibilité), pénalités fixes, calcul montré, verdict.
+Agrège les sorties des scripts en une note de 0 à 100 sur cinq axes (style, sources, traçabilité, terminologie et nombres, lisibilité), pénalités fixes, calcul montré, verdict. Un plancher par axe plafonne la décision éditoriale : un axe effondré bloque malgré un bon total. La décision se rend sur quatre valeurs (accepter, revision mineure, revision majeure, refus). Le mode trajectoire compare deux rapports JSON (revue puis re-revue) : delta par axe, régression signalée sous -3.
 
 ```
-python3 scorecard.py FICHIER [--format text|json]
+python3 scorecard.py FICHIER [--format text|json] [--plancher N]
+python3 scorecard.py --trajectoire AVANT.json APRES.json
 ```
 
 ## ai-fingerprint.py
@@ -144,10 +156,14 @@ python3 plan-check.py PLAN.json DOCUMENT.md [--format text|json]
 
 ## project.py
 
-Mémoire de projet : un fichier projet.json conserve le brief, la charte, le glossaire, les sources, le profil et le plan.
+Mémoire de projet : un fichier projet.json conserve le brief, la charte, le glossaire, les sources, le profil et le plan, plus un journal de mission append-only (entrées horodatées, jamais modifiées). Les frontières portent un hash de continuité (SHA-256 du journal, 12 hexadécimaux) et la reprise se fait par ce hash, une seule fois chacune. Les étapes suivent cinq états à transitions vérifiées, les artefacts des versions strictement croissantes, la configuration de génération se documente sans promettre le rejeu.
 
 ```
 python3 project.py init | show | get CLE | set CLE VALEUR
+python3 project.py etape NOM ETAT [--motif TEXTE]
+python3 project.py artefact NOM | frontiere "LIBELLE" | reprendre HASH
+python3 project.py reproductibilite --plugin-version X.Y.Z --modele NOM
+python3 project.py status
 ```
 
 ## audit-doc.py
@@ -169,8 +185,8 @@ python3 images.py manifest DIR
 
 ## tools/check.py
 
-Porte d'intégration continue éditoriale : passe ou échoue un ou plusieurs documents contre un seuil de scorecard.
+Porte d'intégration continue éditoriale : passe ou échoue un ou plusieurs documents contre un seuil de scorecard. Passer outre exige une friction croissante (avertissement, puis justification, puis justification de cent caractères au moins) et chaque passage outre est journalisé.
 
 ```
-python3 tools/check.py "chemin/**/*.md" --seuil 85
+python3 tools/check.py "chemin/**/*.md" --seuil 85 [--outrepasser] [--justification "..."] [--projet projet.json]
 ```

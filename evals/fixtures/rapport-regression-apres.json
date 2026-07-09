@@ -1,0 +1,43 @@
+{
+  "_double_usage": "Fixture a double usage, seconde moitie de la paire (voir rapport-regression-avant.json pour le contexte complet et l'attente du test de trajectoire). Sortie reelle de scripts/scorecard.py --format json sur la meme fixture apres degradation volontaire : lexique promotionnel banni, virgule d'Oxford, URL avec parametres de suivi, sigle non defini.",
+  "axes": {
+    "Style": {
+      "score": 0,
+      "deductions": [
+        "-20 ecart critique de style (x4)",
+        "-3 ecart majeur (x1)",
+        "-2 tic d'ecriture IA (x1)"
+      ]
+    },
+    "Sources": {
+      "score": 16,
+      "deductions": [
+        "-4 URL a nettoyer (x1)"
+      ]
+    },
+    "Tracabilite": {
+      "score": 20,
+      "deductions": []
+    },
+    "Terminologie et nombres": {
+      "score": 16,
+      "deductions": [
+        "-4 sigle non defini (x1)"
+      ]
+    },
+    "Lisibilite": {
+      "score": 20,
+      "deductions": []
+    }
+  },
+  "total": 72,
+  "verdict": "A reviser",
+  "decision_editoriale": {
+    "decision": "refus",
+    "plancher": 8,
+    "axes_effondres": [
+      "Style"
+    ],
+    "commentaire_sous_type": "sous-type propose : a retravailler en profondeur (axe effondre sous plancher/2 : Style)"
+  }
+}

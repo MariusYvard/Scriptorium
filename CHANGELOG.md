@@ -11,6 +11,26 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.7.0] - 2026-07-09
+
+Intégrité des sources, comité de revue durci, journal de projet. Quarante-sept mécanismes réimplémentés à neuf depuis l'étude du plugin academic-research-skills (idées seulement, licence CC BY-NC 4.0 respectée, standards cités depuis leurs sources primaires).
+
+### Added
+- Intégrité des sources : triangulation multi-index en option réseau (Crossref, OpenAlex, Semantic Scholar, similarité de titre 0,70) avec verdicts gradués par référence (vérifié, plausible, invérifiable, fabriqué) et signaux de contamination ; taxonomie des citations fabriquées ; ancre par citation dans le BibTeX (citation exacte ou localisation, `--exiger-ancres`) ; tags de lacune normalisés `[LACUNE MATERIELLE]` et `[PREUVE FAIBLE]` comptés par traceability.py ; nouveau script check-temporel.py (cinq défaillances chronologiques, consultatif par défaut) ; hiérarchie de preuve à sept niveaux et fiche source A-F ; logique GRADE générale ; chronologie des sources et garde anti-anachronisme ; corpus utilisateur pré-criblé (BibTeX, Zotero) avec traçabilité inclus/exclus. Références : integrite-sources.md, hierarchie-preuve.md, corpus-utilisateur.md, discipline-synthese.md.
+- Comité de revue : contrat de notation préenregistré en aveugle pour le consensus (contrat-notation.md), anti-ancrage entre les voix et vérification croisée optionnelle par un second modèle ; discipline de concession du contradicteur (réfutations notées 1-5, jamais deux concessions consécutives, sévérité DA-CRITIQUE, détection du verrouillage de cadrage) ; plancher par axe et décision éditoriale à quatre valeurs dans scorecard.py, mode trajectoire entre deux revues (régression sous -3 = point de contrôle) ; lettre de décision (lettre-decision.md) ; biais et lentilles du relecteur (biais-relecteur.md) ; santé du dialogue anti-complaisance (sante-dialogue.md) ; 28 sophismes en six familles, critères de Bradford Hill et statuts épistémiques (sophismes-causalite.md) ; protocole d'originalité et d'auto-plagiat (plagiat.md) ; statuts fermés par remarque de relecteur dont la limite assumée, registre d'engagements, revue externe réelle (relecteurs.md étendu).
+- Atelier : cadre FINER (cadre-finer.md) et boîte socratique (boite-socratique.md) au cadrage ; aiguilleur des demandes (aiguilleur.md) ; douze chemins de défaillance avec récupération (chemins-defaillance.md) ; registre des modes sur le spectre fidélité-originalité (registre-modes.md) ; schémas de passation entre sous-commandes (passations.md) ; renforcement aux transitions et bilan de fin de mission avec auto-audit dans piloter.
+- Journal de projet : project.py passe en journal append-only horodaté (frontières à hash de continuité SHA-256, reprise par hash à usage unique, décision en attente reposée, états d'étapes à transitions vérifiées, versions d'artefacts strictement croissantes, tableau de bord `status`, bloc de reproductibilité honnête). Compatibilité de lecture des projet.json antérieurs conservée.
+- Production : calibration d'un style personnel sur échantillons, subordonnée au style maison (style.md, mode 4) ; formats Chicago, MLA et IEEE et bascule entre formats dans citations.py ; déclarations CRediT, financement et usage de l'IA avec politiques d'éditeurs vérifiées et datées (credit-divulgation.md) ; résumé bilingue FR/EN aligné (decliner.md) ; vérification visuelle du rendu des figures (figure.md) ; nouvelle sous-commande produire veille (veille.md : requêtes par plateforme, digest, rétractations via le jeu de données Retraction Watch chez Crossref) ; contrat rédacteur-évaluateur par mission (contrat-mission.md, exemple JSON dans assets/).
+- Outillage : friction à trois crans sur les passages outre de tools/check.py, journalisés et non supprimables ; glossaire transverse de sévérité (severite.md) ; principes de conception documentés (docs/CONCEPTION.md : mesure avant politique, dégradation gracieuse, jamais de moyenne qui masque un désaccord) ; contrôle de fraîcheur des sources normatives documenté (docs/CI.md) ; quatre fixtures d'evals à double usage (test et exemple de référence) ; harnais étendu d'une trentaine de cas dont un lint de prompt (références citées existantes, frontmatters d'agents, chemins périmés, sections Sources).
+
+### Changed
+- Les agents contradicteur, controle-qualite, verificateur-faits et synthese-sources intègrent les nouvelles grilles (concession, lentilles, verdicts gradués, statuts épistémiques, hiérarchie de preuve). Les routeurs des quatre compétences référencent les nouvelles sous-commandes et références transverses.
+
+### Fixed
+- Chemins périmés hérités de la réorganisation 0.6.0 dans les agents redacteur (skills/rediger/) et controle-qualite (skills/reviser/, skills/style-maison/), désormais couverts par un cas d'eval dédié.
+- Virgules d'Oxford résiduelles dans consensus.md et contredire.md.
+
+---
 ## [0.6.7] - 2026-06-12
 
 Pitch : ancrage dans une valeur fondamentale et soin de la clôture.

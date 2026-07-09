@@ -28,9 +28,15 @@ Restreindre le sujet large en un objet traitable. Passer le sujet par cinq filtr
 
 ## 3. Formuler la problématique
 
-Transformer le sujet filtré en une question fermée qui met en lumière une tension réelle. Une bonne problématique appelle une démonstration, pas une description. Tester la formulation : si la réponse tient en un fait connu, la question est trop faible. Si elle ouvre un débat ou un arbitrage, elle tient.
+Transformer le sujet filtré en une question fermée qui pose une tension réelle. Une bonne problématique appelle une démonstration, pas une description. Tester la formulation : si la réponse tient en un fait connu, la question est trop faible. Si elle ouvre un débat ou un arbitrage, elle tient.
 
-## 4. Choisir le genre
+Si le sujet reste flou après le brief et les cinq filtres, ou si l'utilisateur demande explicitement à être guidé plutôt que de répondre à une liste de questions, charger `boite-socratique.md` pour un dialogue guidé (contrôle de préparation, cristallisation de la thèse en trois couches, extraction incrémentale d'acquis) avant de revenir formuler la problématique ici.
+
+## 4. Qualifier le sujet (cadre FINER)
+
+Avant de choisir le genre et d'investir dans un plan, noter le sujet sur les cinq critères du cadre FINER (faisable, intéressant, novateur, éthique, pertinent). Voir `cadre-finer.md` pour la définition de chaque critère, ses paliers et le seuil d'engagement. Sous le seuil, resserrer le sujet, changer d'angle ou renoncer avant de continuer, plutôt que de découvrir l'infaisabilité en plein sourcing ou en pleine rédaction.
+
+## 5. Choisir le genre
 
 Apparier la cible au bon genre, qui fixe la structure standard et les normes attendues. Consulter au besoin `methodologie-transverse.md` et la matrice comparative des genres dans le playbook concerné de `rediger/references/`.
 
@@ -41,7 +47,7 @@ Apparier la cible au bon genre, qui fixe la structure standard et les normes att
 - Anticipation de ruptures à long terme : rapport de prospective.
 - Preuve d'usage commercial sur un projet clos : étude de cas d'affaires.
 
-## 5. Bâtir le plan
+## 6. Bâtir le plan
 
 Concevoir le plan comme une démonstration qui résout la problématique, pas comme une juxtaposition de connaissances. Partir de la structure standard du genre, puis y placer le fil conducteur propre au sujet.
 
@@ -49,7 +55,7 @@ Produire un plan à deux niveaux : titres de parties, puis message unique de cha
 
 Délimiter explicitement le hors-périmètre. Lister ce que le document ne traitera pas, avec une raison courte. Cette section hors-sujet protège le document de la dérive.
 
-## 6. Test de cohérence du plan
+## 7. Test de cohérence du plan
 
 Avant de valider, vérifier que chaque sous-partie sert la problématique. Si l'ordre des sections peut s'inverser sans perte de sens, le plan est une liste, pas une démonstration. Le retravailler jusqu'à ce que chaque section appelle la suivante.
 
@@ -57,10 +63,11 @@ Avant de valider, vérifier que chaque sous-partie sert la problématique. Si l'
 
 1. Brief de cadrage (cinq à huit lignes).
 2. Problématique en une question fermée.
-3. Genre retenu et justification en une phrase.
-4. Plan à deux niveaux avec, sous chaque sous-partie, la preuve attendue et le statut (disponible ou à sourcer).
-5. Section hors-périmètre.
-6. Liste des questions ouvertes, chacune accompagnée d'une recommandation.
+3. Qualification FINER (cinq notes et moyenne, voir `cadre-finer.md`).
+4. Genre retenu et justification en une phrase.
+5. Plan à deux niveaux avec, sous chaque sous-partie, la preuve attendue et le statut (disponible ou à sourcer).
+6. Section hors-périmètre.
+7. Liste des questions ouvertes, chacune accompagnée d'une recommandation.
 
 Enregistrer le plan validé dans `plan.json` (genre, problématique, liste des sections) pour le contrôle de conformité ultérieur via `scripts/plan-check.py`, et l'inscrire dans la mémoire de projet (`scripts/project.py set plan`).
 

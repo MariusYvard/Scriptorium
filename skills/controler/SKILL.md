@@ -1,9 +1,9 @@
 ---
 name: controler
 description: >
-  Éprouve, contrôle et corrige un écrit avant publication. Six sous-commandes. revue : revue adversariale et contrôle qualité (carte preuve-affirmation, sévérité, verdict, auto-revue cinq dimensions) "révise mon texte", "ce texte est-il prêt", "critique mon écrit". contredire : contradiction la plus forte d'une thèse, modèle de Toulmin, points de rupture "joue l'avocat du diable", "conteste ma thèse", "où est la faille". consensus : vote de trois agents ancré sur le scorecard, profils de discipline "revue par consensus", "double validation". humaniser : détecter et corriger l'empreinte d'un texte généré "ça sonne IA", "enlève les tics d'écriture". audit : noter un PDF ou Word existant (scorecard, contrôles) "audite ce document", "note ce rapport". relecteurs : réponse point par point aux relecteurs et version en modifications suivies. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
+  Éprouve, contrôle et corrige un écrit avant publication. Six sous-commandes. revue : revue adversariale et contrôle qualité (carte preuve-affirmation, sévérité, verdict, lettre de décision) "révise mon texte", "ce texte est-il prêt", "critique mon écrit". contredire : contradiction la plus forte d'une thèse, modèle de Toulmin, discipline de concession, points de rupture "joue l'avocat du diable", "conteste ma thèse", "où est la faille". consensus : vote de trois agents sur contrat de notation préenregistré, ancré sur le scorecard, profils de discipline "revue par consensus", "double validation". humaniser : détecter et corriger l'empreinte d'un texte généré "ça sonne IA", "enlève les tics d'écriture". audit : noter un PDF ou Word existant (scorecard, contrôles, originalité) "audite ce document", "note ce rapport". relecteurs : réponse point par point, registre d'engagements, re-revue avec trajectoire de score. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.6.7"
+  version: "0.7.0"
 ---
 
 # Contrôler (réviser, contredire, valider, humaniser, auditer)
@@ -14,12 +14,12 @@ metadata:
 
 Si une action est passée en argument (par exemple `audit`), suivre directement sa section. Sinon, déduire l'action de la demande. Charger le fichier de référence indiqué.
 
-- revue : revue adversariale et contrôle qualité complet (cinq dimensions, sévérité, verdict). Charger `references/revue.md`.
-- contredire : construire la contradiction la plus forte d'une thèse (modèle de Toulmin, points de rupture). Charger `references/contredire.md`.
-- consensus : revue par vote de trois agents, ancrée sur le scorecard, calibrée par profil de discipline. Charger `references/consensus.md`.
+- revue : revue adversariale et contrôle qualité complet (cinq dimensions, sévérité, verdict). Charger `references/revue.md`. Pour une revue à fort enjeu, charger aussi `references/biais-relecteur.md` (biais et lentilles du relecteur) et `references/sophismes-causalite.md` (sophismes, causalité, statuts épistémiques).
+- contredire : construire la contradiction la plus forte d'une thèse (modèle de Toulmin, discipline de concession, points de rupture). Charger `references/contredire.md`.
+- consensus : revue par vote de trois agents, chacun engagé sur un contrat de notation préenregistré avant lecture (`references/contrat-notation.md`), ancrée sur le scorecard, calibrée par profil de discipline. Charger `references/consensus.md`.
 - humaniser : détecter et corriger l'empreinte d'un texte généré. Charger `references/humaniser.md`.
-- audit : auditer un document déjà rédigé (PDF, Word, Markdown), extraction puis scorecard. Charger `references/audit.md`.
-- relecteurs : réponse point par point aux relecteurs et version en modifications suivies. Charger `references/relecteurs.md`.
+- audit : auditer un document déjà rédigé (PDF, Word, Markdown), extraction puis scorecard. Charger `references/audit.md`. Pour un contrôle d'originalité, charger aussi `references/plagiat.md`.
+- relecteurs : réponse point par point aux relecteurs, registre d'engagements, re-revue et version en modifications suivies. Charger `references/relecteurs.md`.
 
 ## Contrôles déterministes d'abord
 
@@ -29,11 +29,15 @@ Avant toute lecture de fond, lancer les scripts sur le texte. Ils attrapent méc
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/audit-doc.py FICHIER
 ```
 
-Détail axe par axe : `lint-style.py`, `readability.py`, `verify-sources.py`, `traceability.py`, `terminology.py`, `numbers.py`, `scorecard.py`, `ai-fingerprint.py`, `coherence.py`, `tables.py audit`, `plan-check.py`. Traiter les constats critiques avant la revue de fond.
+Détail axe par axe : `lint-style.py`, `readability.py`, `verify-sources.py`, `traceability.py`, `terminology.py`, `numbers.py`, `scorecard.py` (plancher par axe, trajectoire entre deux revues), `ai-fingerprint.py`, `coherence.py`, `check-temporel.py` (défaillances chronologiques), `tables.py audit`, `plan-check.py`. Traiter les constats critiques avant la revue de fond.
+
+## Références transverses
+
+`references/severite.md` fixe la définition unique de critique, majeur, mineur et signal, et les seuils numériques partagés : les autres références y renvoient plutôt que de redéfinir localement. `references/sante-dialogue.md` (auto-contrôle anti-complaisance) s'applique à tout échange qui dépasse cinq tours. `references/lettre-decision.md` structure la décision finale d'une revue ou d'un consensus à fort enjeu.
 
 ## Délégation
 
-Pour un contrôle complet et structuré, déléguer à l'agent `controle-qualite` via l'outil Task. Pour une contradiction de la thèse centrale, déléguer à l'agent `contradicteur`. Pour la vérification factuelle, déléguer à l'agent `verificateur-faits`. L'action consensus fait voter ces agents ensemble.
+Pour un contrôle complet et structuré, déléguer à l'agent `controle-qualite` via l'outil Task. Pour une contradiction de la thèse centrale, déléguer à l'agent `contradicteur`. Pour la vérification factuelle, déléguer à l'agent `verificateur-faits`. L'action consensus fait voter ces agents ensemble, sans qu'aucun ne voie le verdict des autres avant d'avoir rendu le sien.
 
 ## Trois publics
 
@@ -42,6 +46,6 @@ Les seuils de rigueur se calibrent par profil de discipline (action consensus) :
 ## Règles
 
 1. La cohérence preuve-affirmation est une contrainte dure, pas une préférence.
-2. Classer les constats par sévérité (critique, majeur, mineur), corriger les critiques avant toute finalisation.
+2. Classer les constats par sévérité (voir `references/severite.md`), corriger les critiques avant toute finalisation.
 3. Chaque constat cite sa règle. Chaque question ouverte porte une recommandation.
 4. Verdict explicite et honnête. "Prêt" est faux si un contrôle a été sauté en silence.

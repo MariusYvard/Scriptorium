@@ -1,0 +1,35 @@
+{
+  "_double_usage": "Fixture a double usage (test dans evals/run-evals.py et gabarit de reference montrable a l'utilisateur). Sortie reelle et rejouable de scripts/scorecard.py --format json sur une courte fixture texte propre (voir rapport-regression-apres.json pour la meme fixture degradee). Sert avec scripts/scorecard.py --trajectoire rapport-regression-avant.json rapport-regression-apres.json : attente delta_total = -26, regressions sur Style, Sources et Terminologie et nombres, verdict Pret vers A reviser, decision editoriale accepter vers refus (axe Style effondre sous plancher/2).",
+  "axes": {
+    "Style": {
+      "score": 18,
+      "deductions": [
+        "-2 tic d'ecriture IA (x1)"
+      ]
+    },
+    "Sources": {
+      "score": 20,
+      "deductions": []
+    },
+    "Tracabilite": {
+      "score": 20,
+      "deductions": []
+    },
+    "Terminologie et nombres": {
+      "score": 20,
+      "deductions": []
+    },
+    "Lisibilite": {
+      "score": 20,
+      "deductions": []
+    }
+  },
+  "total": 98,
+  "verdict": "Pret",
+  "decision_editoriale": {
+    "decision": "accepter",
+    "plancher": 8,
+    "axes_effondres": [],
+    "commentaire_sous_type": null
+  }
+}

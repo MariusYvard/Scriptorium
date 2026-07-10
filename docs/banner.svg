@@ -1,42 +1,16 @@
-<svg viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scriptorium, atelier de rédaction de haut niveau">
-  <style>
-    .bg{fill:#FBFAF6}
-    .ink{fill:#1F2A37}
-    .sub{fill:#5B6470}
-    .accent{fill:#B4532A}
-    .chip{fill:#FFFFFF;stroke:#DDD6C8;stroke-width:1.5}
-    .chiptext{fill:#1F2A37}
-    .flow{fill:#8A8275}
-    .foot{fill:#7A8290}
-    @media (prefers-color-scheme: dark){
-      .bg{fill:#0D1117}
-      .ink{fill:#E6EDF3}
-      .sub{fill:#9FB0C0}
-      .accent{fill:#E2703A}
-      .chip{fill:#161B22;stroke:#30363D}
-      .chiptext{fill:#E6EDF3}
-      .flow{fill:#8B98A6}
-      .foot{fill:#7D8A99}
-    }
-  </style>
-  <rect class="bg" x="0" y="0" width="1200" height="360"/>
-  <text class="ink" x="88" y="96" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700">Scriptorium</text>
-  <rect class="accent" x="90" y="116" width="72" height="6" rx="3"/>
-  <text class="sub" x="90" y="160" font-family="Georgia, 'Times New Roman', serif" font-size="26">Atelier de rédaction de haut niveau, du sujet flou au document remis.</text>
-  <text class="sub" x="90" y="192" font-family="Georgia, 'Times New Roman', serif" font-size="21">Vingt-six genres sourcés, quatorze publics, du chercheur au juriste.</text>
-  <g>
-    <rect class="chip" x="90" y="226" width="210" height="58" rx="12"/>
-    <text class="chiptext" x="195" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">atelier</text>
-    <rect class="chip" x="360" y="226" width="210" height="58" rx="12"/>
-    <text class="chiptext" x="465" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">produire</text>
-    <rect class="chip" x="630" y="226" width="210" height="58" rx="12"/>
-    <text class="chiptext" x="735" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">controler</text>
-    <rect class="chip" x="900" y="226" width="210" height="58" rx="12"/>
-    <text class="chiptext" x="1005" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700">livrer</text>
-    <text class="flow" x="330" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
-    <text class="flow" x="600" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
-    <text class="flow" x="870" y="263" text-anchor="middle" font-family="Georgia, serif" font-size="26">&#8594;</text>
-  </g>
-  <text class="foot" x="90" y="324" font-family="Georgia, serif" font-size="19">cadrer &#8594; sourcer &#8594; rédiger &#8594; réviser &#8594; livrer</text>
-  <text class="foot" x="90" y="350" font-family="Georgia, serif" font-size="17">4 compétences · 26 genres sourcés · 20 scripts déterministes · 92 évaluations · Word, PDF, HTML, LaTeX, PowerPoint</text>
+<svg viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Scriptorium, atelier d'ecriture rigoureuse pour Claude">
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBFAF6"/>
+      <stop offset="1" stop-color="#F3F0E9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#fond)"/>
+  <rect x="0" y="0" width="1200" height="2" fill="#C8102E" opacity="0.85"/>
+  <text x="82" y="118" font-family="Georgia, 'Times New Roman', serif" font-size="74" font-weight="700" fill="#16314E">Scriptorium</text>
+  <rect x="86" y="138" width="140" height="3" fill="#C8102E"/>
+  <text x="86" y="178" font-family="Georgia, 'Times New Roman', serif" font-size="23" fill="#5B6470">L'atelier d'&#233;criture rigoureuse : cadrer, sourcer, r&#233;diger, r&#233;viser, livrer.</text>
+  <rect x="84" y="206" rx="22" width="170" height="44" fill="#FFFFFF" stroke="#D8DEE6" stroke-width="1.5"/><text x="169" y="235" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-weight="700" fill="#16314E">atelier</text><text x="274" y="236" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#C8102E">&#8594;</text><rect x="294" y="206" rx="22" width="170" height="44" fill="#FFFFFF" stroke="#D8DEE6" stroke-width="1.5"/><text x="379" y="235" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-weight="700" fill="#16314E">produire</text><text x="484" y="236" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#C8102E">&#8594;</text><rect x="504" y="206" rx="22" width="170" height="44" fill="#FFFFFF" stroke="#D8DEE6" stroke-width="1.5"/><text x="589" y="235" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-weight="700" fill="#16314E">controler</text><text x="694" y="236" text-anchor="middle" font-family="Georgia, serif" font-size="24" fill="#C8102E">&#8594;</text><rect x="714" y="206" rx="22" width="170" height="44" fill="#FFFFFF" stroke="#D8DEE6" stroke-width="1.5"/><text x="799" y="235" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-weight="700" fill="#16314E">livrer</text>
+  <g transform="rotate(-4 1026 164)"><rect x="946" y="76" width="160" height="176" rx="6" fill="#FFFFFF" stroke="#E2E0D8" stroke-width="1.5"/><rect x="966" y="94" width="72" height="5" rx="2.5" fill="#C8102E"/><rect x="966" y="102" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="966" y="120" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="966" y="138" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="966" y="156" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="966" y="174" width="92" height="3.5" rx="1.75" fill="#E8E6DE"/></g><g transform="rotate(2 1038 157)"><rect x="958" y="69" width="160" height="176" rx="6" fill="#FFFFFF" stroke="#E2E0D8" stroke-width="1.5"/><rect x="978" y="87" width="72" height="5" rx="2.5" fill="#C8102E"/><rect x="978" y="95" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="978" y="113" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="978" y="131" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="978" y="149" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="978" y="167" width="92" height="3.5" rx="1.75" fill="#E8E6DE"/></g><g transform="rotate(0 1050 150)"><rect x="970" y="62" width="160" height="176" rx="6" fill="#FFFFFF" stroke="#E2E0D8" stroke-width="1.5"/><rect x="990" y="80" width="72" height="5" rx="2.5" fill="#C8102E"/><rect x="990" y="88" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="990" y="106" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="990" y="124" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="990" y="142" width="120" height="3.5" rx="1.75" fill="#E8E6DE"/><rect x="990" y="160" width="92" height="3.5" rx="1.75" fill="#E8E6DE"/></g><circle cx="1088" cy="216" r="10" fill="#C8102E"/><circle cx="1088" cy="216" r="4" fill="#FBFAF6"/>
+  <text x="86" y="285" font-family="Georgia, serif" font-size="16.5" fill="#8A94A2">26 genres sourc&#233;s &#183; 20 scripts d&#233;terministes &#183; 92 &#233;valuations &#183; Word &#183; PDF &#183; HTML &#183; LaTeX &#183; PowerPoint</text>
 </svg>

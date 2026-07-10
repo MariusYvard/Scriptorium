@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="Scriptorium" width="100%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.svg">
+    <img src="docs/banner.svg" alt="Scriptorium, l'atelier d'écriture rigoureuse pour Claude" width="100%">
+  </picture>
 </p>
 
 <p align="center">
@@ -20,7 +23,13 @@
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
 
 <p align="center">
+  <img src="docs/galerie/vitrine.png" alt="Un rapport LaTeX, un poster a1 et une figure SWOT produits par le plugin, compilés à la charte graphique" width="92%">
+  <br><sub>Un rapport, un poster portrait a1 et une figure SWOT sortis du plugin, compilés à la charte graphique d'exemple, sans retouche.</sub>
+</p>
+
+<p align="center">
   <a href="#ce-que-ça-produit">Galerie</a> ·
+  <a href="#la-preuve-par-le-fond">Le fond</a> ·
   <a href="#démarrer-en-une-minute">Démarrer</a> ·
   <a href="#comment-ça-marche">Comment ça marche</a> ·
   <a href="#garde-fous-déterministes">Garde-fous</a> ·
@@ -28,38 +37,13 @@
   <a href="#contribuer">Contribuer</a>
 </p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. Vingt-six genres adossés à des sources faisant autorité, vingt scripts de contrôle en Python pur, un style maison à directives strictes. Le modèle rédige et juge, le code mesure et vérifie.
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
 
 ---
 
 ## Ce que ça produit
 
-Tout ce qui suit sort du plugin, sans retouche : le rapport et le poster (portrait a1, l'orientation la plus répandue en colloque) sont les gabarits LaTeX livrés, compilés avec la charte graphique d'exemple ; les figures sont générées par `figures.py`.
-
-<div align="center">
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/galerie/rapport-latex.png" alt="Page d'un rapport LaTeX charté : encadrés sémantiques, macros statistiques, tableau" width="400"><br>
-      <sub>Rapport LaTeX charté : encadrés sémantiques, macros statistiques, tableau.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/galerie/poster.png" alt="Poster scientifique portrait a1 généré depuis le gabarit tikzposter à la charte" width="400"><br>
-      <sub>Poster scientifique portrait a1, gabarit tikzposter à la charte.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/galerie/figure-swot.svg" alt="Matrice SWOT générée en SVG" width="420"><br>
-      <sub>Matrice SWOT en SVG, palette et polices de la charte.</sub>
-    </td>
-    <td align="center" width="50%">
-      <img src="docs/galerie/figure-tam-sam-som.svg" alt="Figure TAM SAM SOM en cercles imbriqués" width="420"><br>
-      <sub>Marché TAM, SAM, SOM en cercles imbriqués, audit structurel intégré.</sub>
-    </td>
-  </tr>
-</table>
-</div>
+Le visuel d'ouverture montre les gabarits LaTeX livrés (rapport, poster portrait a1) et une figure `figures.py`, compilés avec la charte graphique d'exemple. Les sorties brutes, dont la figure TAM-SAM-SOM et le poster complet, sont dans [`docs/galerie/`](docs/galerie/).
 
 Et chaque document passe au scorecard avant livraison. Sortie réelle sur le texte de démonstration :
 
@@ -76,6 +60,24 @@ Scorecard : 92/100, verdict Pret | seuil rapport 80/100 : atteint
   Force(s) : Style, Sources, Tracabilite, Lisibilite (20/20)
   Faiblesse(s) : Terminologie et nombres (12/20)
 ```
+
+---
+
+## La preuve par le fond
+
+La rigueur ne se décrète pas, elle s'exécute. Sortie réelle de `verify-sources.py --reseau` sur une note qui cite deux références réelles et une inventée :
+
+```text
+Triangulation multi-index (verdict par DOI) :
+  [VERIFIE]   10.1136/bmj.n160 -> resolu par crossref
+  [PLAUSIBLE] 10.1136/bmj.n71  -> resolu par crossref seul, non trouve par semantic_scholar
+  [FABRIQUE]  10.9999/scriptorium.demo.999 -> non trouve independamment par 2 index
+```
+
+La vérification d'une source va plus loin que l'existence d'une URL. Triangulation multi-index avec verdicts gradués par référence (vérifié, plausible, invérifiable, fabriqué), ancre par citation (citation exacte ou localisation précise), contrôle chronologique des affirmations causales datées, tags de lacune normalisés (`[LACUNE MATERIELLE]`, `[PREUVE FAIBLE]`) comptés par le linter, hiérarchie de preuve à sept niveaux, fiche source A-F, standards de compte rendu EQUATOR aux comptes vérifiés. Une bibliothèque personnelle fournie (BibTeX, Zotero) est pré-criblée aux mêmes critères que les sources externes, sans rien écarter en silence.
+
+Le comité de revue suit la même discipline : trois agents votent sur contrat de notation préenregistré avant lecture, aucune moyenne ne masque un désaccord, aucun verdict n'est montré aux voix qui n'ont pas voté, un axe effondré plafonne la décision, et la re-revue suit la trajectoire de score axe par axe.
+
 
 ---
 
@@ -149,13 +151,6 @@ Vingt scripts en Python pur (aucune dépendance) déplacent la rigueur du jugeme
 
 Un hook lance le linter après chaque écriture et bloque la finalisation tant qu'un écart critique subsiste. Le catalogue détaillé est dans [`scripts/README.md`](scripts/README.md).
 
-## L'intégrité des sources, au sérieux
-
-La vérification d'une source va plus loin que l'existence d'une URL. Triangulation multi-index avec verdicts gradués par référence (vérifié, plausible, invérifiable, fabriqué), ancre par citation (citation exacte ou localisation précise), contrôle chronologique des affirmations causales datées, tags de lacune normalisés (`[LACUNE MATERIELLE]`, `[PREUVE FAIBLE]`) comptés par le linter, hiérarchie de preuve à sept niveaux, fiche source A-F, standards de compte rendu EQUATOR aux comptes vérifiés. Une bibliothèque personnelle fournie (BibTeX, Zotero) est pré-criblée aux mêmes critères que les sources externes, sans rien écarter en silence.
-
-Le comité de revue suit la même discipline : trois agents votent sur contrat de notation préenregistré avant lecture, aucune moyenne ne masque un désaccord, aucun verdict n'est montré aux voix qui n'ont pas voté, un axe effondré plafonne la décision, et la re-revue suit la trajectoire de score axe par axe.
-
----
 
 ## Vingt-six genres, quatorze publics
 

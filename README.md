@@ -4,28 +4,62 @@
 
 <p align="center">
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg" alt="evals"></a>
-  <a href="https://github.com/MariusYvard/Scriptorium/releases"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
-  <a href="https://github.com/MariusYvard/Scriptorium/releases/latest"><img src="https://img.shields.io/github/v/release/MariusYvard/Scriptorium?color=1f6feb&label=version" alt="derniere version"></a>
+  <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
+  <a href="https://github.com/MariusYvard/Scriptorium/releases/latest"><img src="https://img.shields.io/github/v/release/MariusYvard/Scriptorium?color=1f6feb&label=version" alt="dernière version"></a>
   <img src="https://img.shields.io/badge/licence-MIT-3da639" alt="licence MIT">
   <img src="https://img.shields.io/badge/python-stdlib%20pur-3776ab" alt="python stdlib pur">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-8957e5" alt="26 genres sourcés">
+  <img src="https://img.shields.io/badge/publics-14-8957e5" alt="14 publics">
+  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-20-566573" alt="20 scripts déterministes">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-92%2F92-2ea043" alt="92 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. Il s'appuie sur vingt-six genres adossés à des sources faisant autorité, vingt scripts de contrôle en Python pur et un style maison à directives strictes. Le modèle rédige et juge, le code mesure et vérifie.
+<p align="center">
+  <a href="#ce-que-ça-produit">Galerie</a> ·
+  <a href="#démarrer-en-une-minute">Démarrer</a> ·
+  <a href="#comment-ça-marche">Comment ça marche</a> ·
+  <a href="#garde-fous-déterministes">Garde-fous</a> ·
+  <a href="#vingt-six-genres-quatorze-publics">Genres</a> ·
+  <a href="#contribuer">Contribuer</a>
+</p>
+
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. Vingt-six genres adossés à des sources faisant autorité, vingt scripts de contrôle en Python pur, un style maison à directives strictes. Le modèle rédige et juge, le code mesure et vérifie.
+
+---
 
 ## Ce que ça produit
 
-Tout ce qui suit sort du plugin, sans retouche : le rapport et le poster sont les gabarits LaTeX livrés, compilés avec la charte graphique d'exemple ; les figures sont générées par `figures.py`.
+Tout ce qui suit sort du plugin, sans retouche : le rapport et le poster (portrait a1, l'orientation la plus répandue en colloque) sont les gabarits LaTeX livrés, compilés avec la charte graphique d'exemple ; les figures sont générées par `figures.py`.
 
-| Rapport LaTeX charté | Poster scientifique |
-| :---: | :---: |
-| <img src="docs/galerie/rapport-latex.png" alt="Page d'un rapport LaTeX charté : encadrés sémantiques, macros statistiques, tableau" width="420"> | <img src="docs/galerie/poster.png" alt="Poster scientifique a0 généré depuis le gabarit tikzposter à la charte" width="440"> |
-
-| Figure SWOT | Figure TAM, SAM, SOM |
-| :---: | :---: |
-| <img src="docs/galerie/figure-swot.svg" alt="Matrice SWOT générée en SVG" width="440"> | <img src="docs/galerie/figure-tam-sam-som.svg" alt="Figure TAM SAM SOM en cercles imbriqués" width="440"> |
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/galerie/rapport-latex.png" alt="Page d'un rapport LaTeX charté : encadrés sémantiques, macros statistiques, tableau" width="400"><br>
+      <sub>Rapport LaTeX charté : encadrés sémantiques, macros statistiques, tableau.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/galerie/poster.png" alt="Poster scientifique portrait a1 généré depuis le gabarit tikzposter à la charte" width="400"><br>
+      <sub>Poster scientifique portrait a1, gabarit tikzposter à la charte.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/galerie/figure-swot.svg" alt="Matrice SWOT générée en SVG" width="420"><br>
+      <sub>Matrice SWOT en SVG, palette et polices de la charte.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/galerie/figure-tam-sam-som.svg" alt="Figure TAM SAM SOM en cercles imbriqués" width="420"><br>
+      <sub>Marché TAM, SAM, SOM en cercles imbriqués, audit structurel intégré.</sub>
+    </td>
+  </tr>
+</table>
+</div>
 
 Et chaque document passe au scorecard avant livraison. Sortie réelle sur le texte de démonstration :
 
@@ -43,6 +77,8 @@ Scorecard : 92/100, verdict Pret | seuil rapport 80/100 : atteint
   Faiblesse(s) : Terminologie et nombres (12/20)
 ```
 
+---
+
 ## Démarrer en une minute
 
 1. Télécharger `scriptorium-X.Y.Z.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases/latest).
@@ -51,7 +87,9 @@ Scorecard : 92/100, verdict Pret | seuil rapport 80/100 : atteint
 
 > « Rédige une analyse stratégique de 20 pages sur le marché X pour mon comité de direction, avec un SWOT et un PESTEL. »
 
-`atelier` enchaîne le cadrage (problématique fermée, plan validé), le sourcing (sources pondérées et triangulées, carte preuve-affirmation), la rédaction section par section, les figures en SVG, la revue adversariale, puis la mise en forme à la charte. Trois points de contrôle reviennent vers vous : le périmètre, la suffisance des preuves, le verdict de révision. Les scripts et le harnais d'évaluation tournent en Python sans dépendance (`python3 evals/run-evals.py`).
+`atelier` enchaîne le cadrage (problématique fermée, plan validé), le sourcing (sources pondérées et triangulées, carte preuve-affirmation), la rédaction section par section, les figures en SVG, la revue adversariale, puis la mise en forme à la charte. Trois points de contrôle reviennent vers vous : le périmètre, la suffisance des preuves, le verdict de révision. Les scripts et le harnais tournent en Python sans dépendance (`python3 evals/run-evals.py`).
+
+---
 
 ## Comment ça marche
 
@@ -74,12 +112,15 @@ Deux moteurs travaillent ensemble. Le modèle tranche le jugement : rédiger, cl
 
 Chaque sous-commande charge à la demande son fichier de référence, le contexte reste léger. Décrire la cible suffit ; il est aussi possible de nommer l'action, par exemple `produire figure`.
 
+---
+
 ## Garde-fous déterministes
 
 Vingt scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
 
 <details>
 <summary><b>Les vingt scripts, en une ligne chacun</b></summary>
+<br>
 
 | Script | Ce qu'il attrape ou produit |
 | --- | --- |
@@ -114,12 +155,15 @@ La vérification d'une source va plus loin que l'existence d'une URL. Triangulat
 
 Le comité de revue suit la même discipline : trois agents votent sur contrat de notation préenregistré avant lecture, aucune moyenne ne masque un désaccord, aucun verdict n'est montré aux voix qui n'ont pas voté, un axe effondré plafonne la décision, et la re-revue suit la trajectoire de score axe par axe.
 
+---
+
 ## Vingt-six genres, quatorze publics
 
 Chaque genre est adossé à des sources citées dans son playbook (`skills/produire/references/genre-*.md`).
 
 <details>
 <summary><b>Les genres par famille</b></summary>
+<br>
 
 - Académique et recherche : rapport scientifique et mémoire (IMRAD), article, revue de littérature (PRISMA), demande de financement, dissertation et commentaire.
 - Entreprise et conseil : long rapport décisionnel, analyse stratégique (SWOT, PESTEL, 5 forces, Mactor), prospective, étude de cas, business plan, étude de marché, proposition commerciale et réponse à appel d'offres.
@@ -133,6 +177,7 @@ Chaque genre est adossé à des sources citées dans son playbook (`skills/produ
 
 <details>
 <summary><b>Les publics et leurs genres de prédilection</b></summary>
+<br>
 
 | Public | Genres de prédilection |
 | --- | --- |
@@ -171,6 +216,8 @@ Les issues et propositions sont bienvenues, en français ou en anglais : signale
 
 Les principes de conception sont documentés dans [`docs/CONCEPTION.md`](docs/CONCEPTION.md). Des mécanismes d'intégrité et de revue réimplémentent à neuf des idées observées dans [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) de Cheng-I Wu (CC BY-NC 4.0, zéro texte repris) ; la version 0.8.0 adapte du code et des gabarits du projet [openscience](https://github.com/synthetic-sciences/openscience) de Synthetic Sciences (Apache-2.0, attribution en tête de chaque fichier concerné). Les standards cités (PRISMA, CRediT, GRADE, EQUATOR, Bradford Hill) le sont depuis leurs sources primaires.
 
-## Licence
+---
 
-MIT. Voir [`LICENSE`](LICENSE).
+<p align="center">
+  Écrit, contrôlé et mis en forme avec Scriptorium · <a href="LICENSE">Licence MIT</a>
+</p>

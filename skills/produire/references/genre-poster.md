@@ -1,6 +1,6 @@
 # Playbook : poster scientifique
 
-Support visuel affiché pendant une session dédiée (conférence, colloque, soutenance, journée portes ouvertes), consulté sans l'auteur present une partie du temps. Le poster n'est pas un article réduit ni un mur de texte : c'est une amorce de conversation. Sa réussite se mesure à ce qu'il déclenche un échange, pas à l'exhaustivité de ce qu'il couvre. Format LaTeX via `assets/gabarit-poster.tex` ou PowerPoint via le skill externe `pptx` quand LaTeX n'est pas disponible ou que le poster doit rester éditable après la session (voir `livrer`, action document, pour la même logique de choix appliquée au rapport).
+Support visuel affiché pendant une session dédiée (conférence, colloque, soutenance, journée portes ouvertes), consulté sans l'auteur present une partie du temps. Le poster n'est pas un article réduit ni un mur de texte : c'est une amorce de conversation. Le format et l'orientation sont imposés par l'organisateur : le portrait (a0 ou a1) domine dans les colloques, le paysage existe dans certaines conférences. Vérifier la consigne avant de composer, l'orientation commande toute la structure en colonnes. Sa réussite se mesure à ce qu'il déclenche un échange, pas à l'exhaustivité de ce qu'il couvre. Format LaTeX via `assets/gabarit-poster.tex` ou PowerPoint via le skill externe `pptx` quand LaTeX n'est pas disponible ou que le poster doit rester éditable après la session (voir `livrer`, action document, pour la même logique de choix appliquée au rapport).
 
 ## Le poster comme amorce de conversation
 

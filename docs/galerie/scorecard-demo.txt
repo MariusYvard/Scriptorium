@@ -1,0 +1,15 @@
+Scorecard : 92/100, verdict Pret | seuil rapport 80/100 : atteint
+
+  Style                      20/20  ##############################
+  Sources                    20/20  ##############################
+  Tracabilite                20/20  ##############################
+  Terminologie et nombres    12/20  ##################............
+      -8 sigle non defini (x3)
+  Lisibilite                 20/20  ##############################
+
+  Force(s) : Style, Sources, Tracabilite, Lisibilite (20/20)
+  Faiblesse(s) : Terminologie et nombres (12/20)
+
+  Calcul : chaque axe part de 20, penalites fixes plafonnees, somme ponderee sur 100.
+
+  Decision editoriale (plancher 8/20 par axe) : accepter

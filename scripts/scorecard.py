@@ -345,7 +345,7 @@ def trajectoire(a, b):
 
 
 def rapport_texte(r):
-    entete = f"Scorecard : {r['total']}/100 — verdict {r['verdict']}"
+    entete = f"Scorecard : {r['total']}/100, verdict {r['verdict']}"
     if r.get("seuil_type"):
         st = r["seuil_type"]
         tag = "atteint" if st["atteint"] else "non atteint"

@@ -3,12 +3,12 @@
   "police_titre": "Georgia, 'Times New Roman', serif",
   "graisse_titre": 700,
   "couleurs": {
-    "encre": "#16314E",
-    "trait": "#9AA7B8",
+    "encre": "#102857",
+    "trait": "#215876",
     "fond": "#FFFFFF",
-    "accent": "#C8102E",
-    "palette": ["#EEF2F6", "#E7EDF3", "#F3EEE7", "#EDE7F0"]
+    "accent": "#D97F30",
+    "palette": ["#E9EDF4", "#E3EEF2", "#F2F1DF", "#F3E9DB"]
   },
-  "logo_texte": "ACME",
+  "logo_texte": "Scriptorium",
   "rayon": 8
 }

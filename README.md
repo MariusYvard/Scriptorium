@@ -8,16 +8,16 @@
 <p align="center">
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/evals.yml/badge.svg" alt="evals"></a>
   <a href="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml"><img src="https://github.com/MariusYvard/Scriptorium/actions/workflows/release.yml/badge.svg" alt="release"></a>
-  <a href="https://github.com/MariusYvard/Scriptorium/releases/latest"><img src="https://img.shields.io/github/v/release/MariusYvard/Scriptorium?color=1f6feb&label=version" alt="dernière version"></a>
-  <img src="https://img.shields.io/badge/licence-MIT-3da639" alt="licence MIT">
-  <img src="https://img.shields.io/badge/python-stdlib%20pur-3776ab" alt="python stdlib pur">
+  <a href="https://github.com/MariusYvard/Scriptorium/releases/latest"><img src="https://img.shields.io/github/v/release/MariusYvard/Scriptorium?color=102857&label=version" alt="dernière version"></a>
+  <img src="https://img.shields.io/badge/licence-MIT-215876" alt="licence MIT">
+  <img src="https://img.shields.io/badge/python-stdlib%20pur-102857" alt="python stdlib pur">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-8957e5" alt="26 genres sourcés">
-  <img src="https://img.shields.io/badge/publics-14-8957e5" alt="14 publics">
-  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-20-566573" alt="20 scripts déterministes">
-  <img src="https://img.shields.io/badge/%C3%A9valuations-92%2F92-2ea043" alt="92 évaluations">
+  <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-215876" alt="26 genres sourcés">
+  <img src="https://img.shields.io/badge/publics-14-215876" alt="14 publics">
+  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-20-BF9B6F" alt="20 scripts déterministes">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-92%2F92-D97F30" alt="92 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>

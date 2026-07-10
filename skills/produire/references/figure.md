@@ -28,7 +28,7 @@ Corriger les défauts signalés avant de rendre la figure. Une case vide ou une 
 echo 'DONNEES_JSON' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/figures.py TYPE --data - --out figure.svg --title "Titre"
 ```
 
-TYPE : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`. Le SVG est portable. Pour l'insérer dans un document Word, le convertir en PNG avec l'outil disponible.
+TYPE : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`. Le SVG est portable. Pour l'insérer dans un document Word, le convertir en PNG avec l'outil disponible.
 
 Si une charte graphique existe (`charte-graphique.json` dans le dossier de travail, voir la compétence `produire` (charte)), l'ajouter avec `--theme charte-graphique.json`. La figure suit alors l'identité visuelle : couleurs, police, filet d'accent, filigrane. Toutes les figures d'un même document partagent la charte.
 
@@ -62,15 +62,42 @@ Voir la liste complète dans `references/figures-catalogue.md`.
 
 Numéroter la figure, lui donner un titre et citer sa source. La placer près du passage qu'elle illustre. Renvoyer à elle dans le texte (« voir figure 2 »).
 
+## Encodage redondant
+
+Jamais la couleur seule pour porter un sens. Chaque distinction que la couleur code (catégorie, statut, zone) porte au moins un second signal parmi la forme (rond, carré, triangle), le motif (plein, hachuré, pointillé), la position (regroupement spatial, ordre) ou le libellé direct sur l'élément plutôt que dans une légende éloignée. Un daltonien, une impression en niveaux de gris ou une projection dégradée doivent laisser la figure lisible.
+
+Deux vérifications rapides suffisent : d'abord, retirer mentalement la couleur (ou imprimer un aperçu en niveaux de gris) : la figure garde-t-elle son sens ? Ensuite, si la charte fournit une palette manuelle plutôt qu'une palette nommée daltonisme-sûre (`okabe-ito` ou `wong`, voir `produire`, action charte), passer `theme.py` sur la charte : il signale en avertissement les paires de couleurs trop proches en vision dichromate (approximation déterministe, jamais une certitude clinique). Un avertissement de ce type se corrige par un second canal (forme, motif, libellé), pas seulement en changeant la teinte.
+
+## Grille de raffinement notée
+
+Quand une figure mérite plus qu'un regard ponctuel (figure centrale d'un rapport, figure destinée à un support de communication externe), noter le rendu sur cinq critères pondérés, chacun de 0 à 10.
+
+| Critère | Poids | Ce qu'il vérifie |
+| --- | --- | --- |
+| Lisibilité | 0,25 | Taille de texte, contraste, encombrement à la taille d'insertion réelle |
+| Exactitude | 0,25 | Concordance entre la figure et les données ou le texte qu'elle illustre |
+| Hiérarchie | 0,20 | L'élément principal se voit en premier, le secondaire ne rivalise pas |
+| Cohérence charte | 0,15 | Couleurs, police et filet d'accent alignés sur la charte graphique du document |
+| Légendes | 0,15 | Titre, axes, unités, source et légende complets et autonomes |
+
+Le score pondéré se compare à un seuil selon l'usage de la figure, pas un seuil unique universel.
+
+- Brouillon interne : 6,5 sur 10.
+- Rapport ou document remis : 8,0 sur 10.
+- Support de communication externe (poster, présentation à diffusion large) : 8,5 sur 10.
+
+Sous le seuil, corriger et renoter. Arrêt anticipé : si deux itérations successives ne font pas progresser le score pondéré, arbitrer avec l'utilisateur plutôt que de poursuivre une boucle sans gain (viser une figure différente, accepter le score atteint pour ce brouillon ou revoir les données sources elles-mêmes).
+
 ## Format de sortie
 
-Le fichier SVG (ou PNG), le rapport d'audit déterministe, la vérification visuelle du rendu (étape 4) et la note de regard critique qualitatif sur les cinq points de l'étape 5. Si la figure illustre une affirmation, vérifier que la donnée de la figure correspond à la carte preuve-affirmation.
+Le fichier SVG (ou PNG), le rapport d'audit déterministe, la vérification visuelle du rendu (étape 4), la note de regard critique qualitatif sur les cinq points de l'étape 5 et le score pondéré de la grille de raffinement si la figure en a fait l'objet. Si la figure illustre une affirmation, vérifier que la donnée de la figure correspond à la carte preuve-affirmation.
 
 ## Règles
 
 1. Pas de figure à case vide ni à échelle faussée.
 2. Chaque figure est autonome : titre, axes, unités, source.
-3. La couleur n'est jamais le seul porteur de sens.
+3. La couleur n'est jamais le seul porteur de sens, un second canal (forme, motif, position, libellé) double toujours l'information.
 4. Une figure, un message. Résumer ce qui déborde.
 5. La donnée d'une figure est sourcée comme une affirmation du texte.
 6. Toute figure qui échoue la vérification visuelle du rendu est refaite, jamais livrée avec une réserve.
+7. Sous le seuil de la grille de raffinement pour l'usage visé, corriger avant livraison ; après deux itérations sans gain, arbitrer plutôt que boucler.

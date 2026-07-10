@@ -11,6 +11,20 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.8.0] - 2026-07-10
+
+Livraison LaTeX chartée, genre poster, contrôle de deck, sources renforcées. Vingt et un mécanismes issus de l'étude du plugin openscience (Synthetic Sciences, Apache-2.0) : huit adaptations directes attribuées, treize réécritures d'idées, standards revérifiés aux sources primaires.
+
+### Added
+- Sources et citations : résolution PMID (NCBI E-utilities) et arXiv vers BibTeX dans citations.py, validation de champs par type d'entrée (--valider) et tri stable (--trier) ; paliers de source par domaine dans verify-sources.py (28 domaines, 5 paliers, sans réseau) alimentant la fiche A-F ; profondeur de sourcing par complexité de la question ; nouvelle référence reporting-standards.md : dix standards EQUATOR par type d'étude aux comptes d'items vérifiés aux sources primaires (dont CONSORT 2025 à 30 items et SPIRIT 2025 à 34, versions que la source d'inspiration ignorait ; TRIPOD+AI remplaçant TRIPOD 2015 ; SRQR décrit sans compteur faute de vérification possible).
+- Revue et évaluation : diagramme en barres ASCII, forces et faiblesses nommées, poids externes (--poids, avec correction d'un bug de double renormalisation hérité de la source, documentée en commentaire) et seuils par type de document (--seuil-type brouillon 65, rapport 80, publication 85) dans scorecard.py, note d'arrêt anticipé dans la trajectoire (gain sous +3 sans régression) ; comparaison par paires anti-biais de position et taux d'égalité comme diagnostic de grille dans consensus.md ; grille de revue portée à huit dimensions (rigueur méthodologique, portée et transférabilité, honnêteté des limites, en dimensions qualitatives) ; calibration de sévérité du juge dans biais-relecteur.md ; sept critères de qualité d'hypothèse dans cadre-finer.md ; biais cognitifs du chercheur (HARKing, p-hacking Simmons et al. 2011, biais de publication Rosenthal 1979, apophénie, survivant) dans sophismes-causalite.md ; arrêt anticipé dans chemins-defaillance.md.
+- Livraison et visuel : sortie LaTeX chartée (assets/gabarit-rapport.tex : page de titre, encadrés sémantiques, macros \pvalue, \CI, \effectsize ; theme.py --format latex émet couleurs et polices depuis la charte ; les deux gabarits compilés en test réel par xelatex) ; genre poster scientifique (genre-poster.md, 26e genre, lecture à trois distances, gabarit assets/gabarit-poster.tex en tikzposter) ; arc narratif en sept temps et minutage par durée dans genre-presentation.md ; nouveau script check-presentation.py (deck PDF : pages par durée, densité de texte, backends optionnels en cascade, consultatif par défaut) ; exigences par destination dans document.md et genre-article.md ; type de figure TAM-SAM-SOM avec audit structurel dans figures.py ; palettes daltonisme-sûres Okabe-Ito et Wong dans theme.py avec avertissement de paires indiscernables en vision dichromate (approximation documentée) ; encodage redondant et grille de raffinement à seuils gradués dans figure.md et charte.md.
+- Evals : harnais étendu de nouveaux cas déterministes (validation de champs, tri stable, paliers, garde structurelle de reporting-standards.md, barres et poids du scorecard, arrêt anticipé, TAM-SAM-SOM, préambule LaTeX, palettes, dégradation de check-presentation).
+
+### Changed
+- Les routeurs des quatre compétences passent à vingt-six genres et vingt scripts, la voie LaTeX rejoint les formats de sortie, l'audit couvre les decks PDF.
+
+---
 ## [0.7.0] - 2026-07-09
 
 Intégrité des sources, comité de revue durci, journal de projet. Quarante-sept mécanismes réimplémentés à neuf depuis l'étude du plugin academic-research-skills (idées seulement, licence CC BY-NC 4.0 respectée, standards cités depuis leurs sources primaires).

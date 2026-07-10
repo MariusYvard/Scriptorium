@@ -50,6 +50,8 @@ Message : "Le scorecard reste sous le seuil ([total]/100, seuil [N]) après deux
 
 Récupération : `scripts/scorecard.py --trajectoire` pour objectiver la régression ou la stagnation. Si l'axe effondré est Sources ou Traçabilité, retour à `produire` (sourcer) plutôt qu'une nouvelle passe de style.
 
+Chemin d'arrêt anticipé : si `scripts/scorecard.py --trajectoire` signale un gain total sous +3 points sans régression sur aucun axe (champ `arret_anticipe` du rapport JSON, voir `controler/references/severite.md` section 2), ne pas relancer une troisième passe identique. Message dédié : "Le gain entre les deux dernières revues est de [delta_total] point(s), sous le seuil de +3 et sans régression. Une nouvelle passe à l'identique a peu de chances d'apporter plus. Je vous propose un arbitrage : accepter l'état actuel, cibler un seul axe précis ou revoir le seuil ensemble." Ce chemin remplace la boucle par un arbitrage explicite avec l'utilisateur plutôt que de relancer indéfiniment la même correction. Le seuil visé peut lui-même venir du type de document (`--seuil-type brouillon|rapport|publication`, 65/80/85 par défaut) plutôt que du seul verdict générique à trois valeurs.
+
 ## D7. Charte graphique invalide
 
 Symptôme : `theme.py` signale une couleur mal formée ou un contraste sous 4,5:1 sur un contenu déjà mis en forme.

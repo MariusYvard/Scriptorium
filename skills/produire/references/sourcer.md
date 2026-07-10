@@ -10,6 +10,20 @@ Pour une recherche large (plusieurs thèmes, dizaines de sources, synthèse comp
 
 Partir de la commande de preuve issue du cadrage : chaque sous-partie a un message et une preuve attendue. Lister les faits, chiffres et références à trouver. Hiérarchiser : d'abord les affirmations centrales de l'introduction et de la conclusion, qui supportent le plus de poids.
 
+### Profondeur de sourcing selon la complexité
+
+Avant de chercher, estimer la profondeur nécessaire : rapide, standard ou approfondie. Trois critères simples, en mots ordinaires, suffisent.
+
+- Nombre de concepts distincts dans la question : un fait isolé vaut rapide, plusieurs concepts à relier vaut standard, un croisement de plusieurs champs ou disciplines vaut approfondie.
+- Besoin de triangulation : une affirmation périphérique vaut rapide, une affirmation centrale du document vaut au moins standard (voir la règle de triangulation, section 4), une affirmation qui portera une décision ou une conclusion forte vaut approfondie.
+- Controverse : un fait établi et non contesté vaut rapide, un sujet où plusieurs positions sérieuses s'opposent vaut approfondie quel que soit le nombre de concepts.
+
+Le critère le plus exigeant l'emporte : une question qui semble simple mais reste controversée se traite en approfondie, pas en rapide.
+
+- Rapide : une à deux sources fiables, vérification directe, pas de synthèse nécessaire.
+- Standard : plusieurs sources, pondération par fiabilité et récence, triangulation des affirmations centrales.
+- Approfondie : déléguer à l'agent `synthese-sources`, recherche large, triangulation systématique, carte preuve-affirmation complète.
+
 ## 2. Chercher
 
 Si l'utilisateur fournit sa propre bibliothèque (export BibTeX, Zotero), la consulter en premier : voir `references/corpus-utilisateur.md`. Le corpus personnel se crible aux mêmes critères que toute source externe, la recherche vient combler les manques, rien n'en est écarté en silence.
@@ -28,6 +42,8 @@ Classer chaque source par fiabilité, puis par récence. Voir `references/ponder
 Facteur de récence : une donnée de moins de six mois prime, une donnée de plus de deux ans est traitée avec prudence sauf si elle reste la référence officielle.
 
 Pour une classification plus fine (sept niveaux de preuve, fiche de notation A-F sur six critères, ajustement par domaine), voir `references/hierarchie-preuve.md`. La note globale d'une source est son critère le plus faible, jamais une moyenne.
+
+Le palier de domaine d'une URL (revue à comité de lecture, preprint, institutionnel, encyclopédie, presse-blog) s'obtient sans réseau via `scripts/verify-sources.py` : un indice mécanique de premier tri qui alimente la fiche A-F, jamais un jugement définitif à lui seul. Voir `references/hierarchie-preuve.md` section 5.
 
 ## 4. Trianguler
 
@@ -56,7 +72,7 @@ Chaque citation porte une ancre : une citation exacte de 25 mots au plus, ou une
 
 ## Vérification déterministe
 
-Avant de livrer la bibliographie, la passer au script de vérification. Il retire les paramètres de suivi, repère les doublons et contrôle la syntaxe des DOI.
+Avant de livrer la bibliographie, la passer au script de vérification. Il retire les paramètres de suivi, repère les doublons, contrôle la syntaxe des DOI et classe chaque URL par palier de domaine.
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify-sources.py FICHIER
@@ -66,10 +82,12 @@ La résolution réseau des liens est optionnelle (`--check-links`). Corriger les
 
 Pour une vérification approfondie de l'existence des références (triangulation Crossref, OpenAlex, Semantic Scholar, verdicts gradués, signaux de contamination), utiliser `--reseau` et voir `references/integrite-sources.md`. Une référence qui ne se vérifie pas ne se cite pas.
 
-Pour une bibliographie au format BibTeX, employer le moteur de citations : il formate en APA 7 ou Vancouver, déduplique par DOI, et peut récupérer une référence depuis son DOI (réseau, optionnel).
+Pour une bibliographie au format BibTeX, employer le moteur de citations : il formate en APA 7 ou Vancouver, déduplique par DOI, résout un DOI, un PMID ou un identifiant arXiv vers une entrée BibTeX, valide les champs obligatoires par type d'entrée et trie la liste.
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/citations.py refs.bib --to apa --dedupe
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/citations.py refs.bib --valider --trier annee
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/citations.py --pmid 17938396
 ```
 
 ## Format de sortie

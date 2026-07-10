@@ -1,11 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Vérificateur de sources déterministe pour Scriptorium.
+"""Portions adaptees du projet openscience (Synthetic Sciences, InkVell Inc.),
+Apache-2.0, github.com/synthetic-sciences/openscience. Modifications Marius
+Yvard, MIT.
+
+Vérificateur de sources déterministe pour Scriptorium.
 
 Extrait les URL et les DOI d'un document, retire les paramètres de suivi,
-repère les doublons, contrôle la syntaxe des DOI. La vérification de
-résolution réseau des liens est optionnelle (--check-links) et désactivée
-par défaut.
+repère les doublons, contrôle la syntaxe des DOI. Classe chaque URL par
+palier de source (table locale de domaines, sans réseau : voir
+PALIERS_DOMAINES). La vérification de résolution réseau des liens est
+optionnelle (--check-links) et désactivée par défaut.
+
+Paliers de domaine (sans réseau) : chaque URL du document est confrontée à
+une table locale d'une vingtaine de domaines connus (revue à comité de
+lecture, prépublication, institutionnel, encyclopédie, presse ou blog).
+Un domaine absent de la table est classé "non-classe", jamais rangé par
+défaut dans une catégorie qu'il ne mérite pas forcément. Le palier est un
+indice mécanique de premier tri, pas un jugement de fiabilité définitif : voir
+references/hierarchie-preuve.md pour la fiche de notation complète.
 
 Mode réseau étendu (--reseau) : triangule chaque DOI trouvé auprès de trois
 index bibliographiques (Crossref, OpenAlex, Semantic Scholar), en urllib pur,
@@ -26,7 +39,7 @@ developers.openalex.org/api-reference/authentication). Sans clé fournie par
 ignoré et compté comme non consulté, jamais comme un échec.
 
 Le module est importable : analyser(texte) -> dict ; trianguler_doi(doi) ;
-detecter_contamination(texte).
+detecter_contamination(texte) ; palier_domaine(url).
 """
 import argparse
 import datetime
@@ -48,6 +61,46 @@ SEUIL_SIMILARITE = 0.70  # documenté dans references/integrite-sources.md
 FENETRE_CONTAMINATION_ANS = 2  # un preprint est "recent" dans cette fenetre
 INDEX_TIMEOUT = 8
 USER_AGENT_RESEAU = "Scriptorium/0.7 (+https://github.com/MariusYvard/Scriptorium)"
+
+# Table locale domaine -> palier de source, sans reseau. Cinq paliers :
+# revue-a-comite (revue evaluee par les pairs, editeur academique etabli),
+# preprint (serveur de prepublication), institutionnel (gouvernement,
+# organisation internationale, base bibliographique publique), encyclopedie,
+# presse-blog (presse generaliste ou billet non evalue). Adapte de la logique
+# de detection de palier de lookup.py (research-lookup, openscience), qui
+# classe par sous-chaine d'URL de facon deterministe et sans dependance ;
+# taxonomie et liste de domaines propres a Scriptorium (les paliers d'origine
+# jugeaient la notoriete d'une revue, pas la nature de la source).
+PALIERS_DOMAINES = {
+    "nature.com": "revue-a-comite",
+    "science.org": "revue-a-comite",
+    "cell.com": "revue-a-comite",
+    "nejm.org": "revue-a-comite",
+    "thelancet.com": "revue-a-comite",
+    "jamanetwork.com": "revue-a-comite",
+    "sciencedirect.com": "revue-a-comite",
+    "springer.com": "revue-a-comite",
+    "link.springer.com": "revue-a-comite",
+    "wiley.com": "revue-a-comite",
+    "onlinelibrary.wiley.com": "revue-a-comite",
+    "ieee.org": "revue-a-comite",
+    "ieeexplore.ieee.org": "revue-a-comite",
+    "acm.org": "revue-a-comite",
+    "dl.acm.org": "revue-a-comite",
+    "arxiv.org": "preprint",
+    "biorxiv.org": "preprint",
+    "medrxiv.org": "preprint",
+    "ssrn.com": "preprint",
+    "ncbi.nlm.nih.gov": "institutionnel",
+    "pubmed.ncbi.nlm.nih.gov": "institutionnel",
+    "europa.eu": "institutionnel",
+    "oecd.org": "institutionnel",
+    "who.int": "institutionnel",
+    "equator-network.org": "institutionnel",
+    "wikipedia.org": "encyclopedie",
+    "medium.com": "presse-blog",
+    "substack.com": "presse-blog",
+}
 
 
 def nettoyer_url(u):
@@ -73,6 +126,30 @@ def doi_valide(d):
     return bool(re.fullmatch(r"10\.\d{4,9}/\S+", d))
 
 
+def palier_domaine(url):
+    """Classe le domaine d'une URL par palier de source, table locale sans
+    réseau (PALIERS_DOMAINES). Priorité : domaine exact, puis suffixe
+    .gouv.fr ou .gov (institutions publiques francaises et anglophones),
+    puis suffixe d'un domaine connu (sous-domaines, ex. pubmed.ncbi.nlm.nih.gov
+    via ncbi.nlm.nih.gov). Un domaine absent de toutes ces regles est
+    "non-classe", jamais range par defaut."""
+    import urllib.parse
+    hote = urllib.parse.urlparse(url).netloc.lower()
+    hote = hote.split("@")[-1].split(":")[0]  # retire user-info et port
+    if hote.startswith("www."):
+        hote = hote[4:]
+    if not hote:
+        return "non-classe"
+    if hote in PALIERS_DOMAINES:
+        return PALIERS_DOMAINES[hote]
+    if hote.endswith(".gouv.fr") or hote.endswith(".gov"):
+        return "institutionnel"
+    for domaine, palier in PALIERS_DOMAINES.items():
+        if hote.endswith("." + domaine):
+            return palier
+    return "non-classe"
+
+
 def analyser(texte):
     urls_brutes = [m.group(0) for m in URL_RE.finditer(texte)]
     dois = sorted({m.group(0).rstrip(PONCTU_FIN) for m in DOI_RE.finditer(texte)})
@@ -91,12 +168,14 @@ def analyser(texte):
             vues[cle] = True
             propres.append(propre)
     dois_invalides = [d for d in dois if not doi_valide(d)]
+    paliers = [{"url": u, "palier": palier_domaine(u)} for u in propres]
     return {
         "urls": propres,
         "urls_a_nettoyer": sales,
         "doublons": sorted(set(doublons)),
         "dois": dois,
         "dois_invalides": dois_invalides,
+        "paliers": paliers,
     }
 
 
@@ -302,6 +381,10 @@ def rapport_texte(d):
     if d["dois_invalides"]:
         out.append("\nDOI de syntaxe douteuse :")
         out += [f"  {x}" for x in d["dois_invalides"]]
+    if d.get("paliers"):
+        out.append("\nPaliers de domaine (indice mécanique, sans réseau) :")
+        for p in d["paliers"]:
+            out.append(f"  [{p['palier']}] {p['url']}")
     if "liens" in d:
         out.append("\nRésolution réseau :")
         for r in d["liens"]:

@@ -1,8 +1,38 @@
 {
   "name": "scriptorium",
-  "version": "0.7.0",
-  "description": "Atelier de rédaction de haut niveau pour quatorze publics, du chercheur au juriste et du soignant au financier. Quatre compétences à sous-commandes (atelier, produire, controler, livrer), vingt-cinq genres sourcés (chaque playbook adossé à des standards vérifiés : ICMJE, PRISMA, IEEE 29148, OCDE/CAD, IRAC, CFA, Diataxis, CRediT), cinq agents délégués, dix-neuf scripts déterministes (style, sources et triangulation multi-index, ancres de citation, cohérence temporelle, lisibilité, figures, charte, traçabilité, terminologie, nombres, citations en cinq formats, diff, scorecard 0-100 à plancher et trajectoire, empreinte IA, cohérence, tableaux, plan, journal de projet à reprise par hash, audit consolidé, images), comité de revue sur contrat de notation préenregistré, veille documentaire et rétractations, sorties Word, PDF et HTML piloté par la charte graphique, intégration continue éditoriale, hook et style maison à directives strictes.",
-  "author": { "name": "Marius Yvard" },
-  "keywords": ["redaction", "ecriture", "rapport-scientifique", "ingenierie", "geopolitique", "droit", "sante", "finance", "presentation", "analyse-strategique", "business-plan", "documentation-technique", "post-mortem", "imrad", "prisma", "credit", "veille", "integrite-des-sources", "charte-graphique", "html", "scorecard", "sources", "revue-litterature", "ci"],
+  "version": "0.8.0",
+  "description": "Atelier de rédaction de haut niveau pour quatorze publics, du chercheur au juriste et du soignant au financier. Quatre compétences à sous-commandes (atelier, produire, controler, livrer), vingt-six genres sourcés (chaque playbook adossé à des standards vérifiés : ICMJE, PRISMA, EQUATOR, IEEE 29148, OCDE/CAD, IRAC, CFA, Diataxis, CRediT), cinq agents délégués, vingt scripts déterministes (style, triangulation des sources et paliers de domaine, ancres de citation, résolution DOI-PMID-arXiv, cohérence temporelle, lisibilité, figures dont TAM-SAM-SOM, charte et palettes daltonisme-sûres, citations en cinq formats, scorecard à plancher, poids et trajectoire, empreinte IA, journal de projet à reprise par hash, contrôle de deck PDF, audit consolidé), comité de revue sur contrat préenregistré et comparaison par paires, veille et rétractations, sorties Word, PDF, HTML et LaTeX pilotées par la charte graphique, intégration continue éditoriale, hook et style maison à directives strictes.",
+  "author": {
+    "name": "Marius Yvard"
+  },
+  "keywords": [
+    "redaction",
+    "ecriture",
+    "rapport-scientifique",
+    "ingenierie",
+    "geopolitique",
+    "droit",
+    "sante",
+    "finance",
+    "presentation",
+    "poster",
+    "analyse-strategique",
+    "business-plan",
+    "documentation-technique",
+    "post-mortem",
+    "imrad",
+    "prisma",
+    "equator",
+    "credit",
+    "veille",
+    "integrite-des-sources",
+    "charte-graphique",
+    "latex",
+    "html",
+    "scorecard",
+    "sources",
+    "revue-litterature",
+    "ci"
+  ],
   "license": "MIT"
 }

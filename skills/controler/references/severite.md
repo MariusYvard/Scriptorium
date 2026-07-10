@@ -18,6 +18,9 @@ Un signal qui se corrobore, par une seconde source, une seconde voix ou un secon
 | Verdict scorecard | Prêt à partir de 85, à réviser de 70 à 84, à refondre sous 70 | `scripts/scorecard.py` | `controler` (revue), `controler` (consensus), CI éditoriale |
 | Plancher par axe | 8/20 (`PLANCHER_DEFAUT`), ajustable par `--plancher N` | `scripts/scorecard.py` | Décision éditoriale à quatre valeurs, revue par consensus |
 | Régression de trajectoire | Delta d'axe sous -3 points entre deux rapports | `scripts/scorecard.py` (`trajectoire()`) | `controler` (relecteurs), re-revue |
+| Gain marginal de trajectoire (arrêt anticipé) | Delta total sous +3 points sans régression sur aucun axe | `scripts/scorecard.py` (`trajectoire()`, champ `arret_anticipe`) | `atelier` (chemins-defaillance, scénario D6), re-revue |
+| Seuil par type de document | Brouillon 65, rapport 80, publication 85, sur 100 | `scripts/scorecard.py` (`SEUILS_TYPE`, option `--seuil-type`) | `controler` (revue), `controler` (consensus), `atelier` (chemins-defaillance, scénario D6) |
+| Taux d'égalité de la comparaison par paires | Sous 10% écart net, 10 à 30% normal, 30 à 50% versions proches, au-dessus de 50% grille à resserrer | `controler/references/consensus.md` (section 8) | `controler` (consensus), `controler/references/contrat-notation.md` |
 | Friction des outrepassements | Cran 1 avertissement seul, cran 2 justification non vide, cran 3 et plus 100 caractères au moins | `scripts/project.py` (`valider_justification`), `tools/check.py` | `atelier` (piloter), CI éditoriale |
 | Seuil de scorecard en CI | 85 par défaut, ajustable par `profil.json` (`seuil_scorecard`) | `docs/CI.md`, `controler/references/profils-discipline.md` | `tools/check.py`, CI du projet d'écriture |
 

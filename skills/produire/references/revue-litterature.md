@@ -28,6 +28,8 @@ Une ligne par fait, une colonne d'attribution. Plusieurs sources qui concordent 
 
 Pour une matrice source x thème avec des seuils de convergence explicites (fort, modéré, faible, contesté, lacune), voir `references/discipline-synthese.md`.
 
+Le standard de compte rendu qu'une source incluse aurait dû suivre dépend de son devis (essai randomisé, étude observationnelle, cas clinique, modèle prédictif...) : voir `references/reporting-standards.md` pour vérifier si la source le respecte avant de la créditer d'un niveau de preuve élevé.
+
 ## 4. Synthétiser par thème
 
 Organiser par thème, pas par source. Chaque thème regroupe les faits convergents, signale les désaccords entre sources, et conclut sur l'état des connaissances. Ne pas juxtaposer des résumés d'articles, c'est une synthèse, pas une liste.

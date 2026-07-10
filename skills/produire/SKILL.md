@@ -1,9 +1,9 @@
 ---
 name: produire
 description: >
-  Produit le contenu d'un document et fixe ses règles d'écriture. Neuf sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-cinq genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer, trianguler et vérifier sources et citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA. veille : surveillance documentaire, rétractations "mets en place une veille". figure : schéma SVG (SWOT, PESTEL, BCG). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale, calibrage d'un style personnel. charte : identité visuelle. image : extraire et replacer les images d'un PDF, Word ou PowerPoint. Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
+  Produit le contenu d'un document et fixe ses règles d'écriture. Neuf sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-six genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer, trianguler et vérifier sources et citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA, standards EQUATOR. veille : surveillance documentaire, rétractations "mets en place une veille". figure : schéma SVG (SWOT, PESTEL, BCG). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale, calibrage d'un style personnel. charte : identité visuelle. image : extraire et replacer les images d'un document. Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
 metadata:
-  version: "0.7.0"
+  version: "0.8.0"
 ---
 
 # Produire (rédiger, sourcer, illustrer, styler)
@@ -15,19 +15,19 @@ Produit le contenu d'un document et fixe sa forme. Le genre détermine la struct
 Si une action est passée en argument (par exemple `figure`), suivre directement sa section. Sinon, déduire l'action de la demande. Charger le fichier de référence indiqué, et lui seul.
 
 - genre : rédiger ou réécrire un texte. Charger `references/redaction.md` (moteur unifié), puis le playbook du genre voulu dans `references/genre-*.md`, et `references/methodologie-transverse.md` pour la mécanique commune.
-- sourcer : trouver, pondérer et vérifier les sources, formater les citations, bâtir la carte preuve-affirmation. Charger `references/sourcer.md`. Il renvoie vers `references/integrite-sources.md` (triangulation, citations fabriquées), `references/hierarchie-preuve.md` (niveaux de preuve, fiche A-F) et `references/corpus-utilisateur.md` (bibliothèque fournie) selon le besoin.
-- revue-litterature : synthétiser plusieurs sources en une revue unique (tableau de preuves, schéma PRISMA, discipline de synthèse). Charger `references/revue-litterature.md`.
+- sourcer : trouver, pondérer et vérifier les sources, formater les citations, bâtir la carte preuve-affirmation. Charger `references/sourcer.md`. Il renvoie vers `references/integrite-sources.md` (triangulation, citations fabriquées), `references/hierarchie-preuve.md` (niveaux de preuve, fiche A-F, paliers de domaine) et `references/corpus-utilisateur.md` (bibliothèque fournie) selon le besoin, et dose la profondeur du sourcing selon la complexité de la question.
+- revue-litterature : synthétiser plusieurs sources en une revue unique (tableau de preuves, schéma PRISMA, discipline de synthèse). Charger `references/revue-litterature.md`. Le standard de compte rendu se choisit selon le devis dans `references/reporting-standards.md`.
 - veille : mettre en place une surveillance documentaire périodique sur un sujet (requêtes arXiv, PubMed, Google Scholar, digest, contrôle des rétractations). Charger `references/veille.md`.
-- figure : générer un schéma stratégique en SVG et vérifier son rendu avant livraison. Charger `references/figure.md`.
+- figure : générer un schéma stratégique en SVG (SWOT, BCG, Ansoff, PESTEL, chaîne de valeur, TAM-SAM-SOM) et vérifier son rendu avant livraison. Charger `references/figure.md`.
 - tableau : générer un tableau autonome ou auditer les tableaux d'un document. Charger `references/tableau.md`.
 - equation : poser des équations en LaTeX, contrôler unités SI et chiffres significatifs. Charger `references/equation.md`.
 - style : générer, appliquer ou faire respecter la charte éditoriale, calibrer un style personnel sur des échantillons fournis. Charger `references/style.md`.
-- charte : définir, appliquer ou valider une identité visuelle sur le texte et les figures. Charger `references/charte.md`.
+- charte : définir, appliquer ou valider une identité visuelle sur le texte et les figures, palettes daltonisme-sûres comprises. Charger `references/charte.md`.
 - image : extraire les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel), les cataloguer et les préparer au placement. Charger `references/image.md`.
 
 ## Genres et publics
 
-Vingt-cinq genres couvrent quatorze publics, et chaque playbook (`references/genre-*.md`) porte ses sources.
+Vingt-six genres couvrent quatorze publics, et chaque playbook (`references/genre-*.md`) porte ses sources.
 
 - Académique et recherche : rapport scientifique (IMRAD), article, revue de littérature, demande de financement, dissertation, pour le chercheur, l'enseignant et l'étudiant.
 - Entreprise et conseil : long rapport, analyse stratégique, prospective, étude de cas, business plan, étude de marché, proposition commerciale, pitch, pour le consultant, le dirigeant et l'entrepreneur.
@@ -35,13 +35,13 @@ Vingt-cinq genres couvrent quatorze publics, et chaque playbook (`references/gen
 - Finance : note d'analyse financière et mémo d'investissement, pour l'analyste financier.
 - Public et droit : note de politique publique, rapport d'évaluation, note juridique, conclusions contentieuses, contrat, pour l'analyste géopolitique, l'agent public, le juriste et l'avocat.
 - Santé : cas clinique et protocole, pour le professionnel de santé.
-- Communication : livre blanc, discours, présentation, pour le communicant et l'orateur.
+- Communication : livre blanc, discours, présentation, poster scientifique, pour le communicant, l'orateur, le chercheur et l'étudiant.
 
 La méthode et le style maison ne changent pas, seuls la structure du genre et les exemples s'adaptent.
 
 ## Références transverses
 
-`references/credit-divulgation.md` (déclaration de contribution CRediT, financement, usage de l'IA) se charge quand le document part vers une publication qui l'exige. `references/contrat-mission.md` (contrat rédacteur-évaluateur, critères d'acceptation posés avant d'écrire) se charge pour une mission à exigences formelles. `references/discipline-synthese.md` (anti-patterns, matrice source x thème) sert toute synthèse multi-sources.
+`references/credit-divulgation.md` (déclaration de contribution CRediT, financement, usage de l'IA) se charge quand le document part vers une publication qui l'exige. `references/contrat-mission.md` (contrat rédacteur-évaluateur, critères d'acceptation posés avant d'écrire) se charge pour une mission à exigences formelles. `references/discipline-synthese.md` (anti-patterns, matrice source x thème) sert toute synthèse multi-sources. `references/reporting-standards.md` (dix standards de compte rendu par type d'étude, comptes vérifiés) sert les genres académiques et médicaux.
 
 ## Préalables
 
@@ -53,7 +53,7 @@ Pour un document de plus de cinq pages ou à sections denses, déléguer la réd
 
 ## Scripts déterministes
 
-Les actions s'appuient sur le dossier `scripts/` : `figures.py` pour figure, `tables.py` pour tableau, `citations.py` (cinq formats, ancres par citation) et `verify-sources.py` (triangulation en option) pour sourcer, `theme.py` pour charte, `images.py` pour image, `lint-style.py` et `readability.py` pour style. Voir `scripts/README.md`.
+Les actions s'appuient sur le dossier `scripts/` : `figures.py` pour figure, `tables.py` pour tableau, `citations.py` (cinq formats, ancres par citation, résolution DOI, PMID et arXiv, validation de champs, tri) et `verify-sources.py` (triangulation en option, paliers de domaine sans réseau) pour sourcer, `theme.py` pour charte, `images.py` pour image, `lint-style.py` et `readability.py` pour style. Voir `scripts/README.md`.
 
 ## Règles
 

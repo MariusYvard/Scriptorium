@@ -311,6 +311,119 @@ for _skill, _fichiers in _avec_sources:
 verifier("lint de prompt : chaque nouvelle reference sourcee porte sa section Sources",
          not _sans, f"sans={_sans}")
 
+# --- v0.8.0 : recolte openscience (sources, evaluation, livraison) ---
+
+chkp = charger("check-presentation.py", "check_presentation")
+
+# Citations : validation de champs par type et tri stable
+_bibv = (
+    "@article{ok2024,\n author={Doe, Jane},\n title={T},\n journal={J},\n year={2024},\n note={p. 3}\n}\n"
+    "@article{article_incomplet,\n title={Sans auteur ni annee},\n journal={J}\n}\n"
+    "@book{livre_editeur,\n editor={Roe, Dan},\n title={L},\n publisher={P},\n year={2020}\n}\n"
+    "@inproceedings{confmanquante,\n author={Poe, Al},\n title={C},\n year={2021}\n}\n"
+    "@typeinconnu{bizarre,\n title={X}\n}\n")
+_entv = cita.parser_bibtex(_bibv)
+_rapv = cita.rapport_validation(_entv)
+verifier("citations : champs manquants reperes par type",
+         sorted(_rapv["incompletes"]) == ["article_incomplet", "confmanquante"],
+         f"inc={_rapv['incompletes']}")
+verifier("citations : type non reconnu signale, book a editeur accepte",
+         _rapv["types_non_reconnus"] == ["bizarre"] and "livre_editeur" not in _rapv["incompletes"],
+         f"types={_rapv['types_non_reconnus']}")
+_bibt = ("@misc{b,\n title={B},\n year={2020}\n}\n@misc{a,\n title={A},\n year={2022}\n}\n"
+         "@misc{c,\n title={C},\n year={2020}\n}\n")
+_trie = cita.trier_entrees(cita.parser_bibtex(_bibt), "annee")
+verifier("citations : tri par annee stable sur egalite",
+         [e["_cle"] for e in _trie] == ["b", "c", "a"],
+         f"ordre={[e['_cle'] for e in _trie]}")
+
+# Verify-sources : paliers de domaine sans reseau
+_dp2 = vsrc.analyser(
+    "Sources : https://www.nature.com/articles/x https://arxiv.org/abs/2001.00001 "
+    "https://medium.com/@x/y https://www.economie.gouv.fr/page https://site-inconnu-xyz.example/p")
+_pal = {p["url"].split("/")[2]: p["palier"] for p in _dp2["paliers"]}
+verifier("paliers : revue a comite et preprint distingues",
+         _pal.get("www.nature.com") == "revue-a-comite" and _pal.get("arxiv.org") == "preprint",
+         f"pal={_pal}")
+verifier("paliers : suffixe gouv.fr institutionnel et inconnu non classe",
+         _pal.get("www.economie.gouv.fr") == "institutionnel"
+         and _pal.get("site-inconnu-xyz.example") == "non-classe", f"pal={_pal}")
+
+# Reporting-standards : garde structurelle (URL sans utm, compte chiffre ou non confirme)
+_rs = open(os.path.join(ICI, "..", "skills", "produire", "references",
+                        "reporting-standards.md"), encoding="utf-8").read()
+_lignes_std = [l for l in _rs.splitlines()
+               if _re.match(r"^\| (CONSORT|STROBE|SPIRIT|STARD|TRIPOD|ARRIVE|CARE|SQUIRE|CHEERS|SRQR) ", l)]
+verifier("reporting-standards : les 10 standards tabules",
+         len(_lignes_std) >= 10, f"n={len(_lignes_std)}")
+verifier("reporting-standards : au moins 10 URL primaires en Sources, aucune URL de suivi",
+         _rs.count("https://") >= 10 and "utm_" not in _rs)
+_std_sans_compte = [l.split("|")[1].strip() for l in _lignes_std
+                    if not (_re.search(r"\d", l) or _re.search(r"non confirm", l, _re.I))]
+verifier("reporting-standards : chaque rangee porte un compte ou la mention non confirme",
+         not _std_sans_compte, f"sans={_std_sans_compte}")
+
+# Scorecard : barres ASCII, forces et faiblesses, poids, seuil de type, arret anticipe
+_scr = score.evaluer(lire("style-mauvais.md"))
+_txt = score.rapport_texte(_scr)
+verifier("scorecard : barre ASCII presente dans le rapport",
+         "#" in _txt and any(len(seg) >= 10 for seg in _re.findall(r"#+", _txt)))
+verifier("scorecard : forces et faiblesses nommees",
+         "Force" in _txt and "Faiblesse" in _txt)
+_scp2 = score.evaluer(lire("style-propre.md"),
+                      poids={"Style": 0.75, "Sources": 0.75, "Tracabilite": 0.75,
+                             "Terminologie et nombres": 0.75, "Lisibilite": 0.75})
+verifier("scorecard : poids renormalises, total borne a 100",
+         0 <= _scp2["total"] <= 100, f"total={_scp2['total']}")
+_scs = score.evaluer(lire("style-mauvais.md"), seuil_type="publication")
+verifier("scorecard : seuil de type publication non atteint sur texte fautif",
+         _scs["seuil_type"]["atteint"] is False, f"st={_scs['seuil_type']}")
+_tja = {"axes": {"Style": {"score": 18}, "Sources": {"score": 15}}, "total": 80, "verdict": "x"}
+_tjb = {"axes": {"Style": {"score": 19}, "Sources": {"score": 16}}, "total": 82, "verdict": "x"}
+_tj2 = score.trajectoire(_tja, _tjb)
+verifier("trajectoire : arret anticipe signale sous +3 sans regression",
+         _tj2.get("arret_anticipe") is True, f"tj={_tj2.get('arret_anticipe')}")
+
+# Figures : TAM-SAM-SOM
+_ts_ok = {"tam": {"libelle": "Marche total", "valeur": "80"},
+          "sam": {"libelle": "Accessible", "valeur": "30"},
+          "som": {"libelle": "Atteignable", "valeur": "5"}}
+_svg_ts = figs.tam_sam_som(_ts_ok)
+verifier("figures : tam-sam-som genere 3 cercles etiquetes",
+         _svg_ts.count("<circle") >= 3 and "Marche total" in _svg_ts)
+_av_ts = figs.auditer("tam-sam-som", {"tam": {"libelle": "T", "valeur": "10"},
+                                      "sam": {"libelle": "S", "valeur": "50"},
+                                      "som": {"libelle": "O", "valeur": "5"}})
+verifier("figures : audit tam-sam-som attrape l'ordre inverse",
+         any("TAM" in a and "SAM" in a for a in _av_ts), f"avis={_av_ts}")
+
+# Theme : preambule LaTeX, palette nommee, avertissement dichromate
+_th = theme.charger({"encre": "#16314E", "fond": "#FFFFFF", "accent": "#C8102E"})
+_ltx = theme.latex(_th)
+verifier("theme : preambule latex avec definecolor et police",
+         "\\definecolor" in _ltx and ("setmainfont" in _ltx or "newfontfamily" in _ltx))
+_thp = theme.charger({"encre": "#111111", "fond": "#FFFFFF", "palette": "okabe-ito"})
+verifier("theme : palette okabe-ito injectee",
+         any(c.upper() in ("#E69F00", "#56B4E9") for c in _thp.get("palette", [])),
+         f"pal={_thp.get('palette')}")
+_errd, _warnd = theme.valider(theme.charger(
+    {"encre": "#111111", "fond": "#FFFFFF", "palette": ["#CC3333", "#33CC33"]}))
+verifier("theme : paire rouge-vert signalee au dichromate",
+         any("dichromate" in w for w in _warnd), f"warn={_warnd}")
+
+# Check-presentation : degradation propre sans backend
+_sauve = (chkp.extraire_texte_pages, chkp.rendre_pages_basses_res, chkp.compter_pages_et_taille)
+chkp.extraire_texte_pages = lambda chemin: (None, "aucun backend")
+chkp.rendre_pages_basses_res = lambda chemin, dpi=60: (None, "aucun backend")
+chkp.compter_pages_et_taille = lambda chemin: (None, 0, "aucun backend")
+_rapp = chkp.analyser("/tmp/deck_inexistant_scriptorium.pdf", duree=15)
+chkp.extraire_texte_pages, chkp.rendre_pages_basses_res, chkp.compter_pages_et_taille = _sauve
+verifier("check-presentation : degradation declaree, rien d'invente",
+         any("saut" in str(x).lower() or "aucun backend" in str(x).lower()
+             for x in (_rapp.get("notes") or [])) or _rapp.get("pages") is None,
+         f"rapport={_rapp.get('notes')}")
+
+
 def main():
     passes = sum(1 for _, ok, _ in RESULTATS if ok)
     total = len(RESULTATS)

@@ -1,0 +1,126 @@
+% gabarit-poster.tex - Gabarit de poster scientifique A0 (Scriptorium)
+%
+% Portions adaptees du projet openscience (Synthetic Sciences, InkVell Inc.), Apache-2.0,
+% github.com/synthetic-sciences/openscience (backend/cli/skills/writing/latex-posters,
+% assets/tikzposter_template.tex). Modifications Marius Yvard, MIT.
+%
+% Choix de package : tikzposter plutot que beamerposter ou baposter (les trois options source).
+% Raisons : classe native autonome (aucune dependance a beamer, contrairement a beamerposter,
+% qui detourne un moteur de diaporama pour un objet statique) ; mecanisme \definecolorstyle
+% deja pense pour l'injection de couleurs externes (voir bloc CHARTE ci-dessous, calque sur le
+% bloc equivalent d'un gabarit-rapport.tex) ; syntaxe de bloc la plus courte des trois (\block{
+% Titre}{corps}). Voir produire/references/genre-poster.md pour le playbook complet.
+%
+% Compilation : xelatex gabarit-poster.tex
+%
+% Les couleurs de ce gabarit sont remplacees par la sortie de :
+%   python3 scripts/theme.py charte-graphique.json --format latex
+% (mêmes noms de couleur que gabarit-rapport.tex : ScriptoriumEncre, ScriptoriumTrait,
+% ScriptoriumFond, ScriptoriumAccent, ScriptoriumPalUn a ScriptoriumPalQuatre ; le bloc se colle
+% integralement, fontspec est charge ci-dessus pour que ses lignes \setmainfont s'appliquent).
+%
+\documentclass[25pt,a0paper,portrait,margin=10mm,innermargin=15mm,
+  blockverticalspace=15mm,colspace=15mm,subcolspace=8mm]{tikzposter}
+
+\usepackage{fontspec}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{qrcode}
+
+% ============================================================================
+% >>> DEBUT BLOC CHARTE (remplacer par : python3 scripts/theme.py CHARTE.json --format latex)
+% ============================================================================
+\definecolor{ScriptoriumEncre}{HTML}{2E2A26}
+\definecolor{ScriptoriumTrait}{HTML}{8A8175}
+\definecolor{ScriptoriumFond}{HTML}{FFFFFF}
+\definecolor{ScriptoriumAccent}{HTML}{6E6356}
+\definecolor{ScriptoriumPalUn}{HTML}{F4F1EC}
+\definecolor{ScriptoriumPalDeux}{HTML}{EEF2F4}
+\definecolor{ScriptoriumPalTrois}{HTML}{F1F0EA}
+\definecolor{ScriptoriumPalQuatre}{HTML}{F4EEF0}
+% ============================================================================
+% <<< FIN BLOC CHARTE
+% ============================================================================
+
+% Style de couleurs derive de la charte (mecanisme natif tikzposter, bloc de definitions
+% intermediaires laisse vide : les couleurs sont deja definies globalement ci-dessus)
+\definecolorstyle{ScriptoriumStyle}{
+}{
+  \colorlet{backgroundcolor}{ScriptoriumPalUn}
+  \colorlet{framecolor}{ScriptoriumAccent}
+  \colorlet{titlefgcolor}{white}
+  \colorlet{titlebgcolor}{ScriptoriumEncre}
+  \colorlet{blocktitlebgcolor}{ScriptoriumAccent}
+  \colorlet{blocktitlefgcolor}{white}
+  \colorlet{blockbodybgcolor}{ScriptoriumFond}
+  \colorlet{blockbodyfgcolor}{ScriptoriumEncre}
+}
+\usetheme{Default}
+\usecolorstyle{ScriptoriumStyle}
+
+\title{Titre du poster : concis et descriptif}
+\author{Auteur un\textsuperscript{1}, Auteur deux\textsuperscript{2}}
+\institute{\textsuperscript{1}Etablissement, ville \quad \textsuperscript{2}Etablissement, ville}
+
+\begin{document}
+
+\maketitle
+
+\begin{columns}
+
+  \column{0.33}
+  \block{Introduction}{
+    \textbf{Contexte.} Une a deux phrases sur l'importance du sujet.
+
+    \vspace{0.4cm}
+    \textbf{Probleme.} Le manque ou la question que le travail adresse.
+
+    \vspace{0.4cm}
+    \textbf{Objectif.} Enonce clair de l'objectif du travail.
+  }
+  \block{Methode}{
+    \begin{itemize}
+      \item Demarche ou dispositif
+      \item Echantillon ou perimetre : n = X
+      \item Criteres cles
+    \end{itemize}
+  }
+
+  \column{0.34}
+  \block{Resultat principal}{
+    Description breve du resultat le plus important. La figure porte la preuve, le texte
+    reste minimal (voir produire/references/genre-poster.md).
+
+    \begin{center}
+      % \includegraphics[width=0.9\linewidth]{figure1.pdf}
+      \fbox{\parbox{0.85\linewidth}{\centering\vspace{4cm}Emplacement de la figure\vspace{4cm}}}
+    \end{center}
+    \small Figure 1. Legende avec la donnee cle (n = X, \emph{p} = 0,01).
+  }
+
+  \column{0.33}
+  \block{Conclusion}{
+    \begin{itemize}
+      \item Constat un
+      \item Constat deux
+      \item Portee ou limite
+    \end{itemize}
+  }
+  \block{Pour aller plus loin}{
+    \begin{center}
+      \qrcode[height=4cm]{https://doi.org/10.0000/exemple}\\
+      \small Article, donnees et code
+    \end{center}
+  }
+
+\end{columns}
+
+\block{}{
+  \footnotesize
+  \textbf{References.} Reference un ; reference deux.
+  \hfill
+  \textbf{Contact.} nom@etablissement.fr
+}
+
+\end{document}

@@ -90,7 +90,50 @@ Hors du champ biomédical d'origine, transposer ces neuf angles à une affirmati
 
 Employer le vocabulaire du statut réel de l'affirmation. Un langage d'affirmation établie ("il est démontré que", "on sait que") appliqué à un résultat préliminaire ou spéculatif est le défaut de rigueur le plus fréquent en écriture qui s'appuie sur des sources.
 
+## 4. Biais cognitifs du chercheur (distincts des sophismes)
+
+Un sophisme cité en section 1 est une erreur dans un raisonnement déjà formulé. Un biais cognitif du chercheur agit plus tôt, dans la conception ou l'interprétation d'une recherche, souvent sans qu'aucun argument explicite ne soit encore énoncé. Les deux catégories se recoupent parfois dans leurs effets, elles restent distinctes dans leur mécanisme : l'une porte sur l'argumentation, l'autre sur la manière dont la recherche elle-même a été conçue, conduite ou lue.
+
+### Biais de confirmation expérimentale
+
+Le chercheur conçoit un protocole, sélectionne des données ou interprète un résultat ambigu de façon à confirmer l'hypothèse déjà favorisée, sans que l'intention soit nécessairement délibérée.
+
+Parade côté rédaction : préenregistrer l'hypothèse et le plan d'analyse avant la collecte (même principe que le contrat de notation préenregistré, `contrat-notation.md`, section 1), nommer explicitement dans le texte une hypothèse concurrente qui aurait pu être favorisée à la place.
+
+### HARKing (formuler l'hypothèse après le résultat)
+
+Présenter une hypothèse formulée après coup comme si elle avait été prédite avant la collecte des données. Le résultat ne teste alors plus rien, il habille une observation déjà connue.
+
+Parade côté rédaction : distinguer explicitement dans le texte l'analyse confirmatoire, hypothèse posée avant la collecte, de l'analyse exploratoire, motif repéré après coup, sans jamais présenter la seconde comme la première.
+
+### P-hacking et degrés de liberté du chercheur
+
+Choisir après coup, parmi les analyses possibles, celle qui produit un résultat significatif (multiplier les sous-groupes, les mesures ou les seuils testés jusqu'à ce qu'un résultat franchisse le seuil de significativité), sans rapporter les analyses écartées.
+
+Parade côté rédaction : rapporter toutes les analyses effectuées (pas seulement celle qui a franchi le seuil) et corriger pour les comparaisons multiples sur les mêmes données.
+
+### Biais de publication et effet tiroir
+
+Les résultats positifs ou significatifs ont une probabilité de publication plus élevée que les résultats nuls, ce qui déforme la littérature disponible vers une surestimation des effets réels : les résultats nuls restent dans le tiroir de l'auteur plutôt que d'être diffusés.
+
+Parade côté rédaction : rapporter les résultats nuls obtenus au même titre que les résultats positifs, signaler explicitement quand une affirmation s'appuie sur une littérature susceptible d'être affectée par ce biais (ajuster le statut épistémique de la section 3 en conséquence).
+
+### Apophénie (motifs dans le bruit)
+
+Percevoir un motif structuré, une tendance ou une corrélation dans des données qui ne contiennent en réalité que du bruit aléatoire.
+
+Parade côté rédaction : tester si le motif observé dépasse ce qu'une distribution aléatoire produirait par simple hasard avant de l'interpréter, le signaler comme préliminaire (statut épistémique, section 3) tant que cette vérification n'a pas été faite.
+
+### Biais du survivant (recherche)
+
+Distinct de la généralisation hâtive de la section 1, qui porte sur l'argumentation : ici, l'échantillon de données disponible exclut structurellement les cas qui n'ont pas survécu à un filtre, une clôture d'activité ou une panne, avant même qu'un argument ne soit construit sur ces données.
+
+Parade côté rédaction : rechercher explicitement si des cas éliminés de l'échantillon existent (activité cessée, sujet perdu de vue, mesure manquante) et signaler leur absence plutôt que de conclure uniquement sur les cas observés.
+
 ## Sources
 
 - Hill, A. B. (1965). The Environment and Disease: Association or Causation? Proceedings of the Royal Society of Medicine, 58(5), 295-300. https://doi.org/10.1177/003591576505800503
 - Stanford Encyclopedia of Philosophy, entrée Fallacies. https://plato.stanford.edu/entries/fallacies/ (consultée le 2026-07-08)
+- Kerr, N. L. (1998). HARKing: Hypothesizing After the Results are Known. Personality and Social Psychology Review, 2(3), 196-217. https://doi.org/10.1207/s15327957pspr0203_4
+- Simmons, J. P., Nelson, L. D., Simonsohn, U. (2011). False-Positive Psychology: Undisclosed Flexibility in Data Collection and Analysis Allows Presenting Anything as Significant. Psychological Science, 22(11), 1359-1366. https://doi.org/10.1177/0956797611417632
+- Rosenthal, R. (1979). The file drawer problem and tolerance for null results. Psychological Bulletin, 86(3), 638-641. https://doi.org/10.1037/0033-2909.86.3.638

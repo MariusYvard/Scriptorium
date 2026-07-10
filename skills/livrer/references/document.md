@@ -107,3 +107,52 @@ Les images extraites d'un document source (voir `produire`, action image) se pla
 - Les images décoratives reçoivent un `alt` vide et ne sont pas numérotées. Les images vectorielles non converties ne sont pas insérées en l'état, elles sont signalées.
 
 La charte graphique cadre la légende et le filet, comme pour une figure générée. Une image n'est jamais recadrée au point de tromper.
+
+## Sortie LaTeX (gabarit charté, rapport professionnel)
+
+Une troisième voie de finalisation, à côté de Word, PDF et HTML : le gabarit `assets/gabarit-rapport.tex`, un rapport professionnel autonome avec page de titre, en-têtes, cinq encadrés sémantiques (résultat, méthode, avertissement, limite, note) et trois macros statistiques (`\pvalue`, `\CI`, `\effectsize`). Adapté du paquet `scientific_report` du dépôt openscience (Apache-2.0), simplifié à un seul fichier compilable.
+
+### Quand préférer LaTeX au HTML
+
+- La destination l'impose (revue ou conférence à gabarit LaTeX officiel, voir la section suivante).
+- Le document porte une notation statistique ou mathématique dense : LaTeX la compose nativement, sans détour (voir `produire`, action equation, pour les équations et unités SI).
+- Une pagination exacte est requise (en-têtes courants, numérotation romaine puis arabe, sauts de page maîtrisés), plus fine que ce qu'une feuille d'impression HTML garantit.
+- Le document doit rester dans l'écosystème BibTeX déjà en place (voir `scripts/citations.py`) sans repasser par une conversion.
+
+Le HTML reste préférable pour une publication web interactive, une itération rapide sans recompilation ou l'absence de toute chaîne LaTeX sur la machine.
+
+### Charte injectée
+
+Les couleurs et polices du gabarit sont un bloc `\definecolor` et `\setmainfont` délimité par des marqueurs de commentaire (`DEBUT BLOC CHARTE` / `FIN BLOC CHARTE`). Le générer et le coller tel quel à la place du bloc par défaut :
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/theme.py charte-graphique.json --format latex
+```
+
+Même logique que `--format css` pour le HTML : un bloc prêt à coller, jamais à retaper à la main. Quand `fc-list` (fontconfig) est présent sur la machine, le script vérifie que la police demandée est installée et retombe sur une famille Latin Modern sinon, avec un commentaire d'avertissement dans le bloc généré ; sans `fc-list`, le nom demandé est repris tel quel, à vérifier avant compilation.
+
+### Compilation optionnelle
+
+Si `xelatex` est disponible, compiler directement :
+
+```
+xelatex gabarit-rapport.tex
+```
+
+Deux passes suffisent pour une table des matières correcte ; ajouter `bibtex` entre les deux si une bibliographie BibTeX est jointe (voir `scripts/citations.py` pour la produire depuis des sources vérifiées). Si `xelatex` manque, livrer le fichier `.tex` avec la charte déjà injectée et signaler que la compilation demande cet outil, sans bloquer la remise : même convention que l'export PDF via pandoc décrit dans `produire`, action equation.
+
+### Gabarit associé pour un poster
+
+Le même mécanisme de charte s'applique au poster scientifique : `assets/gabarit-poster.tex` (voir `produire`, action genre, playbook poster). Les deux gabarits partagent les mêmes noms de couleur (`ScriptoriumEncre`, `ScriptoriumTrait`, `ScriptoriumFond`, `ScriptoriumAccent`, `ScriptoriumPalUn` à `ScriptoriumPalQuatre`), un même bloc généré s'applique aux deux sans modification.
+
+## Exigences par destination (revue, conférence, préprint)
+
+En plus du genre, la destination impose ses propres contraintes de forme. Les vérifier avant la mise en forme, jamais après : reprendre une mise en forme déjà posée coûte plus cher que de partir du bon gabarit.
+
+- Revue à comité de lecture : limite de longueur propre à la revue (souvent comptée en mots ou en pages, figures incluses ou non selon le titre), style de citation imposé (numérique, auteur-date ou propre à la revue), résumé structuré ou non selon la discipline, déclarations obligatoires (financement, conflits d'intérêts, disponibilité des données). Le gabarit LaTeX ou le modèle Word officiel de la revue prévaut toujours sur un gabarit générique.
+- Conférence (informatique, apprentissage automatique, sciences de l'ingénieur) : limite de pages stricte pour le corps du texte, annexes et références parfois hors limite, anonymisation en double aveugle fréquente pour la soumission initiale (retirer noms, affiliations, remerciements, auto-citations à la première personne), gabarit LaTeX officiel propre à chaque conférence et millésime.
+- Préprint (arXiv, HAL, bioRxiv et assimilés) : peu ou pas de limite de forme, mais une licence à déclarer, une version datée et citable, ainsi qu'une bascule ultérieure possible vers le gabarit d'une revue ou d'une conférence si le travail y est soumis ensuite.
+
+Checklist de soumission, commune aux trois familles : format de fichier accepté (PDF le plus souvent, parfois LaTeX source), respect de la limite de pages ou de mots avant tout envoi, citations dans le style imposé, anonymisation vérifiée si requise, figures aux résolutions demandées, métadonnées de soumission renseignées (titre, auteurs, affiliations, mots-clés).
+
+Ce plugin n'embarque pas de bibliothèque de gabarits propres à chaque revue ou conférence : ils changent chaque année et se trouvent officiellement sur le site de la destination (page auteurs, dépôt Overleaf officiel de la venue). Utiliser `assets/gabarit-rapport.tex` pour un rapport interne ou un document sans gabarit imposé. Utiliser le gabarit officiel de la destination dès qu'elle en fournit un.

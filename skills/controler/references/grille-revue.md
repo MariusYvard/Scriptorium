@@ -1,8 +1,10 @@
 # Grille de revue adversariale
 
-Référence du contrôle qualité. Cinq dimensions, sévérité, verdict, carte preuve-affirmation. À charger pour toute révision structurée.
+Référence du contrôle qualité. Huit dimensions, sévérité, verdict, carte preuve-affirmation. À charger pour toute révision structurée.
 
-## Cinq dimensions
+## Huit dimensions
+
+Les cinq premières dimensions s'appliquent à tout écrit. Les trois dernières (6 à 8) sont des dimensions de revue qualitative, notées dans le rapport de revue au même titre que les cinq premières : elles ne touchent pas au calcul du scorecard mécanique de `scripts/scorecard.py`, qui reste sur ses cinq axes chiffrés (Style, Sources, Traçabilité, Terminologie et nombres, Lisibilité).
 
 ### 1. Contribution et pertinence
 
@@ -40,6 +42,24 @@ Référence du contrôle qualité. Cinq dimensions, sévérité, verdict, carte 
 - Pas de métadiscours, registre neutre.
 - Faits précis, pas de vague.
 
+### 6. Rigueur méthodologique
+
+- La méthode choisie répond à la question posée, pas seulement disponible ou familière à l'auteur.
+- Les biais connus de la méthode sont nommés et, si possible, mitigés (voir `biais-relecteur.md`, `sophismes-causalite.md`).
+- Les statuts épistémiques (`sophismes-causalite.md`, section statuts) sont respectés : aucune affirmation n'est présentée comme plus établie que ce que la méthode permet réellement de conclure.
+
+### 7. Portée et transférabilité
+
+- Le domaine de validité de la conclusion est nommé explicitement (population, contexte, période).
+- Aucune généralisation ne dépasse ce que l'échantillon, le cas ou le corpus permet (voir la généralisation hâtive, `sophismes-causalite.md`).
+- Les conditions qui rendraient la conclusion transférable à un autre contexte sont précisées, sinon leur absence est admise.
+
+### 8. Honnêteté des limites
+
+- Les limites réelles du travail sont énoncées par l'auteur, pas seulement découvertes par le relecteur.
+- Aucune limite connue n'est dissimulée sous une formulation vague.
+- Une limite assumée est traitée comme un gage de rigueur, pas comme un aveu de faiblesse à minimiser dans la revue.
+
 ## Sévérité
 
 - Critique : fausse une affirmation, source manquante ou inventée, violation dure du style. À corriger avant toute finalisation.
@@ -76,6 +96,9 @@ Contrôles :
 - Preuve et rigueur : [Conforme / Non conforme] - [détail]
 - Complétude : [Conforme / Non conforme] - [détail]
 - Style maison : [Conforme / Non conforme] - [détail]
+- Rigueur méthodologique : [Conforme / Non conforme] - [détail]
+- Portée et transférabilité : [Conforme / Non conforme] - [détail]
+- Honnêteté des limites : [Conforme / Non conforme] - [détail]
 
 Constats classés par sévérité :
 1. [Critique] [description] -> Correctif : [recommandation] (règle : [citée])
@@ -89,4 +112,4 @@ Questions ouvertes :
 - [question] -> Recommandation : [proposition]
 ```
 
-Règles : chaque constat cite sa règle, chaque question ouverte porte une recommandation, lister aussi ce qui fonctionne. Un verdict "Prêt" est faux si un contrôle a été sauté en silence.
+Règles : chaque constat cite sa règle, chaque question ouverte porte une recommandation, lister aussi ce qui fonctionne. Un verdict "Prêt" est faux si un contrôle a été sauté en silence. Les trois dimensions ajoutées (6 à 8) sont notées comme les cinq premières, en lecture qualitative : aucune des deux séries de cinq et de trois dimensions ne remplace le calcul du scorecard, qui reste indépendant et mécanique.

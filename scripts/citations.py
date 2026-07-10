@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Moteur de citations pour Scriptorium : BibTeX, formatage, deduplication.
+"""Portions adaptees du projet openscience (Synthetic Sciences, InkVell Inc.),
+Apache-2.0, github.com/synthetic-sciences/openscience. Modifications Marius
+Yvard, MIT.
+
+Moteur de citations pour Scriptorium : BibTeX, formatage, deduplication.
 
 Lit du BibTeX, formate chaque reference en APA 7, Vancouver, Chicago
 (auteur-date), MLA (9e ed., auteur-page) ou IEEE (numerique), deduplique par
 DOI puis par titre. La recuperation des metadonnees a partir d'un DOI
-(Crossref) est optionnelle et reseau (--doi). Tout le reste est hors ligne.
+(Crossref), d'un PMID (NCBI E-utilities) ou d'un identifiant arXiv (API Atom)
+est optionnelle et reseau (--doi, --pmid, --arxiv). Tout le reste est hors
+ligne.
 
 Ancre par citation : le champ BibTeX optionnel `annote` (priorite) ou `note`
 porte soit une citation exacte de 25 mots au plus, soit une localisation
@@ -18,6 +24,22 @@ Bascule de format : --bascule ANCIEN NOUVEAU reemet la meme bibliographie
 en affichant l'ancien, avec un compte de references avant et apres (doit
 rester identique : aucune entree n'est perdue par un changement de format,
 puisque les deux ne sont que deux rendus de la meme liste analysee).
+
+Resolution d'identifiant vers BibTeX : --pmid interroge efetch.fcgi (NCBI
+E-utilities, XML, endpoint deja cite dans references/veille.md) ; --arxiv
+interroge l'API Atom d'arXiv (export.arxiv.org/api/query, endpoint verifie le
+2026-07-10). Les deux emettent une entree BibTeX litteral (comme --doi mais
+au format texte pret a coller, --format json pour le dict brut) plutot qu'une
+reference deja mise en forme APA/Vancouver.
+
+Validation de champs (--valider) : chaque entree est confrontee a la liste
+des champs obligatoires de son type BibTeX (article, book, inproceedings,
+incollection, phdthesis, mastersthesis, techreport, misc). Un type non
+reconnu est signale, pas silencieusement ignore.
+
+Tri stable (--trier cle|annee|auteur) : sorted() de la bibliotheque standard
+est un tri stable (Timsort), les entrees a valeur egale ou vide gardent leur
+ordre d'origine entre elles.
 
 Limites communes aux cinq formats (formats de base couverts, cas exotiques
 non couverts) : pas de gestion des auteurs institutionnels, des oeuvres sans
@@ -32,11 +54,16 @@ docstring.
 Usage :
     python3 citations.py FICHIER.bib --to apa|vancouver|chicago|mla|ieee [--dedupe]
     python3 citations.py FICHIER.bib --bascule ANCIEN NOUVEAU
-    python3 citations.py --doi 10.xxxx/yyyy   (reseau, recupere une entree)
+    python3 citations.py FICHIER.bib --valider [--trier cle|annee|auteur]
+    python3 citations.py --doi 10.xxxx/yyyy       (reseau, recupere une entree)
+    python3 citations.py --pmid 12345678          (reseau, vers BibTeX)
+    python3 citations.py --arxiv 1706.03762       (reseau, vers BibTeX)
     python3 citations.py FICHIER.bib --exiger-ancres
 Module importable : parser_bibtex(texte) ; format_apa(e) ; format_vancouver(e) ;
 format_chicago(e) ; format_mla(e) ; format_ieee(e) ; FORMATS (dict nom -> fonction) ;
-dedupe(entrees) ; ancre_de(entree).
+dedupe(entrees) ; ancre_de(entree) ; valider_entree(e) ; rapport_validation(entrees) ;
+trier_entrees(entrees, cle) ; fetch_doi(doi) ; fetch_pmid(pmid) ; fetch_arxiv(id) ;
+entree_vers_bibtex(e).
 """
 import argparse
 import json
@@ -50,6 +77,25 @@ SEUIL_MOTS_CITATION = 25  # documente dans references/integrite-sources.md
 LOCATEUR_RE = re.compile(
     r'(?i)\b(pp?\.|pages?|§|sections?|sec\.|chapitres?|chap\.|paragraphes?|par(a)?\.?)'
     r'\s*\d+([.\-]\d+)*\b')
+
+# Champs BibTeX obligatoires par type d'entree. Adapte de required_fields,
+# validate_citations.py (openscience). Cas particulier : "book" accepte
+# "editor" a la place de "author" (voir valider_entree).
+REQUIS_PAR_TYPE = {
+    "article": ["author", "title", "journal", "year"],
+    "book": ["title", "publisher", "year"],
+    "inproceedings": ["author", "title", "booktitle", "year"],
+    "incollection": ["author", "title", "booktitle", "publisher", "year"],
+    "phdthesis": ["author", "title", "school", "year"],
+    "mastersthesis": ["author", "title", "school", "year"],
+    "techreport": ["author", "title", "institution", "year"],
+    "misc": ["title", "year"],
+}
+
+# Ordre de champs pour la serialisation BibTeX litterale (entree_vers_bibtex).
+CHAMPS_BIBTEX_ORDRE = ["author", "editor", "title", "journal", "booktitle",
+                       "year", "volume", "number", "pages", "publisher",
+                       "school", "institution", "doi", "url", "note"]
 
 
 def parser_bibtex(texte):
@@ -338,6 +384,52 @@ def rapport_ancrage(entrees):
     return {"detail": detail, "sans_ancre": sans_ancre}
 
 
+def valider_entree(e):
+    """Confronte une entree a la liste des champs obligatoires de son type
+    (REQUIS_PAR_TYPE). Cas particulier : "book" accepte "editor" a la place
+    de "author" (une monographie dirigee n'a pas toujours d'auteur unique).
+    Un type hors de la table est signale non reconnu, jamais ignore en
+    silence."""
+    typ = e.get("_type", "misc")
+    if typ not in REQUIS_PAR_TYPE:
+        return {"cle": e.get("_cle"), "type": typ, "manquants": [], "type_reconnu": False}
+    manquants = []
+    for champ in REQUIS_PAR_TYPE[typ]:
+        if champ == "author" and typ == "book":
+            if not e.get("author") and not e.get("editor"):
+                manquants.append("author ou editor")
+            continue
+        if not e.get(champ):
+            manquants.append(champ)
+    return {"cle": e.get("_cle"), "type": typ, "manquants": manquants, "type_reconnu": True}
+
+
+def rapport_validation(entrees):
+    """Rapport de validation par entree : champs obligatoires manquants par
+    type BibTeX (REQUIS_PAR_TYPE), et types non reconnus par la table."""
+    detail = [valider_entree(e) for e in entrees]
+    incompletes = [d["cle"] for d in detail if d["manquants"]]
+    non_reconnues = [d["cle"] for d in detail if not d["type_reconnu"]]
+    return {"detail": detail, "incompletes": incompletes, "types_non_reconnus": non_reconnues}
+
+
+def trier_entrees(entrees, cle):
+    """Tri stable sur cle|annee|auteur. sorted() (bibliotheque standard) est
+    un tri stable (Timsort) : deux entrees a valeur egale ou vide gardent
+    leur ordre d'origine entre elles, une entree sans la valeur demandee se
+    retrouve en fin de liste plutot que d'etre placee arbitrairement."""
+    def cle_tri(e):
+        if cle == "annee":
+            v = e.get("year", "")
+        elif cle == "auteur":
+            aut = _auteurs(e.get("author", ""))
+            v = aut[0][0] if aut else ""
+        else:
+            v = e.get("_cle", "")
+        return (v == "", v)
+    return sorted(entrees, key=cle_tri)
+
+
 def fetch_doi(doi):  # reseau, appele seulement avec --doi
     import urllib.request
     url = "https://api.crossref.org/works/" + doi.strip()
@@ -355,41 +447,172 @@ def fetch_doi(doi):  # reseau, appele seulement avec --doi
     }
 
 
+def fetch_pmid(pmid, email=None):  # reseau, appele seulement avec --pmid
+    """Resout un PMID via NCBI E-utilities (efetch.fcgi, XML), endpoint deja
+    cite dans references/veille.md. Retourne le meme schema de dict que
+    fetch_doi. Port stdlib (urllib + xml.etree.ElementTree) d'extract_from_pmid,
+    extract_metadata.py (openscience) : la source utilise `requests`, ici
+    urllib.request suffit et evite toute dependance."""
+    import urllib.parse
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    pmid = pmid.strip()
+    params = {"db": "pubmed", "id": pmid, "retmode": "xml", "rettype": "abstract"}
+    if email:
+        params["email"] = email
+    url = ("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?"
+           + urllib.parse.urlencode(params))
+    with urllib.request.urlopen(url, timeout=15) as r:
+        root = ET.fromstring(r.read())
+    article = root.find(".//PubmedArticle")
+    if article is None:
+        raise ValueError(f"PMID introuvable ou reponse vide : {pmid}")
+    art = article.find(".//Article")
+    journal = art.find(".//Journal") if art is not None else None
+    auteurs = []
+    for a in article.findall(".//AuthorList/Author"):
+        nom = a.findtext("LastName", "")
+        prenom = a.findtext("ForeName", "")
+        if nom:
+            auteurs.append(f"{nom}, {prenom}" if prenom else nom)
+    doi = ""
+    for aid in article.findall(".//ArticleIdList/ArticleId"):
+        if aid.get("IdType") == "doi":
+            doi = aid.text or ""
+    annee = journal.findtext(".//JournalIssue/PubDate/Year", "") if journal is not None else ""
+    if not annee and journal is not None:
+        medline_date = journal.findtext(".//JournalIssue/PubDate/MedlineDate", "") or ""
+        m = re.search(r"\d{4}", medline_date)
+        annee = m.group() if m else ""
+    return {
+        "_type": "article", "_cle": f"pmid_{pmid}",
+        "author": " and ".join(auteurs),
+        "title": art.findtext(".//ArticleTitle", "Sans titre") if art is not None else "Sans titre",
+        "year": annee,
+        "journal": journal.findtext(".//Title", "") if journal is not None else "",
+        "volume": journal.findtext(".//JournalIssue/Volume", "") if journal is not None else "",
+        "number": journal.findtext(".//JournalIssue/Issue", "") if journal is not None else "",
+        "pages": art.findtext(".//Pagination/MedlinePgn", "") if art is not None else "",
+        "doi": doi, "pmid": pmid,
+    }
+
+
+def fetch_arxiv(arxiv_id):  # reseau, appele seulement avec --arxiv
+    """Resout un identifiant arXiv via l'API Atom (export.arxiv.org/api/query),
+    endpoint verifie le 2026-07-10 (reponse Atom valide sur un identifiant
+    connu). Retourne le meme schema de dict que fetch_doi. Port stdlib
+    (urllib + xml.etree.ElementTree) d'extract_from_arxiv, extract_metadata.py
+    (openscience). Type "article" si un DOI de publication existe (version
+    revue parue), sinon "misc" avec la reference arXiv en guise de venue."""
+    import urllib.parse
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    ns = {"atom": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
+    aid = arxiv_id.strip()
+    for prefixe in ("arXiv:", "arxiv:"):
+        if aid.startswith(prefixe):
+            aid = aid[len(prefixe):]
+    url = ("http://export.arxiv.org/api/query?"
+           + urllib.parse.urlencode({"id_list": aid, "max_results": 1}))
+    with urllib.request.urlopen(url, timeout=15) as r:
+        root = ET.fromstring(r.read())
+    entry = root.find("atom:entry", ns)
+    if entry is None:
+        raise ValueError(f"Identifiant arXiv introuvable : {arxiv_id}")
+    titre = " ".join((entry.findtext("atom:title", "", ns) or "").split())
+    auteurs = " and ".join(
+        (a.findtext("atom:name", "", ns) or "") for a in entry.findall("atom:author", ns))
+    publie = entry.findtext("atom:published", "", ns) or ""
+    annee = publie[:4] if publie else ""
+    doi_elem = entry.find("arxiv:doi", ns)
+    doi = doi_elem.text if doi_elem is not None and doi_elem.text else ""
+    ref_elem = entry.find("arxiv:journal_ref", ns)
+    ref = ref_elem.text if ref_elem is not None and ref_elem.text else ""
+    return {
+        "_type": "article" if doi else "misc", "_cle": f"arxiv_{aid}",
+        "author": auteurs, "title": titre or "Sans titre", "year": annee,
+        "journal": ref or ("" if doi else f"arXiv:{aid}"),
+        "volume": "", "number": "", "pages": "", "doi": doi, "arxiv": aid,
+    }
+
+
+def entree_vers_bibtex(e, cle=None):
+    """Serialise un dict d'entree (meme forme que fetch_doi/fetch_pmid/
+    fetch_arxiv) en texte BibTeX litteral, pret a coller dans un fichier
+    .bib. Adapte de metadata_to_bibtex, extract_metadata.py (openscience)."""
+    cle = cle or e.get("_cle") or "entree"
+    typ = e.get("_type", "misc")
+    lignes = [f"@{typ}{{{cle},"]
+    for champ in CHAMPS_BIBTEX_ORDRE:
+        valeur = e.get(champ)
+        if valeur:
+            lignes.append(f"  {champ} = {{{valeur}}},")
+    if lignes[-1].endswith(","):
+        lignes[-1] = lignes[-1][:-1]
+    lignes.append("}")
+    return "\n".join(lignes)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Moteur de citations BibTeX.")
     ap.add_argument("fichier", nargs="?", help="fichier .bib, ou - pour stdin")
     ap.add_argument("--to", choices=list(FORMATS), default="apa")
     ap.add_argument("--dedupe", action="store_true")
     ap.add_argument("--doi", help="recupere une entree depuis Crossref (reseau)")
+    ap.add_argument("--pmid", help="recupere une entree depuis PubMed E-utilities, vers BibTeX (reseau)")
+    ap.add_argument("--arxiv", help="recupere une entree depuis l'API arXiv, vers BibTeX (reseau)")
+    ap.add_argument("--email", help="email transmis a NCBI E-utilities par courtoisie (optionnel, --pmid)")
     ap.add_argument("--format", choices=["text", "json"], default="text")
     ap.add_argument("--exiger-ancres", action="store_true",
                      help="code de sortie 1 si une entree n'a pas d'ancre exploitable")
+    ap.add_argument("--valider", action="store_true",
+                     help="rapport des champs BibTeX obligatoires manquants, par type d'entree")
+    ap.add_argument("--trier", choices=["cle", "annee", "auteur"],
+                     help="tri stable des entrees avant formatage")
     ap.add_argument("--bascule", nargs=2, metavar=("ANCIEN", "NOUVEAU"), choices=list(FORMATS),
                      help="reemet la meme bibliographie (memes entrees) d'un format vers un "
                           "autre, avec un compte de references avant et apres")
     a = ap.parse_args(argv)
+
+    if a.pmid:
+        e = fetch_pmid(a.pmid, email=a.email)
+        print(json.dumps(e, ensure_ascii=False, indent=2) if a.format == "json"
+              else entree_vers_bibtex(e))
+        return 0
+    if a.arxiv:
+        e = fetch_arxiv(a.arxiv)
+        print(json.dumps(e, ensure_ascii=False, indent=2) if a.format == "json"
+              else entree_vers_bibtex(e))
+        return 0
     if a.doi:
         e = fetch_doi(a.doi)
         print(format_apa(e) if a.to == "apa" else format_vancouver(e))
         return 0
+
     texte = sys.stdin.read() if a.fichier in (None, "-") else open(a.fichier, encoding="utf-8").read()
     entrees = parser_bibtex(texte)
     doublons = []
     if a.dedupe:
         entrees, doublons = dedupe(entrees)
+    if a.trier:
+        entrees = trier_entrees(entrees, a.trier)
     ancrage = rapport_ancrage(entrees)
+    validation = rapport_validation(entrees) if a.valider else None
 
     if a.bascule:
         ancien, nouveau = a.bascule
         refs_ancien = [FORMATS[ancien](e) for e in entrees]
         refs_nouveau = [FORMATS[nouveau](e) for e in entrees]
         if a.format == "json":
-            print(json.dumps({
+            sortie = {
                 "format_ancien": ancien, "format_nouveau": nouveau,
                 "references_ancien": refs_ancien, "references_nouveau": refs_nouveau,
                 "compte_ancien": len(refs_ancien), "compte_nouveau": len(refs_nouveau),
                 "doublons": doublons, "ancrage": ancrage,
-            }, ensure_ascii=False, indent=2))
+            }
+            if validation is not None:
+                sortie["validation"] = validation
+            print(json.dumps(sortie, ensure_ascii=False, indent=2))
         else:
             print(f"Bascule {ancien} -> {nouveau} "
                   f"(compte inchange : {len(refs_ancien)} avant, {len(refs_nouveau)} apres)\n")
@@ -397,14 +620,23 @@ def main(argv=None):
                 print(_ligne(r, nouveau, i))
             if doublons:
                 print(f"\nDoublons ecartes : {doublons}")
-        if a.exiger_ancres and ancrage["sans_ancre"]:
-            return 1
-        return 0
+            if validation is not None and validation["incompletes"]:
+                print(f"\nChamps obligatoires manquants ({len(validation['incompletes'])} entree(s)) :")
+                for d in validation["detail"]:
+                    if d["manquants"]:
+                        print(f"  {d['cle']} ({d['type']}) : {', '.join(d['manquants'])}")
+            if validation is not None and validation["types_non_reconnus"]:
+                print(f"\nType BibTeX non reconnu (non valide) : {validation['types_non_reconnus']}")
+        probleme = bool(a.exiger_ancres and ancrage["sans_ancre"])
+        probleme = probleme or bool(validation is not None and validation["incompletes"])
+        return 1 if probleme else 0
 
     refs = [FORMATS[a.to](e) for e in entrees]
     if a.format == "json":
-        print(json.dumps({"references": refs, "doublons": doublons, "ancrage": ancrage},
-                          ensure_ascii=False, indent=2))
+        sortie = {"references": refs, "doublons": doublons, "ancrage": ancrage}
+        if validation is not None:
+            sortie["validation"] = validation
+        print(json.dumps(sortie, ensure_ascii=False, indent=2))
     else:
         for i, r in enumerate(refs, 1):
             print(_ligne(r, a.to, i))
@@ -412,9 +644,16 @@ def main(argv=None):
             print(f"\nDoublons ecartes : {doublons}")
         if ancrage["sans_ancre"]:
             print(f"\nEntrees sans ancre exploitable (signal) : {ancrage['sans_ancre']}")
-    if a.exiger_ancres and ancrage["sans_ancre"]:
-        return 1
-    return 0
+        if validation is not None and validation["incompletes"]:
+            print(f"\nChamps obligatoires manquants ({len(validation['incompletes'])} entree(s)) :")
+            for d in validation["detail"]:
+                if d["manquants"]:
+                    print(f"  {d['cle']} ({d['type']}) : {', '.join(d['manquants'])}")
+        if validation is not None and validation["types_non_reconnus"]:
+            print(f"\nType BibTeX non reconnu (non valide) : {validation['types_non_reconnus']}")
+    probleme = bool(a.exiger_ancres and ancrage["sans_ancre"])
+    probleme = probleme or bool(validation is not None and validation["incompletes"])
+    return 1 if probleme else 0
 
 
 if __name__ == "__main__":

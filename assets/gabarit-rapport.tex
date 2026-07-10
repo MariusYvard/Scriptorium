@@ -1,0 +1,206 @@
+% gabarit-rapport.tex - Gabarit de rapport professionnel (Scriptorium)
+%
+% Portions adaptees du projet openscience (Synthetic Sciences, InkVell Inc.), Apache-2.0,
+% github.com/synthetic-sciences/openscience (scientific_report.sty, scientific_report_template.tex,
+% skill scientific-writing). Modifications Marius Yvard, MIT.
+%
+% Simplifie par rapport a la source : un seul fichier autonome (pas de .sty separe), cinq
+% encadres semantiques au lieu de neuf, trois macros statistiques au lieu d'une quinzaine.
+% Voir livrer/references/document.md ("Sortie LaTeX") pour la voie complete et le choix entre
+% LaTeX, Word, PDF et HTML.
+%
+% Compilation : xelatex gabarit-rapport.tex (deux passes pour la table des matieres).
+% Avec bibliographie : xelatex, bibtex, xelatex, xelatex (fournir un fichier references.bib,
+% voir scripts/citations.py pour le produire depuis des sources verifiees).
+%
+% Les couleurs et polices du bloc CHARTE ci-dessous sont un jeu de valeurs sobres par defaut.
+% Pour appliquer une charte graphique reelle, remplacer tout le bloc entre les marqueurs par
+% la sortie de :
+%   python3 scripts/theme.py charte-graphique.json --format latex
+% (meme logique que --format css pour la sortie HTML : un bloc genere a coller tel quel).
+%
+\documentclass[11pt,a4paper]{article}
+
+% --- Paquets ---
+\usepackage{fontspec}
+\usepackage[a4paper,margin=2.5cm,headheight=26pt]{geometry}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage[colorlinks=true]{hyperref}
+\usepackage[numbers,sort&compress]{natbib}
+
+% ============================================================================
+% >>> DEBUT BLOC CHARTE (remplacer par : python3 scripts/theme.py CHARTE.json --format latex)
+% ============================================================================
+\definecolor{ScriptoriumEncre}{HTML}{2E2A26}
+\definecolor{ScriptoriumTrait}{HTML}{8A8175}
+\definecolor{ScriptoriumFond}{HTML}{FFFFFF}
+\definecolor{ScriptoriumAccent}{HTML}{6E6356}
+\definecolor{ScriptoriumPalUn}{HTML}{F4F1EC}
+\definecolor{ScriptoriumPalDeux}{HTML}{EEF2F4}
+\definecolor{ScriptoriumPalTrois}{HTML}{F1F0EA}
+\definecolor{ScriptoriumPalQuatre}{HTML}{F4EEF0}
+\setmainfont{Latin Modern Roman}
+% ============================================================================
+% <<< FIN BLOC CHARTE
+% ============================================================================
+
+\hypersetup{
+  linkcolor=ScriptoriumAccent,
+  citecolor=ScriptoriumEncre,
+  urlcolor=ScriptoriumAccent,
+  pdftitle={Rapport},
+}
+
+% --- Titres ---
+\titleformat{\section}{\normalfont\Large\bfseries\color{ScriptoriumEncre}}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{ScriptoriumEncre}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries\color{ScriptoriumTrait}}{\thesubsubsection}{1em}{}
+
+% --- En-tetes et pieds de page ---
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{\leftmark}}
+\fancyhead[R]{\small\textit{Rapport}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.6pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{ScriptoriumAccent}\leaders\hrule height\headrulewidth\hfill}}
+
+% ============================================================================
+% Encadres semantiques (tcolorbox : l'equivalent le plus portable pour ce type d'encadre,
+% disponible dans toute distribution TeX Live standard)
+% ============================================================================
+\newtcolorbox{resultat}[1][Resultat]{
+  colback=ScriptoriumPalUn, colframe=ScriptoriumAccent,
+  fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=ScriptoriumAccent,
+  title=#1, boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+\newtcolorbox{methode}[1][Methode]{
+  colback=ScriptoriumPalDeux, colframe=ScriptoriumTrait,
+  fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=ScriptoriumTrait,
+  title=#1, boxrule=0.8pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+\newtcolorbox{avertissement}[1][Avertissement]{
+  colback=ScriptoriumPalTrois, colframe=ScriptoriumEncre,
+  fonttitle=\bfseries\color{white}, coltitle=white, colbacktitle=ScriptoriumEncre,
+  title=#1, boxrule=1.2pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+\newtcolorbox{limite}[1][Limite]{
+  colback=ScriptoriumPalQuatre, colframe=ScriptoriumTrait,
+  fonttitle=\bfseries\color{ScriptoriumEncre}, coltitle=ScriptoriumEncre, colbacktitle=ScriptoriumPalQuatre,
+  title=#1, boxrule=0.5pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+\newtcolorbox{note}[1][Note]{
+  colback=ScriptoriumFond, colframe=ScriptoriumTrait,
+  fonttitle=\bfseries\color{ScriptoriumEncre}, coltitle=ScriptoriumEncre, colbacktitle=ScriptoriumPalUn,
+  title=#1, boxrule=0.4pt, arc=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+}
+
+% ============================================================================
+% Macros statistiques
+% ============================================================================
+% p-valeur : \pvalue{0{,}03}. En mode mathematique, ecrire 0{,}03 (accolades) pour un
+% separateur decimal francais correct, sinon LaTeX espace les chiffres autour de la virgule.
+\newcommand{\pvalue}[1]{\textit{p}~=~#1}
+% Intervalle de confiance a 95 % : \CI{borne basse}{borne haute}.
+\newcommand{\CI}[2]{IC 95~\%~[#1, #2]}
+% Taille d'effet nommee : \effectsize{d}{0{,}6}.
+\newcommand{\effectsize}[2]{#1~=~#2}
+
+% --- Page de titre ---
+\newcommand{\pagetitre}[4]{%
+  % #1 titre, #2 sous-titre, #3 auteur ou equipe, #4 date
+  \begin{titlepage}
+  \centering
+  \vspace*{2.5cm}
+  {\Huge\bfseries\color{ScriptoriumEncre} #1\par}
+  \vspace{0.5cm}
+  {\Large\color{ScriptoriumTrait} #2\par}
+  \vspace{3cm}
+  {\large\bfseries #3\par}
+  \vspace{0.3cm}
+  {\large #4\par}
+  \vfill
+  \textcolor{ScriptoriumAccent}{\rule{\textwidth}{2pt}}
+  \end{titlepage}
+}
+
+\begin{document}
+
+\pagetitre{Titre du rapport}{Sous-titre ou perimetre de l'etude}{Auteur ou equipe}{Mois annee}
+
+\tableofcontents
+\thispagestyle{empty}
+\newpage
+
+\section{Introduction}
+
+Contexte, objet du rapport et perimetre. Une phrase de portee generale, suivie de
+l'observation precise qui motive le rapport.
+
+\begin{note}
+Une remarque secondaire, non essentielle au fil du propos, se place ici plutot que dans
+le corps du texte.
+\end{note}
+
+\section{Methode}
+
+\begin{methode}
+Donnees mobilisees, procedure suivie, limites connues des l'origine de la collecte.
+\end{methode}
+
+Le corps du texte developpe la methode en continu. Les notations statistiques suivent des
+macros dediees : \pvalue{0{,}01}, \CI{1,2}{3,4}, \effectsize{d}{0{,}6}.
+
+\section{Resultats}
+
+\begin{table}[htbp]
+\centering
+\caption{Exemple de tableau (a remplacer)}
+\label{tab:exemple}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Variable & n & Moyenne \\
+\midrule
+Premiere serie & 120 & 42,5 \\
+Seconde serie  & 118 & 37,1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{resultat}[Constat principal]
+Resume verifiable du resultat central en une phrase, chiffre a l'appui (tableau~\ref{tab:exemple}).
+\end{resultat}
+
+\begin{avertissement}
+Point de vigilance qui conditionne la lecture du resultat precedent (biais, echantillon, portee).
+\end{avertissement}
+
+\section{Discussion}
+
+Interpretation du resultat, mise en regard avec les travaux existants cites en bibliographie.
+
+\begin{limite}
+Limites de methode, de portee ou d'echantillon, enoncees sans les minimiser.
+\end{limite}
+
+\section{Conclusion}
+
+Synthese des constats et suite eventuelle donnee au travail.
+
+% ============================================================================
+% Bibliographie (BibTeX ; voir scripts/citations.py pour produire un .bib verifie)
+% ============================================================================
+\bibliographystyle{plain}
+\bibliography{references}
+
+\appendix
+\section{Annexe}
+
+Materiel complementaire (protocole detaille, tableau etendu, glossaire des sigles).
+
+\end{document}

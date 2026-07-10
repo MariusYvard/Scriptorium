@@ -63,6 +63,12 @@ Facteurs de hausse : effet de grande ampleur, gradient dose-réponse observé (l
 
 La confiance ajustée qui en résulte alimente le score de confiance déjà produit par l'agent `synthese-sources` : un fait de niveau 3 avec tous les facteurs de baisse absents peut justifier une confiance supérieure à un fait de niveau 2 miné par une forte incohérence.
 
+## 5. Indice mécanique de palier de domaine
+
+`scripts/verify-sources.py` classe automatiquement, sans réseau, le domaine de chaque URL d'un document dans l'un de cinq paliers : revue à comité de lecture, preprint, institutionnel, encyclopédie, presse-blog (table locale d'une vingtaine de domaines connus ; un domaine absent de la table est classé non-classe, jamais rangé par défaut dans une catégorie qu'il ne mérite pas forcément).
+
+Cet indice alimente le critère Validation de la fiche de notation (section 2) : une URL de revue à comité de lecture pointe vers une évaluation par les pairs généralement constatée, un billet de blog n'en pointe aucune. Il ne s'y substitue jamais. Une revue à comité de lecture peut publier un article à méthodologie faible (note F malgré un palier de revue à comité de lecture) et un blog peut relayer fidèlement une donnée primaire correctement attribuée (note qui peut rester acceptable malgré un palier presse-blog). Le palier oriente la lecture en premier passage, la fiche de notation individuelle des six critères tranche.
+
 ## Sources
 
 - The GRADE Working Group. https://www.gradeworkinggroup.org/ (consultée le 2026-07-08)

@@ -10,6 +10,25 @@ Une idée par diapositive. Le titre de chaque diapositive est une phrase asserti
 
 Contexte et problème, question ou objectif, méthode, résultats, limites, conclusion. Une diapositive de plan en ouverture, une de synthèse en clôture. Le propos suit l'ordre de la démonstration, chaque section sert la suivante.
 
+## Arc narratif en sept temps
+
+Le fil ci-dessus se détaille en sept temps quand la durée le permet. Accroche : une phrase, un chiffre ou une image qui capte l'attention avant même le contexte, absente des formats les plus courts où le contexte assure déjà ce rôle. Contexte : le cadre nécessaire pour comprendre l'enjeu. Problème : ce qui manque, ce qui coince ou la question ouverte. Approche : la méthode choisie, brièvement justifiée (correspond à la méthode du fil ci-dessus). Résultats : la preuve, portée par les figures. Implications : ce que les résultats changent pour le public visé, en plus du constat brut. Appel : la clôture qui engage (question ouverte, recommandation ou prochaine étape), jamais un simple "merci" (voir la barre de qualité plus bas).
+
+Les sept temps ne remplacent pas le fil en six étapes déjà présent : ils le détaillent pour les formats disposant de plus de temps, en ajoutant l'accroche en ouverture et en distinguant les implications d'un simple énoncé de conclusion.
+
+## Minutage par durée
+
+Le nombre de diapositives et leur répartition entre les sept temps se calibrent par la durée annoncée. Ces repères prolongent la règle 10/20/30 déjà citée plus bas (dix diapositives pour vingt minutes, soit environ une diapositive pour deux minutes) : le rythme reste sobre, à l'opposé d'une diapositive par minute qui convient à d'autres styles plus denses. Le script `scripts/check-presentation.py` valide une bande plus large (environ une à deux diapositives par minute) car il couvre des styles de présentation plus larges que celui documenté ici : les deux repères divergent volontairement, celui-ci reste le plus sobre des deux pour une soutenance ou une présentation de résultats.
+
+| Durée | Diapositives | Accroche | Contexte | Problème | Approche | Résultats | Implications | Appel |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 5 min | 5 | 1 | 1 (avec problème) | - | 1 | 1 | 1 (avec appel) | - |
+| 15 min | 8 | 1 | 1 | 1 | 1 | 2 | 1 | 1 |
+| 30 min | 14 | 1 | 2 | 1 | 2 | 5 | 2 | 1 |
+| 45 min | 20 | 1 | 2 | 2 | 3 | 7 | 3 | 2 |
+
+À cinq minutes, contexte et problème tiennent sur une seule diapositive, de même qu'implications et appel : le format le plus court n'a pas la place pour sept temps distincts, il en fusionne deux paires en préservant les sept idées. Passé quinze minutes, les résultats concentrent une part croissante du temps : c'est la partie qui porte la preuve, elle mérite la place la plus large.
+
 ## Concevoir une diapositive
 
 Un titre assertif, un visuel ou une donnée, le minimum de texte. Pas de paragraphe projeté, trois à cinq puces courtes au maximum ou une figure (approche assertion-preuve d'Alley). Une figure par diapositive de fond (produite par `produire` figure), légendée et sourcée. Charte graphique appliquée, contraste suffisant pour la projection. La règle 10/20/30 de Kawasaki sert de garde-fou : au plus dix diapositives, vingt minutes, aucune police sous trente points.

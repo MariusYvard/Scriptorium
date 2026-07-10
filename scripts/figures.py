@@ -3,16 +3,17 @@
 """Generateur de figures strategiques en SVG pour Scriptorium.
 
 Produit des schemas deterministes et sobres : SWOT, matrice BCG, matrice
-d'Ansoff, PESTEL, chaine de valeur de Porter. Applique une charte graphique
-fournie (--theme charte.json) : couleurs, polices, filet d'accent, fond,
-filigrane, rayon des angles. Un audit (--audit) porte un regard critique sur
-la figure, charte comprise (contraste).
+d'Ansoff, PESTEL, chaine de valeur de Porter, ainsi que trois cercles imbriques
+TAM/SAM/SOM (etude de marche). Applique une charte graphique fournie (--theme
+charte.json) : couleurs, polices, filet d'accent, fond, filigrane, rayon des
+angles. Un audit (--audit) porte un regard critique sur la figure, charte
+comprise (contraste).
 
 Usage :
     python3 figures.py TYPE --out f.svg [--data data.json|-] [--title "T"] [--theme charte.json]
     python3 figures.py TYPE --data - --audit --theme charte.json < data.json
 
-TYPE : swot | bcg | ansoff | pestel | chaine-valeur
+TYPE : swot | bcg | ansoff | pestel | chaine-valeur | tam-sam-som
 Module importable : construire(type, data, titre, theme) ; auditer(type, data, theme).
 """
 import argparse
@@ -213,13 +214,67 @@ def chaine_valeur(data, titre="Chaine de valeur (Porter)"):
     return NL.join(s)
 
 
-CONSTRUCTEURS = {"swot": swot, "bcg": bcg, "ansoff": ansoff, "pestel": pestel, "chaine-valeur": chaine_valeur}
+def tam_sam_som(data, titre="TAM, SAM, SOM"):
+    """Trois cercles imbriques (TAM englobe SAM englobe SOM), etude de marche.
+
+    Portions adaptees du projet openscience (Synthetic Sciences, InkVell Inc.), Apache-2.0,
+    github.com/synthetic-sciences/openscience (logique du gabarit market-research-reports).
+    Modifications Marius Yvard, MIT.
+
+    Donnees attendues : {"tam": {"libelle": "...", "valeur": "..."}, "sam": {...}, "som": {...}}.
+    """
+    cx, cy = W / 2, 350
+    rayons = {"tam": 250, "sam": 172, "som": 95}
+    fonds = {"tam": FONDS[0], "sam": FONDS[1 % len(FONDS)], "som": FONDS[2 % len(FONDS)]}
+    s = [_cadre(H), _titre(titre)]
+    for cle in ("tam", "sam", "som"):
+        s.append(f'<circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rayons[cle]}" fill="{fonds[cle]}" '
+                  f'fill-opacity="0.9" stroke="{TRAIT}" stroke-width="1.5"/>')
+    for cle in ("tam", "sam", "som"):
+        bloc = data.get(cle, {}) or {}
+        libelle = str(bloc.get("libelle", "")).strip()
+        valeur = str(bloc.get("valeur", "")).strip()
+        if cle == "som":
+            y = cy
+            s.append(_txt(cx, y - 8, cle.upper(), 16, gras=True, ancre="middle"))
+            s.append(_txt(cx, y + 16, valeur or "?", 18, gras=True, ancre="middle", couleur=ACCENT))
+            if libelle:
+                s.append(_txt(cx, y + 36, libelle, 11, ancre="middle", couleur=TRAIT))
+        else:
+            y = cy - rayons[cle] + 38
+            entete = f"{cle.upper()} - {valeur}" if valeur else cle.upper()
+            s.append(_txt(cx, y, entete, 17, gras=True, ancre="middle"))
+            if libelle:
+                s.append(_txt(cx, y + 20, libelle, 12, ancre="middle", couleur=TRAIT))
+    s.append("</svg>")
+    return NL.join(s)
+
+
+CONSTRUCTEURS = {"swot": swot, "bcg": bcg, "ansoff": ansoff, "pestel": pestel,
+                 "chaine-valeur": chaine_valeur, "tam-sam-som": tam_sam_som}
 
 CASES = {
     "swot": ["forces", "faiblesses", "opportunites", "menaces"],
     "ansoff": ["penetration", "extension_produit", "extension_marche", "diversification"],
     "pestel": ["politique", "economique", "social", "technologique", "environnemental", "legal"],
 }
+
+
+def _numero(v):
+    """Interprete une valeur comme un nombre si c'est sans ambiguite (separateurs milliers,
+    virgule decimale, un seul symbole de devise ou pourcentage tolere), sinon None : pas de
+    comparaison numerique risquee sur un suffixe d'unite (k, M, Md) qui demanderait une mise
+    a l'echelle non geree ici."""
+    s = str(v).strip().replace(" ", "").replace(" ", "")
+    if not s:
+        return None
+    for symb in ("€", "$", "%"):
+        s = s.replace(symb, "")
+    s = s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return None
 
 
 def auditer(type_fig, data, theme=None):
@@ -254,6 +309,28 @@ def auditer(type_fig, data, theme=None):
                     avert.append(f"Point '{it.get('nom','?')}' : '{axe}'={v} hors de 0-100, echelle faussee.")
         if len(items) > 10:
             avert.append("Plus de 10 bulles : surcharge, regrouper les domaines mineurs.")
+    if type_fig == "tam-sam-som":
+        blocs = {}
+        for cle in ("tam", "sam", "som"):
+            bloc = data.get(cle)
+            if not isinstance(bloc, dict):
+                avert.append(f"Bloc '{cle}' absent ou mal forme : attendu un objet avec 'libelle' et 'valeur'.")
+                continue
+            blocs[cle] = bloc
+            if not str(bloc.get("libelle", "")).strip():
+                avert.append(f"Bloc '{cle}' : libelle vide, un cercle sans libelle n'est pas lisible.")
+            if not str(bloc.get("valeur", "")).strip():
+                avert.append(f"Bloc '{cle}' : valeur vide.")
+        if len(blocs) == 3:
+            nums = {cle: _numero(blocs[cle].get("valeur")) for cle in ("tam", "sam", "som")}
+            if all(n is not None for n in nums.values()):
+                if not (nums["tam"] >= nums["sam"] >= nums["som"]):
+                    avert.append(
+                        f"Ordre attendu TAM >= SAM >= SOM non respecte (tam={nums['tam']:g}, "
+                        f"sam={nums['sam']:g}, som={nums['som']:g}) : verifier les valeurs ou le sens des cercles."
+                    )
+            else:
+                avert.append("Valeurs non toutes numeriques de facon univoque : ordre TAM >= SAM >= SOM non verifie automatiquement, a controler a l'oeil.")
     if theme is not None:
         t = charger_theme(theme)
         err, warn = valider_theme(t)

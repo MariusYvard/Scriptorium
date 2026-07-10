@@ -32,7 +32,7 @@ Calculer la note objective du document.
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/scorecard.py FICHIER --format json
 ```
 
-Le scorecard sert d'ancre commune et de départage. Un document que les agents jugent prêt mais que le scorecard place sous 70 n'est pas prêt. La sortie JSON expose aussi une décision éditoriale à quatre valeurs et un plancher par axe (option `--plancher N`, champ `decision_editoriale`) : un axe sous le plancher plafonne cette décision indépendamment du total, voir la logique montrée dans `scorecard.py` et le détail dans `_cablage-lot2.md`.
+Le scorecard sert d'ancre commune et de départage. Un document que les agents jugent prêt mais que le scorecard place sous 70 n'est pas prêt. La sortie JSON expose aussi une décision éditoriale à quatre valeurs et un plancher par axe (option `--plancher N`, champ `decision_editoriale`) : un axe sous le plancher plafonne cette décision indépendamment du total, voir la logique montrée dans `scorecard.py` et le détail dans `_cablage-lot2.md`. L'option `--seuil-type brouillon|rapport|publication` teinte en plus le verdict du scorecard avec le seuil attendu du type de document visé (65/80/85 par défaut, voir `references/severite.md`), sans remplacer le verdict à trois valeurs.
 
 ## 5. Agréger le verdict
 
@@ -68,6 +68,23 @@ Pour un document à enjeu élevé, une vérification supplémentaire peut porter
 - Elle se dégrade gracieusement si aucune seconde configuration de modèle n'est disponible dans l'environnement courant : le consensus à trois voix reste valide seul, l'absence de vérification croisée se note comme non réalisée plutôt que de bloquer la revue.
 - Une divergence entre la vérification croisée et le consensus initial se signale telle quelle, elle ne se moyenne jamais avec les votes déjà rendus : un désaccord entre deux mécanismes de contrôle est un signal à trancher en lecture humaine, pas un chiffre à lisser.
 
+## 7. Comparaison par paires pour départager deux versions
+
+Pour choisir entre deux versions d'un même texte (un brouillon avant et après une passe de révision, deux propositions concurrentes ou une version restaurée contre une version corrigée), une comparaison par paires départage plus finement qu'une notation absolue isolée de chaque version et atténue le biais de position.
+
+Procédure : présenter les deux versions dans l'ordre A puis B à un juge (agent ou modèle), obtenir un verdict (A meilleur, B meilleur, égalité). Répéter la même comparaison en inversant l'ordre de présentation (B puis A). Un verdict n'est retenu que s'il est identique dans les deux passages, A gagne dans les deux ordres ou B gagne dans les deux ordres. Si le gagnant change selon l'ordre de présentation, déclarer une égalité : le signal de préférence n'est pas assez net pour trancher, quelle que soit l'intensité de chaque jugement isolé.
+
+Cette procédure départage deux textes déjà produits, elle ne remplace jamais le vote à trois voix de la section 3 pour une revue complète contre un barème absolu. Les deux mécanismes servent des besoins différents.
+
+## 8. Taux d'égalité comme diagnostic de grille
+
+Sur une série de comparaisons par paires (section 7), le taux d'égalité déclarée informe sur la grille elle-même, pas seulement sur les textes comparés à chaque fois.
+
+- Sous 10% d'égalités : écart de qualité net et réel entre les versions comparées, la grille distingue correctement.
+- De 10% à 30% : plage normale pour des versions de qualité déjà proche.
+- De 30% à 50% : les versions comparées sont très proches ou la grille commence à manquer de discrimination : à surveiller sur la série suivante.
+- Au-dessus de 50% : les critères de la grille sont trop vagues pour départager. Resserrer `references/contrat-notation.md` (conditions d'échec plus précises, quantificateur explicite) avant de refaire la série de comparaisons plutôt que de conclure à une égalité réelle généralisée.
+
 ## Format de sortie
 
 ```
@@ -80,7 +97,9 @@ Votes :
 
 Dissidence : [aucune / une dimension : laquelle, par quelle voix] (deux dissidences simultanées -> un nouveau cycle, voir contrat-notation.md)
 
-Scorecard : [note]/100 | Décision éditoriale : [accepter/révision mineure/révision majeure/refus] (plancher [N]/20)
+Scorecard : [note]/100 | Décision éditoriale : [accepter/révision mineure/révision majeure/refus] (plancher [N]/20) | Seuil type : [brouillon/rapport/publication non demandé ou atteint/non atteint]
+
+Calibration : [taux d'acceptation observé sur la série en cours, si disponible] (voir biais-relecteur.md)
 
 Vérification croisée : [non réalisée / réalisée sur échantillon de N éléments, convergente / divergente sur tel point]
 
@@ -99,3 +118,5 @@ Actions prioritaires : [...]
 6. Le contrat de notation se préenregistre en aveugle avant la lecture, jamais après.
 7. Une dimension sous le plancher bloque malgré une bonne moyenne. Deux dimensions contradictoires se rapportent telles quelles, jamais lissées.
 8. Aucune voix ne voit le verdict d'une autre avant que les trois soient rendus. Une vérification croisée par un second modèle, si elle a lieu, reste un signal supplémentaire sur échantillon, jamais moyenné avec les trois voix.
+9. La comparaison par paires (section 7) départage deux versions, elle ne remplace jamais le vote à trois voix d'une revue complète.
+10. Un taux d'égalité au-dessus de 50% sur une série de comparaisons par paires signale une grille à resserrer, jamais une série de textes réellement à égalité.

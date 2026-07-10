@@ -3,7 +3,7 @@ name: atelier
 description: >
   Point d'entrée d'un projet d'écrit : orchestration de bout en bout, cadrage du sujet et mémoire de projet entre sessions. Trois sous-commandes. piloter : produire un document complet de A à Z (cadrage, sourcing, rédaction, révision, finalisation, bilan de fin) quand l'utilisateur dit "produis un rapport complet", "rédige de A à Z", "prends en charge tout l'écrit". cadrer : délimiter le sujet, le qualifier (cadre FINER), formuler la problématique en question fermée, choisir le genre, bâtir le plan quand il dit "cadre mon rapport", "par où commencer", "quel plan", "formule ma problématique". projet : sauvegarder ou recharger le contexte (brief, charte, glossaire, sources, plan, journal de mission) quand il dit "charge mon projet", "reprends le projet", "où en étais-je", "tableau de bord du projet". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.7.0"
+  version: "0.8.0"
 ---
 
 # Atelier (piloter, cadrer, projet)
@@ -15,7 +15,7 @@ Point d'entrée d'un projet d'écrit. Cette compétence cadre le sujet, garde le
 Si une action est passée en argument (par exemple `cadrer`), suivre directement sa section. Sinon, déduire l'action de la demande. Charger le fichier de référence indiqué, et lui seul, pour ne pas saturer le contexte.
 
 - piloter : produire un document de A à Z. Charger `references/piloter.md`. Enchaîne cadrage, sourcing, rédaction, révision, finalisation et bilan de fin de mission en s'appuyant sur `produire`, `controler` et `livrer`.
-- cadrer : délimiter le sujet, le qualifier (cadre FINER), formuler la problématique, choisir le genre, bâtir le plan. Charger `references/cadrer.md`. Il renvoie vers `references/cadre-finer.md` et, si le sujet reste flou ou si l'utilisateur veut être guidé, vers `references/boite-socratique.md`.
+- cadrer : délimiter le sujet, le qualifier (cadre FINER), formuler la problématique, choisir le genre, bâtir le plan. Charger `references/cadrer.md`. Il renvoie vers `references/cadre-finer.md` (et, pour une recherche à hypothèse, vers ses critères de qualité d'hypothèse) puis, si le sujet reste flou ou si l'utilisateur veut être guidé, vers `references/boite-socratique.md`.
 - projet : sauvegarder ou recharger le contexte du projet (`projet.json` : journal de mission, frontières et reprise par hash, états d'étapes, tableau de bord `status`, configuration de génération). Charger `references/projet.md`.
 
 ## Références transverses

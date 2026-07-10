@@ -59,6 +59,10 @@ Tester : crée-t-elle la curiosité, promet-elle une valeur, est-elle précise, 
 - Le ton promotionnel (proscrire incontournable, révolutionnaire, qui change la donne).
 - La conclusion qui introduit un fait nouveau au lieu de synthétiser.
 
+## Exigences de la destination
+
+Un article destiné à une revue, une conférence ou un support externe précis porte ses propres règles de forme (limite de mots, anonymisation, format de citation imposé) avant même la question du style. Vérifier ces exigences en tout début de mise en forme, jamais après rédaction complète : voir `livrer`, action document, section exigences par destination, pour la table des grandes familles de venues et le renvoi aux gabarits officiels.
+
 ## Sources
 
 - Recommendations for the Conduct, Reporting, Editing and Publication of Scholarly Work in Medical Journals (page de titre, résumé, références, soumission), ICMJE, 2026. https://www.icmje.org/recommendations/browse/manuscript-preparation/preparing-for-submission.html

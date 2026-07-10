@@ -1,6 +1,6 @@
 # Biais et lentilles du relecteur
 
-Une revue n'est pas seulement une grille appliquée au texte, elle passe par un relecteur qui a ses propres angles morts. Ce fichier catalogue les biais les plus documentés du jugement en revue, trois lentilles à croiser systématiquement et les pièges de processus qui font passer un défaut fatal inaperçu. À charger par `controle-qualite` et `contradicteur` en complément de `references/grille-revue.md`.
+Une revue n'est pas seulement une grille appliquée au texte, elle passe par un relecteur qui a ses propres angles morts. Ce fichier catalogue les biais les plus documentés du jugement en revue, trois lentilles à croiser systématiquement, les pièges de processus qui font passer un défaut fatal inaperçu et une règle de calibration de la sévérité. À charger par `controle-qualite` et `contradicteur` en complément de `references/grille-revue.md`.
 
 ## 1. Huit biais nommés, avec parade
 
@@ -30,6 +30,19 @@ Appliquer les trois à chaque relecture, jamais une seule.
 3. Projection d'expertise : juger un texte d'un domaine voisin avec les normes du sien propre. Nommer explicitement où sa propre expertise s'arrête avant de trancher un point technique.
 4. Tunnel méthodologique : se focaliser sur un aspect technique maîtrisé au détriment de la question posée par le document lui-même. Revenir à la question centrale avant de conclure.
 5. Perte de vue d'ensemble : corriger phrase par phrase sans jamais formuler un jugement global. Toute relecture se termine par une phrase qui tranche sur l'ensemble, pas seulement par une liste de corrections locales.
+
+## 4. Calibration de sévérité par point de repère quantitatif
+
+Les distributions réelles de décisions de revue (taux d'acceptation, de révision majeure, de refus) varient fortement par discipline, par revue et par niveau d'exigence visé : aucun chiffre unique ne vaut comme référence universelle pour Scriptorium. La règle opérationnelle ne dépend pas d'un chiffre externe précis, elle porte sur le comportement du juge d'une revue à l'autre.
+
+Règle : sur une série de revues (au moins cinq à dix documents notés par le même juge ou la même configuration d'agents), calculer le taux d'acceptation observé, soit la part des revues conclues par "accepter" ou par le verdict "Prêt". Un juge qui accepte la quasi-totalité de la série ou qui la refuse presque en totalité ne discrimine plus les documents entre eux : il se recalibre contre le contrat de notation (`references/contrat-notation.md`), pas contre son impression du moment.
+
+Deux signes concrets de dérive, sans seuil chiffré universel imposé :
+
+- Un score bas rendu sans qu'aucune condition d'échec critique du contrat ne soit citée. Un score bas doit toujours pointer vers une condition d'échec nommée, jamais rester une impression générale de faiblesse.
+- Un ton qui déborde la sévérité réelle du constat, par exemple qualifier de "trompeur" ou de "fondamentalement vicié" un défaut qui relève d'un simple manque de clarté. Revenir au vocabulaire de sévérité de `references/severite.md` (critique, majeur, mineur, signal) plutôt qu'à un adjectif informel.
+
+Consigner le taux d'acceptation observé sur la série dans le rapport de consensus (`references/consensus.md`, section Format de sortie, ligne Calibration) : un chiffre qui dérive sans que personne ne le remarque est précisément le symptôme que cette règle corrige.
 
 ## Sources
 

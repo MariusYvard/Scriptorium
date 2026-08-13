@@ -39,8 +39,32 @@ P_VIDE = os.path.join(FIXT, "pdf-sans-texte.pdf")
 P_TRONQUE = os.path.join(FIXT, "pdf-tronque.pdf")
 
 
+def _avec_backend(pages_texte):
+    """Analyse un PDF avec un backend simule, deterministe sur toute machine.
+
+    Les backends PDF du depot sont optionnels : une machine de developpement en
+    a souvent un, une machine d'integration continue vierge n'en a aucun. Ne
+    pas simuler ferait dependre le resultat de l'environnement, et un cas
+    d'eval qui change de verdict selon la machine ne mesure plus rien. La
+    simulation vaut ici pour les cas qui portent sur la lecture ; les cas
+    binaires, eux, tournent sans backend par construction.
+    """
+    def analyser(chemin):
+        sauve = (clp._CHKP.extraire_texte_pages,
+                 clp._CHKP.compter_pages_et_taille)
+        clp._CHKP.extraire_texte_pages = lambda c: (list(pages_texte), None)
+        clp._CHKP.compter_pages_et_taille = lambda c: (len(pages_texte), 0,
+                                                       None)
+        try:
+            return clp.analyser(chemin)
+        finally:
+            (clp._CHKP.extraire_texte_pages,
+             clp._CHKP.compter_pages_et_taille) = sauve
+    return analyser
+
+
 # Cas 1-3 : PDF normal, texte extractible, ancrage possible
-r_normal = clp.analyser(P_NORMAL)
+r_normal = _avec_backend(["Page 1 du gabarit impose"])(P_NORMAL)
 verifier("pdf normal : verdict lecture fiable",
          r_normal["verdict"] == "lecture fiable", f"verdict={r_normal['verdict']}")
 verifier("pdf normal : page 1 ancrable",
@@ -50,7 +74,7 @@ verifier("pdf normal : taux de couverture a 100%",
          r_normal["taux_couverture"] == 1.0, f"taux={r_normal['taux_couverture']}")
 
 # Cas 4-5 : PDF sans texte (scan sans OCR), ancrage refuse
-r_vide = clp.analyser(P_VIDE)
+r_vide = _avec_backend([""])(P_VIDE)
 verifier("pdf sans texte : page sans texte refusee a l'ancrage",
          r_vide["pages_sans_texte"] == [1] and r_vide["pages_ancrables"] == [],
          f"sans_texte={r_vide['pages_sans_texte']} ancrables={r_vide['pages_ancrables']}")
@@ -118,3 +142,13 @@ verifier("rapport_texte : chaine contenant le verdict en majuscules",
 recouvrement = set(r_vide["pages_ancrables"]) & set(r_vide["pages_non_ancrables"])
 verifier("pages ancrables et non ancrables : aucun recouvrement",
          not recouvrement, f"recouvrement={recouvrement}")
+
+# Cas 16 : invariant vrai sur toute machine, backend present ou non. Un PDF
+# sain ne doit jamais etre declare non fiable a cause de l'outillage local :
+# selon ce qui est installe, le verdict vaut lecture fiable ou non mesurable,
+# et rien d'autre. Ce cas aurait attrape la dependance a l'environnement qui a
+# fait echouer l'integration continue de la 0.10.0.
+r_reel = clp.analyser(P_NORMAL)
+verifier("pdf sain : le verdict ne depend de l'outillage que dans un sens",
+         r_reel["verdict"] in ("lecture fiable", "non mesurable"),
+         f"verdict={r_reel['verdict']}")

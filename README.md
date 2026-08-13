@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-215876" alt="26 genres sourcés">
   <img src="https://img.shields.io/badge/publics-14-215876" alt="14 publics">
   <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-23-BF9B6F" alt="23 scripts déterministes">
-  <img src="https://img.shields.io/badge/%C3%A9valuations-210%2F210-D97F30" alt="210 évaluations">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-211%2F211-D97F30" alt="210 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
@@ -204,7 +204,7 @@ Le style par défaut applique des directives strictes : registre encyclopédique
 
 ## Qualité, évaluations, releases
 
-Le harnais (`evals/run-evals.py`, 210 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
+Le harnais (`evals/run-evals.py`, 211 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Contribuer
 

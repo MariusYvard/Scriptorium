@@ -72,13 +72,44 @@ Un même travail voyage parfois sous plusieurs formes successives : prépublicat
 
 La garde anti-anachronisme (dates futures présentées comme passées, ordre causal inversé par les dates, langage à péremption non ancré) est un contrôle déterministe séparé : voir `check-temporel.py` et son usage documenté dans `agents/verificateur-faits.md`.
 
-## 8. Outillage
+## 8. Ancrage de citation à trois couches
+
+Une affirmation qui cite une source engage trois vérifications distinctes. Chacune est nécessaire, aucune n'est suffisante seule.
+
+- Couche 1, existence : la référence existe et se résout vers un travail réel. Couverte par `verify-sources.py` (sections 2 à 5 ci-dessus), verdicts vérifié, plausible, invérifiable ou fabriqué. Une référence qui échoue à cette couche ne passe pas aux couches suivantes.
+- Couche 2, localisation : l'ancre pointe un endroit précis et vérifiable de la source, pas seulement la source dans son ensemble.
+- Couche 3, fidélité affirmation-source : l'affirmation tirée de la source correspond à ce que la source montre à cet endroit précis.
+
+Détail de la couche 2. `scripts/citations.py` (`qualifier_ancre`) classe chaque ancre en cinq types fermés.
+
+- Citation exacte : texte entre guillemets droits, 25 mots au plus.
+- Localisation paginée : p. 12, pp. 12-15.
+- Localisation structurelle : section 3.2, tableau 4, figure 2, annexe B, paragraphe 7.
+- Horodatage : min:sec, pour une source audio ou vidéo.
+- Aucune ancre.
+
+Une forme reconnaissable mais mal formée porte le type défaut plutôt qu'un des cinq types valides : page nulle ou négative, plage inversée (pp. 20-12), citation de plus de 25 mots (qui devient un emprunt plutôt qu'une ancre), guillemets non fermés. Une ancre défaut ne se reclasse jamais en ancre valide par indulgence.
+
+Ce que la couche 2 prouve : l'ancre a une forme exploitable, un lecteur peut la rouvrir et retrouver le même passage. Ce qu'elle ne prouve pas : que ce passage soutient l'affirmation qui le cite. Une citation exacte de 25 mots appuie l'affirmation, la contredit ou lui est étrangère de façon identique du point de vue de sa forme : celle-ci ne dit rien du fond.
+
+Détail de la couche 3. `scripts/citations.py` (`auditer_fidelite`, option `--auditer-fidelite`) mesure trois signaux mécaniques par couple affirmation-ancre, uniquement quand l'ancre porte une citation exacte (les autres types d'ancre ne portent pas de texte source comparable à l'affirmation).
+
+- Montée en force : l'ancre porte un terme de modalité prudente (suggère, est associé à, dans cet échantillon), l'affirmation porte un terme de modalité forte (démontre, prouve, cause, toujours), par deux lexiques fermés.
+- Chiffre orphelin : un nombre, un pourcentage ou une année cité dans l'affirmation et absent du texte de l'ancre.
+- Généralisation retirée : une portée nommée dans l'ancre (échantillon, cohorte, groupe précis) absente de l'affirmation, remplacée par un marqueur de portée générale.
+
+Ce que la couche 3 mesure reste un écart de forme entre deux textes, jamais un jugement de sens. Le code ne détermine pas si « démontre » est un abus au regard de cette source précise ou la reformulation légitime d'un résultat par ailleurs solide : il signale l'écart lexical, rien de plus. Un verdict fermé (soutenue, extrapolée, invérifiable, contredite) n'est pas mécanisable : il n'existe pas comme sortie automatique de cet outil. Ce jugement revient au modèle ou au relecteur humain, le signal mécanique servant de point de départ, pas de conclusion. Cette vérification naît consultative (`CONTRIBUTING.md`, règle 5) : un code de sortie non nul sur un simple écart de modalité pénaliserait de façon identique une reformulation légitime et un abus réel.
+
+## 9. Outillage
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/verify-sources.py FICHIER --reseau
+python3 scripts/citations.py FICHIER.bib --auditer-fidelite DOCUMENT.md
 ```
 
 `--reseau` déclenche la triangulation Crossref, OpenAlex et Semantic Scholar sur les DOI trouvés dans le texte, calcule le verdict d'existence par référence et signale les préprints récents absents de tous les index consultés. Sans `--reseau`, le script se limite à son comportement existant (nettoyage d'URL, doublons, syntaxe des DOI), hors ligne.
+
+`--auditer-fidelite` lit les couples affirmation-ancre d'un document Markdown (convention : une phrase suivie du marqueur `[cle_bibtex]`) contre la bibliographie du fichier `.bib` fourni, et rend le rapport de couche 3 décrit en section 8. Toujours consultatif, code de sortie 0.
 
 ## Sources
 

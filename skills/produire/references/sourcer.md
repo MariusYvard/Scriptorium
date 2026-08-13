@@ -78,6 +78,24 @@ Appliquer la norme demandée (APA 7 ou Vancouver pour l'académique, notes ou r�
 
 Chaque citation porte une ancre : une citation exacte de 25 mots au plus, ou une localisation (page, section, paragraphe), portée par le champ `annote` ou `note` du BibTeX. Une citation sans ancre est un signal à corriger, pas une simple formalité : elle rend vérifiable le lien affirmation-source, pas seulement l'existence de la source. Voir `scripts/citations.py`.
 
+## 8. Préflight d'intégrité de lecture PDF
+
+Ancrer une citation sur une page ("p. 12") suppose que le texte de cette page a été réellement lu. Rien ne le garantit d'office : un PDF scanné sans OCR rend zéro caractère, un PDF partiellement corrompu rend des pages vides, un encodage cassé rend du charabia. Avant tout ancrage dans une source PDF, lancer le préflight.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/check-lecture-pdf.py FICHIER.pdf
+```
+
+Le script mesure le taux de couverture texte (pages dont du texte a été extrait sur le total), liste les pages ancrables et les pages non ancrables et rend un verdict fermé sur quatre valeurs : lecture fiable, lecture partielle, lecture non fiable, non mesurable.
+
+Trois règles s'imposent, sans exception.
+
+1. Aucune ancre ne se produit sur une page déclarée non ancrable. Une page sans texte extrait ou à l'encodage suspect est refusée à l'ancrage, pas seulement déconseillée.
+2. Un verdict "non mesurable" interdit d'affirmer qu'une source a été lue. L'absence de backend d'extraction n'est pas un défaut du document, elle ne prouve rien non plus sur son contenu : le préflight se contente de dire que la mesure n'a pas pu se faire.
+3. Un PDF chiffré ou protégé est déclaré comme tel, jamais contourné. L'extraction vide qui en résulte se distingue d'un scan sans OCR dans le rapport, mais le résultat pour l'ancrage est le même : refus.
+
+Un fichier tronqué ou malformé (en-tête absent, marqueur de fin de fichier absent, table de références illisible) se détecte en lecture binaire directe, sans backend : cette vérification fonctionne toujours, même sans aucun outil PDF installé.
+
 ## Vérification déterministe
 
 Avant de livrer la bibliographie, la passer au script de vérification. Il retire les paramètres de suivi, repère les doublons, contrôle la syntaxe des DOI et classe chaque URL par palier de domaine.

@@ -22,9 +22,27 @@ import os
 import sys
 from xml.sax.saxutils import escape
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+def _charger_theme_module():
+    """Charge theme.py par son chemin, sans toucher a sys.path.
+
+    Inserer le dossier scripts/ dans sys.path rendait ses fichiers prioritaires
+    sur la bibliotheque standard pour tout le processus : numbers.py masquait
+    alors le module standard numbers, dont depend decimal, et l'erreur qui en
+    resultait etait avalee plus loin par un except large. Charger par chemin
+    explicite supprime la cause.
+    """
+    import importlib.util
+    chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          "theme.py")
+    spec = importlib.util.spec_from_file_location("scriptorium_theme", chemin)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 try:
-    from theme import charger as charger_theme, valider as valider_theme
+    _theme = _charger_theme_module()
+    charger_theme, valider_theme = _theme.charger, _theme.valider
 except Exception:
     _DEF = {"police": "Helvetica, Arial, sans-serif", "police_titre": "Helvetica, Arial, sans-serif",
             "graisse_titre": 700, "encre": "#2E2A26", "trait": "#8A8175", "fond": "#FFFFFF",

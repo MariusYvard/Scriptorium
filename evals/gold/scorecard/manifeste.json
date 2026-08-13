@@ -1,0 +1,157 @@
+{
+  "tache": "scorecard",
+  "version_gel": "0.9.0",
+  "description": "Corpus fige de documents Markdown courts, notes par scripts/scorecard.py au moment du gel. Sert a mesurer si la classification (verdict et bande de score) que produit le scorecard reste stable d'une version a l'autre.",
+  "seuil_exactitude_attendu": 0.9,
+  "distribution": {
+    "defauts-style": 2,
+    "lisibilite-courte": 1,
+    "lisibilite-defauts": 1,
+    "multi-defauts": 1,
+    "propre": 2,
+    "sources-sales": 1,
+    "terminologie": 1,
+    "tracabilite-cassee": 1
+  },
+  "non_couvert": [
+    "ne couvre pas les documents tres longs (au dela de 2000 mots) ni les documents multilingues",
+    "ne couvre pas les combinaisons rares ou plusieurs axes s'effondrent simultanement sous le plancher",
+    "ne couvre pas les poids personnalises (--poids) ni les seuils par type de document (--seuil-type)",
+    "dix cas seulement : ne mesure pas la stabilite statistique de l'exactitude, seulement sa valeur ponctuelle"
+  ],
+  "cas": [
+    {
+      "id": "defauts-style-01",
+      "fichier": "cas/defauts-style-01.md",
+      "type": "defauts-style",
+      "attendu": {
+        "verdict": "A reviser",
+        "total_min": 70,
+        "total_max": 84,
+        "axes_les_plus_bas": [
+          "Style"
+        ]
+      }
+    },
+    {
+      "id": "defauts-style-02",
+      "fichier": "cas/defauts-style-02.md",
+      "type": "defauts-style",
+      "attendu": {
+        "verdict": "A reviser",
+        "total_min": 70,
+        "total_max": 84,
+        "axes_les_plus_bas": [
+          "Style"
+        ]
+      }
+    },
+    {
+      "id": "lisibilite-courte-01",
+      "fichier": "cas/lisibilite-courte-01.md",
+      "type": "lisibilite-courte",
+      "attendu": {
+        "verdict": "Pret",
+        "total_min": 85,
+        "total_max": 100,
+        "axes_les_plus_bas": [
+          "Style",
+          "Sources",
+          "Tracabilite",
+          "Terminologie et nombres"
+        ]
+      }
+    },
+    {
+      "id": "lisibilite-defauts-01",
+      "fichier": "cas/lisibilite-defauts-01.md",
+      "type": "lisibilite-defauts",
+      "attendu": {
+        "verdict": "Pret",
+        "total_min": 85,
+        "total_max": 100,
+        "axes_les_plus_bas": [
+          "Lisibilite"
+        ]
+      }
+    },
+    {
+      "id": "multi-defauts-01",
+      "fichier": "cas/multi-defauts-01.md",
+      "type": "multi-defauts",
+      "attendu": {
+        "verdict": "A refondre",
+        "total_min": 0,
+        "total_max": 69,
+        "axes_les_plus_bas": [
+          "Style"
+        ]
+      }
+    },
+    {
+      "id": "propre-01",
+      "fichier": "cas/propre-01.md",
+      "type": "propre",
+      "attendu": {
+        "verdict": "Pret",
+        "total_min": 85,
+        "total_max": 100,
+        "axes_les_plus_bas": [
+          "Lisibilite"
+        ]
+      }
+    },
+    {
+      "id": "propre-02",
+      "fichier": "cas/propre-02.md",
+      "type": "propre",
+      "attendu": {
+        "verdict": "Pret",
+        "total_min": 85,
+        "total_max": 100,
+        "axes_les_plus_bas": [
+          "Lisibilite"
+        ]
+      }
+    },
+    {
+      "id": "sources-sales-01",
+      "fichier": "cas/sources-sales-01.md",
+      "type": "sources-sales",
+      "attendu": {
+        "verdict": "A refondre",
+        "total_min": 0,
+        "total_max": 69,
+        "axes_les_plus_bas": [
+          "Style"
+        ]
+      }
+    },
+    {
+      "id": "terminologie-01",
+      "fichier": "cas/terminologie-01.md",
+      "type": "terminologie",
+      "attendu": {
+        "verdict": "Pret",
+        "total_min": 85,
+        "total_max": 100,
+        "axes_les_plus_bas": [
+          "Terminologie et nombres"
+        ]
+      }
+    },
+    {
+      "id": "tracabilite-cassee-01",
+      "fichier": "cas/tracabilite-cassee-01.md",
+      "type": "tracabilite-cassee",
+      "attendu": {
+        "verdict": "Pret",
+        "total_min": 85,
+        "total_max": 100,
+        "axes_les_plus_bas": [
+          "Tracabilite"
+        ]
+      }
+    }
+  ]
+}

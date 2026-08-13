@@ -15,6 +15,7 @@ import os
 import sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
+RACINE = os.path.abspath(os.path.join(ICI, ".."))
 SCRIPTS = os.path.join(ICI, "..", "scripts")
 FIXT = os.path.join(ICI, "fixtures")
 
@@ -577,6 +578,164 @@ verifier("verify-sources : une simple correction n'est pas une retractation",
          vsrc._retractation_crossref(_msg_correction) is None)
 verifier("verify-sources : sans declaration, le statut reste absent, pas sain",
          vsrc._retractation_crossref({"title": ["Un article"]}) is None)
+
+
+# Gabarit multi-format : detection, presentations, ODF, PDF
+_fmt_attendus = {
+    "gabarit-ecole.docx": ("docx", "texte-ooxml"),
+    "gabarit-deck.pptx": ("pptx", "diapositives-ooxml"),
+    "gabarit-labo.odt": ("odt", "texte-odf"),
+    "gabarit-rendu.pdf": ("pdf", "page-fixe"),
+}
+for _f, _attendu in sorted(_fmt_attendus.items()):
+    verifier("gabarit : %s reconnu comme %s" % (_f, _attendu[1]),
+             gab.detecter_format(os.path.join(FIXT, _f)) == _attendu,
+             f"vu={gab.detecter_format(os.path.join(FIXT, _f))}")
+
+_invp = gab.inventorier(os.path.join(FIXT, "gabarit-deck.pptx"))
+verifier("gabarit pptx : dispositions lues par leur nom",
+         {d["nom"] for d in _invp["dispositions"]}
+         == {"Diapositive de titre", "Titre et contenu"},
+         f"d={[d['nom'] for d in _invp['dispositions']]}")
+verifier("gabarit pptx : espaces reserves types par disposition",
+         any(e["type"] == "body" for d in _invp["dispositions"]
+             for e in d["espaces"]))
+verifier("gabarit pptx : taille de diapositive et ratio",
+         _invp["mise_en_page"]["ratio"] == 1.333
+         and _invp["mise_en_page"]["orientation"] == "paysage",
+         f"mep={_invp['mise_en_page']}")
+verifier("gabarit pptx : polices lues dans le theme de la presentation",
+         "Calibri" in _invp["polices"], f"p={_invp['polices']}")
+_cmp_deck = gab.comparer(_invp, os.path.join(FIXT, "deck-conforme.pptx"))
+verifier("gabarit pptx : un deck conforme ne leve aucun majeur",
+         _cmp_deck["majeurs"] == 0, f"v={_cmp_deck['verdict']}")
+_cmp_devie = gab.comparer(_invp, os.path.join(FIXT, "deck-devie.pptx"))
+verifier("gabarit pptx : une taille de diapositive divergente est majeure",
+         any(e["regle"] == "mise en page divergente"
+             for e in _cmp_devie["ecarts"]), f"e={_cmp_devie['ecarts']}")
+verifier("gabarit pptx : une disposition non resolue est signalee",
+         any(e["regle"] == "disposition non identifiable"
+             for e in _cmp_devie["ecarts"]))
+# Inventaire ampute : la disposition employee par le deck n'y figure plus.
+_inv_ampute = dict(_invp, dispositions=[
+    d for d in _invp["dispositions"] if d["nom"] != "Titre et contenu"])
+_cmp_hors = gab.comparer(_inv_ampute, os.path.join(FIXT, "deck-conforme.pptx"))
+verifier("gabarit pptx : une disposition hors gabarit est majeure",
+         any(e["regle"] == "disposition hors gabarit"
+             for e in _cmp_hors["ecarts"]), f"e={_cmp_hors['ecarts']}")
+
+_sortie_deck = os.path.join(_tf.mkdtemp(), "deck.pptx")
+_rap_deck = gab.remplir(
+    _invp, "# Contexte\n\n- Un point\n- Un autre\n\n# Methode\n\nTexte.\n",
+    _sortie_deck)
+verifier("gabarit pptx : un titre de niveau 1 ouvre une diapositive",
+         _rap_deck["diapositives"] == 2, f"r={_rap_deck}")
+verifier("gabarit pptx : la disposition d'accueil porte titre et corps",
+         _rap_deck["disposition"] == "Titre et contenu")
+with _zf.ZipFile(_sortie_deck) as _z:
+    _noms_d = _z.namelist()
+    _pres = _z.read("ppt/presentation.xml").decode("utf-8")
+    _s1 = _z.read("ppt/slides/slide1.xml").decode("utf-8")
+    _ctd = _z.read("[Content_Types].xml").decode("utf-8")
+verifier("gabarit pptx : chaque diapositive arrive avec ses quatre ecritures",
+         _pres.count("<p:sldId ") == 2
+         and _ctd.count("presentationml.slide+xml") == 2
+         and "ppt/slides/_rels/slide1.xml.rels" in _noms_d)
+verifier("gabarit pptx : les prefixes OOXML survivent au remplissage",
+         "ns0:" not in _s1 and "Contexte" in _s1 and "Un point" in _s1)
+verifier("gabarit pptx : le deck produit reste conforme a son gabarit",
+         gab.comparer(_invp, _sortie_deck)["majeurs"] == 0)
+try:
+    gab.remplir(_invp, "# X\n", _sortie_deck, disposition="Inexistante")
+    _refus_dispo = False
+except SystemExit:
+    _refus_dispo = True
+verifier("gabarit pptx : une disposition demandee et absente arrete le "
+         "remplissage", _refus_dispo)
+
+_invo = gab.inventorier(os.path.join(FIXT, "gabarit-labo.odt"))
+verifier("gabarit odt : styles nommes et hierarchie de titres lus",
+         _invo["hierarchie_titres"].get("1") == "Heading_20_1"
+         and _invo["style_corps"] == "Standard",
+         f"h={_invo['hierarchie_titres']} c={_invo['style_corps']}")
+verifier("gabarit odt : longueurs converties en centimetres",
+         _invo["mise_en_page"]["left"] == 3.0
+         and _invo["mise_en_page"]["hauteur"] == 29.7,
+         f"mep={_invo['mise_en_page']}")
+verifier("gabarit odt : longueur en pouces et en millimetres converties",
+         gab._longueur_odf("1in") == 2.54 and gab._longueur_odf("20mm") == 2.0)
+_cmp_odt = gab.comparer(_invo, os.path.join(FIXT, "document-odt-devie.odt"))
+verifier("gabarit odt : style hors gabarit et marge divergente sont majeurs",
+         _cmp_odt["majeurs"] == 2, f"v={_cmp_odt}")
+verifier("gabarit odt : un style automatique n'est pas compte hors gabarit",
+         not any("P1" in e["detail"] for e in _cmp_odt["ecarts"]))
+
+_invpdf = gab.inventorier(os.path.join(FIXT, "gabarit-rendu.pdf"))
+verifier("gabarit pdf : pages, format nomme et version lus en binaire",
+         _invpdf["pages"] == 2
+         and _invpdf["mise_en_page"]["format_nomme"] == "A4"
+         and _invpdf["version_pdf"] == "1.4", f"inv={_invpdf['mise_en_page']}")
+verifier("gabarit pdf : les marges ne sont pas inventees",
+         "left" not in (_invpdf["mise_en_page"] or {})
+         and any("marges" in m for m in _invpdf["lacunes"]))
+_cmp_pdf = gab.comparer(_invpdf, os.path.join(FIXT, "rendu-devie.pdf"))
+verifier("gabarit pdf : un format de page divergent est majeur",
+         any(e["regle"] == "format de page divergent"
+             for e in _cmp_pdf["ecarts"]), f"e={_cmp_pdf['ecarts']}")
+verifier("gabarit pdf : une police non incorporee reste un mineur",
+         any(e["regle"] == "aucune police incorporee"
+             and e["gravite"] == "mineur" for e in _cmp_pdf["ecarts"]))
+_invpdf_limite = dict(_invpdf, pages_max=2)
+verifier("gabarit pdf : une limite de pages depassee est majeure",
+         any(e["regle"] == "limite de pages depassee" for e in gab.comparer(
+             _invpdf_limite, os.path.join(FIXT, "rendu-devie.pdf"))["ecarts"]))
+
+for _inv_nr, _nom_nr in ((_invo, "odt"), (_invpdf, "pdf")):
+    verifier("gabarit %s : le remplissage est refuse avec son motif" % _nom_nr,
+             _inv_nr["remplissable"] is False
+             and bool(_inv_nr.get("motif_non_remplissable")))
+try:
+    gab.remplir(_invpdf, "# X\n", os.path.join(_tf.mkdtemp(), "x.pdf"))
+    _refus_pdf = False
+except SystemExit:
+    _refus_pdf = True
+verifier("gabarit pdf : remplir un PDF s'arrete plutot que d'approximer",
+         _refus_pdf)
+try:
+    gab.comparer(_invp, os.path.join(FIXT, "gabarit-ecole.docx"))
+    _refus_croise = False
+except SystemExit:
+    _refus_croise = True
+verifier("gabarit : comparer deux familles differentes est refuse",
+         _refus_croise)
+
+
+# Modules de cas ranges dans evals/cas/. Le harnais grossit par fichier plutot
+# que par lignes ajoutees a celui-ci : chaque module recoit verifier et les
+# aides communes, et n'a ni chargement ni resume propres.
+def _charger_modules_de_cas():
+    dossier = os.path.join(ICI, "cas")
+    if not os.path.isdir(dossier):
+        return []
+    charges = []
+    espace_commun = {
+        "verifier": verifier, "charger": charger, "lire": lire,
+        "ICI": ICI, "SCRIPTS": SCRIPTS, "FIXT": FIXT, "RACINE": RACINE,
+    }
+    for nom in sorted(os.listdir(dossier)):
+        if not nom.endswith(".py") or nom.startswith("_"):
+            continue
+        chemin = os.path.join(dossier, nom)
+        espace = dict(espace_commun)
+        espace["__file__"] = chemin
+        with open(chemin, encoding="utf-8") as f:
+            code = compile(f.read(), chemin, "exec")
+        exec(code, espace)
+        charges.append(nom)
+    return charges
+
+
+MODULES_DE_CAS = _charger_modules_de_cas()
 
 
 def main():

@@ -1,0 +1,125 @@
+{
+  "tache": "lint-style",
+  "version_gel": "0.9.0",
+  "description": "Corpus fige d'extraits courts, comptes par scripts/lint-style.py au moment du gel. Sert a mesurer si le compte de constats par severite reste stable d'une version a l'autre du linter.",
+  "seuil_exactitude_attendu": 0.9,
+  "distribution": {
+    "guillemets-courbes": 1,
+    "lexique-promo": 1,
+    "metadiscours": 1,
+    "mixte": 1,
+    "pronom-quantif": 1,
+    "propre": 2,
+    "tiret-cadratin": 1,
+    "url-suivi": 1,
+    "virgule-oxford": 1
+  },
+  "non_couvert": [
+    "ne couvre pas les faux positifs dans du code cite ou des citations entre guillemets qui reprennent volontairement une tournure bannie",
+    "ne couvre pas les pragmas lint-style:ignore et lint-style:ignore-file",
+    "ne couvre pas les documents tres longs ni les fichiers non-.md",
+    "dix cas seulement : chaque regle n'est representee qu'une ou deux fois"
+  ],
+  "cas": [
+    {
+      "id": "guillemets-courbes-01",
+      "fichier": "cas/guillemets-courbes-01.md",
+      "type": "guillemets-courbes",
+      "attendu": {
+        "critique": 4,
+        "majeur": 0,
+        "mineur": 0
+      }
+    },
+    {
+      "id": "lexique-promo-01",
+      "fichier": "cas/lexique-promo-01.md",
+      "type": "lexique-promo",
+      "attendu": {
+        "critique": 2,
+        "majeur": 0,
+        "mineur": 0
+      }
+    },
+    {
+      "id": "metadiscours-01",
+      "fichier": "cas/metadiscours-01.md",
+      "type": "metadiscours",
+      "attendu": {
+        "critique": 0,
+        "majeur": 2,
+        "mineur": 0
+      }
+    },
+    {
+      "id": "mixte-01",
+      "fichier": "cas/mixte-01.md",
+      "type": "mixte",
+      "attendu": {
+        "critique": 5,
+        "majeur": 2,
+        "mineur": 3
+      }
+    },
+    {
+      "id": "pronom-quantif-01",
+      "fichier": "cas/pronom-quantif-01.md",
+      "type": "pronom-quantif",
+      "attendu": {
+        "critique": 0,
+        "majeur": 0,
+        "mineur": 2
+      }
+    },
+    {
+      "id": "propre-01",
+      "fichier": "cas/propre-01.md",
+      "type": "propre",
+      "attendu": {
+        "critique": 0,
+        "majeur": 0,
+        "mineur": 0
+      }
+    },
+    {
+      "id": "propre-02",
+      "fichier": "cas/propre-02.md",
+      "type": "propre",
+      "attendu": {
+        "critique": 0,
+        "majeur": 0,
+        "mineur": 0
+      }
+    },
+    {
+      "id": "tiret-cadratin-01",
+      "fichier": "cas/tiret-cadratin-01.md",
+      "type": "tiret-cadratin",
+      "attendu": {
+        "critique": 2,
+        "majeur": 0,
+        "mineur": 1
+      }
+    },
+    {
+      "id": "url-suivi-01",
+      "fichier": "cas/url-suivi-01.md",
+      "type": "url-suivi",
+      "attendu": {
+        "critique": 2,
+        "majeur": 0,
+        "mineur": 0
+      }
+    },
+    {
+      "id": "virgule-oxford-01",
+      "fichier": "cas/virgule-oxford-01.md",
+      "type": "virgule-oxford",
+      "attendu": {
+        "critique": 0,
+        "majeur": 1,
+        "mineur": 0
+      }
+    }
+  ]
+}

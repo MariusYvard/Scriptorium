@@ -19,6 +19,18 @@ porte soit une citation exacte de 25 mots au plus, soit une localisation
 correspond a aucun des deux formats, est signalee sans ancre (--exiger-ancres
 pour en faire une erreur bloquante, sinon un simple signal).
 
+Ancrage a trois couches (references/integrite-sources.md) : la couche 1
+(existence de la reference) reste couverte par verify-sources.py. La couche 2
+(qualifier_ancre, rapport_qualification) qualifie une ancre en type ferme
+(citation, page, structure, horodatage, aucune) et nomme les formes mal
+formees (page nulle ou negative, plage inversee, citation trop longue,
+guillemets non fermes) comme un defaut plutot que de les faire passer pour
+une ancre valide. La couche 3 (auditer_fidelite, --auditer-fidelite) mesure
+l'ecart entre une affirmation et le texte de l'ancre qui la soutient (montee
+en force modale, chiffre orphelin, generalisation retiree) sans jamais
+emettre de verdict de fidelite global : ce jugement n'est pas mecanisable et
+reste consultatif.
+
 Bascule de format : --bascule ANCIEN NOUVEAU reemet la meme bibliographie
 (le fichier .bib est la seule source de verite) dans un nouveau format tout
 en affichant l'ancien, avec un compte de references avant et apres (doit
@@ -59,11 +71,14 @@ Usage :
     python3 citations.py --pmid 12345678          (reseau, vers BibTeX)
     python3 citations.py --arxiv 1706.03762       (reseau, vers BibTeX)
     python3 citations.py FICHIER.bib --exiger-ancres
+    python3 citations.py FICHIER.bib --auditer-fidelite DOCUMENT.md
 Module importable : parser_bibtex(texte) ; format_apa(e) ; format_vancouver(e) ;
 format_chicago(e) ; format_mla(e) ; format_ieee(e) ; FORMATS (dict nom -> fonction) ;
-dedupe(entrees) ; ancre_de(entree) ; valider_entree(e) ; rapport_validation(entrees) ;
-trier_entrees(entrees, cle) ; fetch_doi(doi) ; fetch_pmid(pmid) ; fetch_arxiv(id) ;
-entree_vers_bibtex(e).
+dedupe(entrees) ; ancre_de(entree) ; qualifier_ancre(valeur) ;
+rapport_qualification(entrees) ; extraire_couples(document_md, entrees) ;
+auditer_fidelite(document_md, entrees) ; valider_entree(e) ;
+rapport_validation(entrees) ; trier_entrees(entrees, cle) ; fetch_doi(doi) ;
+fetch_pmid(pmid) ; fetch_arxiv(id) ; entree_vers_bibtex(e).
 """
 import argparse
 import json
@@ -77,6 +92,16 @@ SEUIL_MOTS_CITATION = 25  # documente dans references/integrite-sources.md
 LOCATEUR_RE = re.compile(
     r'(?i)\b(pp?\.|pages?|§|sections?|sec\.|chapitres?|chap\.|paragraphes?|par(a)?\.?)'
     r'\s*\d+([.\-]\d+)*\b')
+
+# Couche 2 (ancrage a trois couches, integrite-sources.md) : qualification
+# stricte d'une ancre en types fermes. Plus stricte que LOCATEUR_RE ci-dessus
+# (qui ne fait que reperer un indice de localisation dans un texte libre) :
+# ces expressions valident la forme entiere du champ et distinguent un
+# defaut nomme d'une ancre valide.
+PAGE_RE = re.compile(r'(?i)^pp?\.\s*(-?\d+)(?:\s*[-–]\s*(-?\d+))?$')
+STRUCTURE_RE = re.compile(
+    r'(?i)^(section|tableau|figure|annexe|paragraphe)\s+([a-z0-9]+(?:\.[0-9]+)*)$')
+HORODATAGE_RE = re.compile(r'^(?:\d{1,2}:)?[0-5]?\d:[0-5]\d$')
 
 # Champs BibTeX obligatoires par type d'entree. Adapte de required_fields,
 # validate_citations.py (openscience). Cas particulier : "book" accepte
@@ -384,6 +409,189 @@ def rapport_ancrage(entrees):
     return {"detail": detail, "sans_ancre": sans_ancre}
 
 
+def qualifier_ancre(valeur):
+    """Couche 2 (localisation) : qualifie une ancre brute (champ annote ou
+    note d'une entree BibTeX, ou toute chaine equivalente) en un type ferme :
+    citation, page, structure, horodatage, aucune, ou defaut si la forme est
+    reconnaissable mais mal formee. Une ancre mal formee (page nulle ou
+    negative, plage inversee, citation de plus de 25 mots, guillemets non
+    fermes, ou une forme qui ne correspond a aucun des quatre types valides)
+    n'est jamais reclassee en ancre valide : elle porte le type "defaut" et
+    un code dans la cle "defaut". Plus strict que ancre_de/LOCATEUR_RE
+    ci-dessus (repli historique, conserve pour --exiger-ancres) : ici la
+    forme entiere du champ doit correspondre, pas seulement en contenir un
+    indice."""
+    valeur = (valeur or "").strip()
+    if not valeur:
+        return {"type": "aucune", "defaut": None, "valeur": None}
+
+    if valeur.count('"') % 2 == 1:
+        return {"type": "defaut", "defaut": "guillemets_non_fermes", "valeur": valeur}
+
+    m_cit = re.match(r'^"(.*)"$', valeur, re.S)
+    if m_cit:
+        texte = m_cit.group(1).strip()
+        if not texte:
+            return {"type": "defaut", "defaut": "citation_vide", "valeur": valeur}
+        n_mots = len(texte.split())
+        if n_mots > SEUIL_MOTS_CITATION:
+            return {"type": "defaut", "defaut": "citation_trop_longue",
+                    "valeur": valeur, "mots": n_mots}
+        return {"type": "citation", "valeur": texte, "mots": n_mots}
+
+    m_page = PAGE_RE.match(valeur)
+    if m_page:
+        debut = int(m_page.group(1))
+        fin = int(m_page.group(2)) if m_page.group(2) else None
+        if debut <= 0 or (fin is not None and fin <= 0):
+            return {"type": "defaut", "defaut": "page_invalide", "valeur": valeur}
+        if fin is not None and fin < debut:
+            return {"type": "defaut", "defaut": "plage_inversee", "valeur": valeur}
+        return {"type": "page", "valeur": valeur, "debut": debut, "fin": fin}
+
+    if STRUCTURE_RE.match(valeur):
+        return {"type": "structure", "valeur": valeur}
+
+    if HORODATAGE_RE.match(valeur):
+        return {"type": "horodatage", "valeur": valeur}
+
+    return {"type": "defaut", "defaut": "forme_non_reconnue", "valeur": valeur}
+
+
+def rapport_qualification(entrees):
+    """Couche 2 sur une bibliographie entiere : qualifier_ancre applique au
+    champ annote (priorite) ou note de chaque entree, meme convention de
+    priorite que ancre_de. Retourne le detail par cle et la liste des cles
+    dont l'ancre est un defaut nomme (jamais confondu avec une ancre absente,
+    qui est un type distinct : "aucune")."""
+    detail = []
+    defauts = []
+    for e in entrees:
+        brute = e.get("annote") or e.get("note") or ""
+        q = qualifier_ancre(brute)
+        detail.append({"cle": e.get("_cle"), **q})
+        if q["type"] == "defaut":
+            defauts.append(e.get("_cle"))
+    return {"detail": detail, "defauts": defauts}
+
+
+# Couche 3 (fidelite, integrite-sources.md) : lexiques fermes pour les
+# signaux mecaniques mesures sur le couple affirmation-ancre. Le code ne
+# juge jamais si l'affirmation est vraie : il mesure un ecart de forme entre
+# le texte de l'ancre (citation exacte uniquement, seul type d'ancre qui
+# porte du texte source comparable) et le texte de l'affirmation, et laisse
+# le jugement au modele ou au relecteur.
+MODALITE_PRUDENTE = {
+    "suggere", "suggerent", "est associe", "sont associes", "semble",
+    "semblent", "pourrait", "pourraient", "tend a", "tendent a",
+    "dans cet echantillon", "dans cette etude", "preliminaire", "possible",
+    "eventuellement", "dans certains cas",
+}
+MODALITE_FORTE = {
+    "demontre", "demontrent", "prouve", "prouvent", "cause", "causent",
+    "toujours", "jamais", "garantit", "garantissent", "systematiquement",
+    "universellement", "quel que soit", "sans aucun doute",
+    "de maniere definitive",
+}
+PORTEE_MARQUEURS = {
+    "echantillon", "cohorte", "population", "dans cette etude",
+    "dans cet echantillon", "parmi les participants", "chez les patients",
+    "dans ce groupe", "sur ce panel",
+}
+GENERALISATION_MARQUEURS = {
+    "tous", "toutes", "tout le monde", "universellement", "systematiquement",
+    "en general", "quel que soit", "dans tous les cas", "partout",
+}
+NUM_RE = re.compile(r'\d[\d.,]*\s?%?')
+MARQUEUR_CITATION_RE = re.compile(r'([^.!?\n]*[.!?])\s*\[([\w:-]+)\]')
+
+
+def _sans_accents(texte):
+    """Normalisation minimale (NFKD, bibliotheque standard unicodedata) pour
+    une comparaison de lexique insensible aux accents et a la casse."""
+    import unicodedata
+    d = unicodedata.normalize('NFKD', texte.lower())
+    return ''.join(c for c in d if not unicodedata.combining(c))
+
+
+def _contient_lexique(texte, lexique):
+    t = _sans_accents(texte)
+    return any(mot in t for mot in lexique)
+
+
+def _nombres(texte):
+    """Chiffres, pourcentages et annees mentionnes dans un texte, normalises
+    (virgule francaise vers point) pour comparaison ensembliste."""
+    return {n.replace(' ', '').replace(',', '.').rstrip('.') for n in NUM_RE.findall(texte)}
+
+
+def extraire_couples(document_md, entrees):
+    """Convention de marquage : une affirmation se termine par une phrase
+    (jusqu'a . ! ou ?) immediatement suivie d'un marqueur [cle_bibtex], la
+    cle devant correspondre a une entree de la bibliographie fournie.
+    Retourne une liste de couples {cle, affirmation, entree} ; "entree" vaut
+    None si la cle ne resout vers aucune entree (signale par
+    auditer_fidelite comme reference_introuvable, pas une erreur silencieuse)."""
+    index = {e.get("_cle"): e for e in entrees}
+    couples = []
+    for m in MARQUEUR_CITATION_RE.finditer(document_md):
+        cle = m.group(2)
+        couples.append({
+            "cle": cle,
+            "affirmation": m.group(1).strip(),
+            "entree": index.get(cle),
+        })
+    return couples
+
+
+def auditer_fidelite(document_md, entrees):
+    """Couche 3 : audit de fidelite affirmation-ancre. Pour chaque couple
+    (extraire_couples), mesure trois signaux fermes quand le texte source est
+    disponible (ancre de type citation uniquement) : montee en force modale
+    (lexique prudent dans l'ancre, lexique fort dans l'affirmation), chiffre
+    orphelin (nombre, pourcentage ou annee present dans l'affirmation et
+    absent de l'ancre), generalisation retiree (portee nommee dans l'ancre,
+    marqueur de generalisation dans l'affirmation sans reprise de cette
+    portee). N'emet jamais de verdict global (soutenue/extrapolee/non
+    verifiable/contredite) : ce jugement n'est pas mecanisable, voir
+    references/integrite-sources.md. N'affecte jamais le code de sortie
+    (verification consultative, CONTRIBUTING.md regle 5)."""
+    rapport = []
+    for c in extraire_couples(document_md, entrees):
+        entree = c["entree"]
+        brute = (entree.get("annote") or entree.get("note") or "") if entree else ""
+        ancre = qualifier_ancre(brute)
+        signaux = []
+        if entree is None:
+            signaux.append({"signal": "reference_introuvable", "detail": c["cle"]})
+        elif ancre["type"] == "defaut":
+            signaux.append({"signal": "ancre_malformee", "detail": ancre["defaut"]})
+
+        source_texte = ancre["valeur"] if ancre["type"] == "citation" else None
+        if source_texte is None:
+            non_mesurable = ["montee_en_force", "chiffre_orphelin", "generalisation_retiree"]
+        else:
+            non_mesurable = []
+            if (_contient_lexique(source_texte, MODALITE_PRUDENTE)
+                    and _contient_lexique(c["affirmation"], MODALITE_FORTE)):
+                signaux.append({"signal": "montee_en_force", "detail": None})
+
+            orphelins = sorted(_nombres(c["affirmation"]) - _nombres(source_texte))
+            if orphelins:
+                signaux.append({"signal": "chiffre_orphelin", "detail": orphelins})
+
+            if (_contient_lexique(source_texte, PORTEE_MARQUEURS)
+                    and _contient_lexique(c["affirmation"], GENERALISATION_MARQUEURS)
+                    and not _contient_lexique(c["affirmation"], PORTEE_MARQUEURS)):
+                signaux.append({"signal": "generalisation_retiree", "detail": None})
+
+        rapport.append({
+            "cle": c["cle"], "affirmation": c["affirmation"], "ancre": ancre,
+            "signaux": signaux, "non_mesurable": non_mesurable,
+        })
+    return rapport
+
+
 def valider_entree(e):
     """Confronte une entree a la liste des champs obligatoires de son type
     (REQUIS_PAR_TYPE). Cas particulier : "book" accepte "editor" a la place
@@ -565,6 +773,11 @@ def main(argv=None):
     ap.add_argument("--format", choices=["text", "json"], default="text")
     ap.add_argument("--exiger-ancres", action="store_true",
                      help="code de sortie 1 si une entree n'a pas d'ancre exploitable")
+    ap.add_argument("--auditer-fidelite", metavar="DOCUMENT.md",
+                     help="couche 3 : audit de fidelite affirmation-ancre du document Markdown "
+                          "contre la bibliographie du fichier .bib fourni en argument "
+                          "positionnel ; convention [cle_bibtex] apres la phrase citee ; "
+                          "consultatif, code de sortie toujours 0")
     ap.add_argument("--valider", action="store_true",
                      help="rapport des champs BibTeX obligatoires manquants, par type d'entree")
     ap.add_argument("--trier", choices=["cle", "annee", "auteur"],
@@ -591,6 +804,32 @@ def main(argv=None):
 
     texte = sys.stdin.read() if a.fichier in (None, "-") else open(a.fichier, encoding="utf-8").read()
     entrees = parser_bibtex(texte)
+
+    if a.auditer_fidelite:
+        doc_texte = open(a.auditer_fidelite, encoding="utf-8").read()
+        rapport = auditer_fidelite(doc_texte, entrees)
+        if a.format == "json":
+            print(json.dumps({"audit_fidelite": rapport}, ensure_ascii=False, indent=2))
+        elif not rapport:
+            print("Audit de fidelite : aucun couple affirmation-ancre repere "
+                  "(convention : phrase suivie de [cle_bibtex]).")
+        else:
+            for r in rapport:
+                print(f"[{r['cle']}] {r['affirmation']}")
+                defaut = f" ({r['ancre']['defaut']})" if r['ancre'].get('defaut') else ""
+                print(f"  ancre : {r['ancre']['type']}{defaut}")
+                if r["signaux"]:
+                    for s in r["signaux"]:
+                        detail = f" -- {s['detail']}" if s['detail'] else ""
+                        print(f"  signal : {s['signal']}{detail}")
+                else:
+                    print("  signal : aucun")
+                if r["non_mesurable"]:
+                    print("  non mesurable (pas de texte source dans l'ancre) : "
+                          + ", ".join(r["non_mesurable"]))
+                print()
+        return 0  # couche 3 consultative : n'affecte jamais le code de sortie
+
     doublons = []
     if a.dedupe:
         entrees, doublons = dedupe(entrees)

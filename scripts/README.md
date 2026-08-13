@@ -1,6 +1,6 @@
 # Scripts déterministes de Scriptorium
 
-Vingt-deux outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Vingt-trois outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
@@ -98,6 +98,8 @@ python3 citations.py --doi 10.xxxx/yyyy | --pmid N | --arxiv ID
 ```
 
 `--exiger-ancres` renvoie un code de sortie 1 si une entrée n'a pas d'ancre. `--valider` rapporte les champs obligatoires manquants par type d'entrée, `--pmid` et `--arxiv` résolvent une référence en BibTeX (réseau, NCBI E-utilities et export.arxiv.org).
+
+Ancrage à trois couches (`references/integrite-sources.md`). La couche 1, existence de la référence, reste couverte par verify-sources.py. La couche 2, localisation, qualifie chaque ancre en type fermé (citation, page, structure, horodatage, aucune) et nomme les formes mal formées (page nulle ou négative, plage inversée, citation trop longue, guillemets non fermés) comme un défaut plutôt que de les faire passer pour une ancre valide. La couche 3, fidélité (`--auditer-fidelite DOCUMENT.md`), mesure l'écart entre une affirmation et le texte de l'ancre qui la soutient (montée en force modale, chiffre orphelin, généralisation retirée), uniquement quand l'ancre porte une citation exacte, et n'émet jamais de verdict de fidélité global : ce jugement reste consultatif.
 
 ## check-temporel.py
 
@@ -198,15 +200,28 @@ python3 images.py manifest DIR
 
 ## gabarit.py
 
-Gabarits de document imposés par un tiers. Un .docx ou .dotx est un zip de fragments XML : le script les lit avec `zipfile` et `xml.etree`, sans dépendance. Trois actions. `inventorier` extrait la structure d'un gabarit fourni (styles nommés, hiérarchie de titres, style de corps, marges et format de page, en-têtes et pieds avec leurs champs, polices nommées, protection en édition) dans un JSON déclaratif, qui porte lui-même la liste de ce qu'il ne couvre pas. `comparer` confronte un document à cet inventaire et rend un verdict fermé (conforme, écarts mineurs, écarts majeurs) : un style inconnu du gabarit, une marge ou une orientation divergente, un en-tête manquant sont majeurs. `remplir` injecte le contenu dans le gabarit lui-même, dans ses styles existants, plutôt que de générer un fichier neuf qui perdrait filigrane, numérotation liée et thème de couleurs.
+Gabarits de document imposés par un tiers, en quatre familles détectées par le contenu du fichier puis par son extension (un fichier qui commence par `%PDF-` est un PDF quelle que soit son extension). Texte OOXML (.docx, .dotx, .docm) et diapositives OOXML (.pptx, .potx, .pptm) : inventaire complet, comparaison et remplissage. Texte et diapositives ODF (.odt, .ott, .odp, .otp) : inventaire et comparaison, remplissage non implémenté. PDF : inventaire et comparaison en lecture seule, jamais de remplissage, une page fixe déjà composée ne se remplit pas. Tout est lu avec `zipfile` et `xml.etree` (ou en binaire direct pour un PDF), sans dépendance.
+
+Trois actions communes aux familles concernées. `inventorier` extrait la structure d'un gabarit fourni dans un JSON déclaratif qui porte lui-même la liste de ce qu'il ne couvre pas : pour un document texte, styles nommés, hiérarchie de titres, style de corps, marges et format de page, en-têtes et pieds, polices, protection en édition ; pour une diapositive, dispositions nommées, espaces réservés et taille de diapositive en plus ; pour un PDF, nombre de pages, format de page nommé (A4, Letter), orientation, polices et proportion incorporée, chiffrement et version, sans les marges, qui ne sont pas une donnée du fichier. `comparer` confronte un document à cet inventaire et rend un verdict fermé (conforme, écarts mineurs, écarts majeurs) par identifiant stable, jamais par le libellé affiché qu'un Word ou un PowerPoint francisé renomme ; comparer deux familles différentes est refusé. `remplir` injecte le contenu dans le gabarit lui-même, dans ses styles ou ses dispositions existants, plutôt que de générer un fichier neuf qui perdrait filigrane, numérotation liée, masque de diapositive ou thème de couleurs ; l'option `--disposition` choisit la disposition du gabarit dans laquelle les diapositives sont créées. Une nouvelle sous-commande `formats` liste les familles et leurs extensions.
 
 ```
-python3 gabarit.py inventorier GABARIT.docx [--out INVENTAIRE.json] [--format text|json]
-python3 gabarit.py comparer INVENTAIRE.json DOCUMENT.docx [--format text|json] [--strict]
-python3 gabarit.py remplir INVENTAIRE.json CONTENU.md --out SORTIE.docx [--logo FICHIER] [--logo-largeur-cm N]
+python3 gabarit.py inventorier GABARIT.docx|.pptx|.odt|.pdf [--out INVENTAIRE.json] [--format text|json]
+python3 gabarit.py comparer INVENTAIRE.json DOCUMENT [--format text|json] [--strict]
+python3 gabarit.py remplir INVENTAIRE.json CONTENU.md --out SORTIE [--logo FICHIER] [--logo-largeur-cm N] [--disposition NOM]
+python3 gabarit.py formats
 ```
 
-La comparaison des styles se fait par identifiant (`w:styleId`), jamais par le libellé affiché, qu'un Word francisé renomme. Le remplissage s'arrête sur un gabarit protégé en édition plutôt que de produire un fichier douteux, et ajoute le contenu avant la dernière section sans supprimer les paragraphes de remplissage du gabarit. Code de sortie 1 sur écart majeur.
+La comparaison des styles se fait par identifiant (`w:styleId` en Word, nom de disposition en PowerPoint, `style:name` en ODF), jamais par le libellé affiché. Le remplissage s'arrête sur un gabarit protégé en édition, ou sur un ODF ou un PDF, plutôt que de produire un fichier douteux, et ajoute le contenu avant la dernière section sans supprimer les paragraphes ou les diapositives de remplissage du gabarit. Code de sortie 1 sur écart majeur.
+
+## check-lecture-pdf.py
+
+Préflight d'intégrité de lecture, à lancer avant tout ancrage de citation sur une source PDF : un ancrage sur une page suppose que le texte de cette page a réellement été extrait, ce que le script vérifie plutôt que de le supposer. Verdict fermé sur quatre valeurs : lecture fiable, lecture partielle, lecture non fiable, non mesurable, ce dernier ne se confondant jamais avec le troisième (l'absence de tout backend PDF dégrade proprement vers non mesurable). Le rapport liste les pages ancrables et les pages non ancrables, signale les pages sans texte (scan sans OCR), les pages à l'encodage suspect (mojibake) et un fichier chiffré ou protégé, déclaré et jamais contourné. Les contrôles binaires (en-tête `%PDF-`, marqueur `%%EOF`, table xref) restent disponibles sans aucun backend installé, en réutilisant la cascade de backends de check-presentation.py par import de chemin.
+
+```
+python3 check-lecture-pdf.py FICHIER.pdf [--format text|json] [--strict]
+```
+
+Module importable : `analyser(chemin)` renvoie le rapport, `rapport_texte(rapport)` le met en forme.
 
 ## logos.py
 
@@ -226,3 +241,15 @@ Porte d'intégration continue éditoriale : passe ou échoue un ou plusieurs doc
 ```
 python3 tools/check.py "chemin/**/*.md" --seuil 85 [--outrepasser] [--justification "..."] [--projet projet.json]
 ```
+
+## tools/gold.py
+
+Jeu d'or versionné et porte de régression directionnelle pour scorecard.py et lint-style.py. `verifier` contrôle la santé du corpus figé de `evals/gold/` contre neuf invariants numérotés (I1 à I9), dont le plus important (I6) impose que chaque étiquette attendue soit recalculable par les vraies constantes du dépôt (`AXES_CONNUS`, les sévérités du linter) plutôt que par une liste recopiée dans le validateur. `mesurer` rejoue le corpus avec les fonctions réelles du dépôt et écrit un rapport horodaté portant la version du plugin. `comparer` confronte deux rapports polarité par polarité (chaque métrique déclare si elle doit monter ou descendre) et signale une métrique absente au candidat comme une régression plutôt que comme un succès par défaut.
+
+```
+python3 tools/gold.py verifier [--format text|json]
+python3 tools/gold.py mesurer [--format text|json] [--out FICHIER]
+python3 tools/gold.py comparer REFERENCE.json CANDIDAT.json [--format text|json] [--bloquant] [--outrepasser] [--justification "..."] [--projet FICHIER]
+```
+
+Consultatif par défaut : `comparer` renvoie 0 même en régression, sauf avec `--bloquant`, qui exige alors `--outrepasser` à la même friction à trois crans que tools/check.py pour passer outre. Non câblé en intégration continue tant qu'aucun rapport de référence n'est publié.

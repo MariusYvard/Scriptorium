@@ -1,0 +1,38 @@
+{
+  "organisation": "Exemple : un stage de recherche sous double tutelle",
+  "note": "Chaque entree appartient a l'organisation proprietaire du logo. Les regles de zone de respiration et de taille minimale viennent de sa charte de marque, pas de la charte du document.",
+  "logos": [
+    {
+      "id": "ecole",
+      "libelle": "Ecole de rattachement",
+      "fichier": "logos/ecole.svg",
+      "alt": "Logo de l'ecole",
+      "rang": 1,
+      "usages": ["page-garde", "en-tete"],
+      "largeur_cm_par_usage": {"page-garde": 5.0, "en-tete": 2.2},
+      "respiration": 0.3,
+      "variante_sombre": "logos/ecole-blanc.svg"
+    },
+    {
+      "id": "laboratoire",
+      "libelle": "Laboratoire d'accueil",
+      "fichier": "logos/laboratoire.svg",
+      "alt": "Logo du laboratoire",
+      "rang": 2,
+      "usages": ["page-garde", "co-signature"],
+      "largeur_cm": 4.0,
+      "respiration": 0.25
+    },
+    {
+      "id": "financeur",
+      "libelle": "Financeur du projet",
+      "fichier": "logos/financeur.png",
+      "alt": "Logo du financeur",
+      "rang": 3,
+      "usages": ["pied", "co-signature"],
+      "largeur_cm": 2.5,
+      "respiration": 0.5,
+      "ratio_verrouille": 3.0
+    }
+  ]
+}

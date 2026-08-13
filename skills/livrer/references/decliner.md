@@ -38,6 +38,10 @@ Chaque affirmation du résumé, dans les deux langues, doit se retrouver dans le
 
 Aucun canal n'introduit un fait absent du source ni ne déforme un chiffre. Un raccourci de format ne devient pas une approximation. En cas de doute, revenir au source et à sa carte preuve-affirmation.
 
+### Phrases de couverture protégées
+
+Quand une déclinaison impose une contrainte de longueur stricte (résumé d'une page, abstract calibré), les réserves et les limites du document source ne sont pas les premières coupées pour tenir le format. Désigner avant la réduction une liste courte de phrases de couverture (limite de l'étude, portée du résultat, incertitude signalée) qui survit à la contrainte, quitte à raccourcir ailleurs. Un résumé plus affirmatif que le document qu'il résume est un faux, pas une simplification.
+
 ## 5. Appliquer la charte et le style
 
 Appliquer la même charte graphique (voir `produire` (charte)) à tous les livrables visuels, et le style maison à tous les textes. Repasser chaque déclinaison par `scripts/lint-style.py` et le scorecard.

@@ -30,6 +30,10 @@ La structure standard du genre est-elle respectée ? Les sections obligatoires s
 
 Le texte respecte-t-il les directives strictes ? Vérifier point par point : zéro tiret cadratin, pas de virgule d'Oxford, guillemets et apostrophes droits, lexique banni absent, pas de métadiscours, faits précis, URL sans paramètres de suivi. Voir `references/grille-revue.md`.
 
+### Calibration de sévérité selon la norme du champ
+
+Invoquer une norme disciplinaire ("dans cette discipline, on attend X") sans citer la source qui l'établit est une sévérité non calibrée. Une telle critique se requalifie en préférence du relecteur tant que la norme visée n'est pas sourcée : elle ne s'inscrit pas comme constat critique ou majeur avant cette étape. Voir `references/severite.md` pour la définition des niveaux.
+
 ## Controles deterministes (avant la lecture)
 
 Avant la lecture humaine, lancer les trois scripts sur le texte. Ils attrapent mecaniquement ce qu'un modele juge mal, et liberent la revue pour le fond.

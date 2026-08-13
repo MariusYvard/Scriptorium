@@ -239,8 +239,39 @@ def verifier_crossref_doi(doi, timeout=INDEX_TIMEOUT):
         return {"consulte": False, "trouve": False, "titre": None}
     if code == 404:
         return {"consulte": True, "trouve": False, "titre": None}
-    titres = data.get("message", {}).get("title") or []
-    return {"consulte": True, "trouve": True, "titre": titres[0] if titres else None}
+    message = data.get("message", {})
+    titres = message.get("title") or []
+    return {"consulte": True, "trouve": True,
+            "titre": titres[0] if titres else None,
+            "retracte": _retractation_crossref(message)}
+
+
+def _retractation_crossref(message):
+    """Statut de retractation lu dans la reponse Crossref deja recuperee.
+
+    Crossref porte deux champs distincts. updated-by liste les enregistrements
+    qui corrigent celui-ci : un avis de retractation y apparait avec le type
+    retraction. update-to fait l'inverse, il designe ce que cet enregistrement
+    corrige : le trouver signifie que le DOI cite est l'avis lui-meme, pas
+    l'article retracte. Les deux cas se distinguent au lieu d'etre confondus.
+
+    Retourne None quand rien n'est declare : l'absence de mention n'est pas une
+    preuve d'absence de retractation, seulement une absence d'information.
+    """
+    types = {"retraction", "withdrawal", "removal"}
+    for entree in message.get("updated-by") or []:
+        if (entree.get("type") or "").lower() in types:
+            return {"statut": "retracte", "type": entree.get("type"),
+                    "avis_doi": entree.get("DOI"),
+                    "date": ((entree.get("updated") or {}).get("date-time")),
+                    "source": "crossref updated-by"}
+    for entree in message.get("update-to") or []:
+        if (entree.get("type") or "").lower() in types:
+            return {"statut": "avis de retractation", "type": entree.get("type"),
+                    "avis_doi": entree.get("DOI"),
+                    "date": ((entree.get("updated") or {}).get("date-time")),
+                    "source": "crossref update-to"}
+    return None
 
 
 def verifier_semantic_scholar_doi(doi, timeout=INDEX_TIMEOUT):
@@ -275,7 +306,12 @@ def verifier_openalex_doi(doi, timeout=INDEX_TIMEOUT, api_key=None):
         return {"consulte": False, "trouve": False, "titre": None}
     if code == 404:
         return {"consulte": True, "trouve": False, "titre": None}
-    return {"consulte": True, "trouve": True, "titre": data.get("title")}
+    retracte = None
+    if data.get("is_retracted") is True:
+        retracte = {"statut": "retracte", "type": "is_retracted",
+                    "avis_doi": None, "date": None, "source": "openalex"}
+    return {"consulte": True, "trouve": True, "titre": data.get("title"),
+            "retracte": retracte}
 
 
 def trianguler_doi(doi, timeout=INDEX_TIMEOUT, api_key_openalex=None):
@@ -325,10 +361,30 @@ def trianguler_doi(doi, timeout=INDEX_TIMEOUT, api_key_openalex=None):
             verdict = "inverifiable"
             detail = "aucun index consulte avec succes (reseau indisponible, cles absentes)"
 
+    # La retractation est un fait distinct de l'existence : un article retracte
+    # existe, se resout dans les index et reste "verifie". Le statut se rapporte
+    # a part plutot que de degrader le verdict d'existence, qui repondrait a une
+    # autre question. Aucun index consulte ne le declarant, le statut reste
+    # inconnu, jamais suppose sain.
+    signalements = [r["retracte"] for r in index.values() if r.get("retracte")]
+    if signalements:
+        retractation = dict(signalements[0])
+        retractation["sources"] = sorted(
+            {s["source"] for s in signalements})
+    else:
+        consultes_avec_champ = [nom for nom, r in index.items()
+                                if r["consulte"] and r["trouve"]
+                                and "retracte" in r]
+        retractation = {
+            "statut": "non declare" if consultes_avec_champ else "inconnu",
+            "sources": consultes_avec_champ,
+        }
+
     return {
         "doi": doi,
         "verdict": verdict,
         "detail": detail,
+        "retractation": retractation,
         "index": {nom: {"consulte": r["consulte"], "trouve": r["trouve"], "titre": r.get("titre")}
                   for nom, r in index.items()},
     }
@@ -394,6 +450,24 @@ def rapport_texte(d):
         out.append("\nTriangulation multi-index (verdict par DOI) :")
         for t in d["triangulation"]:
             out.append(f"  [{t['verdict'].upper()}] {t['doi']} -> {t['detail']}")
+        retractes = [t for t in d["triangulation"]
+                     if (t.get("retractation") or {}).get("statut")
+                     in ("retracte", "avis de retractation")]
+        if retractes:
+            out.append("\nStatut de rétractation (fait distinct de l'existence) :")
+            for t in retractes:
+                r = t["retractation"]
+                avis = f", avis {r['avis_doi']}" if r.get("avis_doi") else ""
+                date = f", {r['date']}" if r.get("date") else ""
+                out.append(f"  [{r['statut'].upper()}] {t['doi']} "
+                           f"(déclaré par {', '.join(r.get('sources') or [])}"
+                           f"{avis}{date})")
+        inconnus = [t["doi"] for t in d["triangulation"]
+                    if (t.get("retractation") or {}).get("statut") == "inconnu"]
+        if inconnus:
+            out.append(f"\n  Statut de rétractation inconnu pour {len(inconnus)} "
+                       "DOI : aucun index consulté ne le déclare, ce qui n'est "
+                       "pas une preuve d'absence de rétractation.")
     if "contamination" in d and d["contamination"]:
         out.append("\nSignaux de contamination (preprints récents) :")
         for c in d["contamination"]:

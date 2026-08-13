@@ -61,6 +61,11 @@ POIDS_DEFAUT = {axe: 0.2 for axe in AXES_CONNUS}  # 5 axes egaux = comportement 
 
 LARGEUR_BARRE = 30  # caracteres, barre ASCII du rapport texte
 
+# Sous ce nombre de mots, les metriques de lisibilite (ecart-type de longueur
+# de phrase, indice LIX) portent trop peu d'echantillon pour signifier quoi que
+# ce soit. L'axe est alors declare non evalue plutot que note.
+MOTS_MINIMUM_LISIBILITE = 80
+
 SEUILS_TYPE = {  # seuil de score attendu par type de document, sur 100
     "brouillon": 65,
     "rapport": 80,
@@ -142,9 +147,22 @@ def _total_pondere(axes, poids_normalise):
     de 20 points) par le poids normalise de l'axe. Poids par defaut egaux
     (0.2 chacun sur 5 axes) : cette formule redonne alors exactement la
     simple somme des scores sur 100, comportement 0.7.0 inchange quand
-    --poids n'est pas fourni."""
-    brut = sum((score / 20.0) * poids_normalise.get(nom, 0.0) * 100.0
-               for nom, (score, _) in axes.items())
+    --poids n'est pas fourni.
+
+    Un axe non evalue (sa precondition de mesure ne tient pas, par exemple un
+    texte trop court pour que la lisibilite veuille dire quelque chose) sort du
+    calcul et son poids se redistribue sur les axes reellement mesures. Le
+    compter pour zero punirait une mesure absente, le compter pour son plafond
+    recompenserait le fait de n'avoir rien mesure : ni l'un ni l'autre. Une
+    mesure absente reste absente."""
+    mesures = {nom: v for nom, v in axes.items() if v[0] is not None}
+    if not mesures:
+        return None
+    actif = sum(poids_normalise.get(nom, 0.0) for nom in mesures)
+    if actif <= 0:
+        return None
+    brut = sum((score / 20.0) * (poids_normalise.get(nom, 0.0) / actif) * 100.0
+               for nom, (score, _) in mesures.items())
     brut = round(brut, 6)
     return int(round(brut)) if brut.is_integer() else round(brut, 1)
 
@@ -165,7 +183,11 @@ def _forces_faiblesses(axes_out):
     """Meilleur et pire axe par score. En cas d'egalite, tous les axes a
     egalite sont nommes plutot qu'un choix arbitraire du premier rencontre
     dans le dict."""
-    scores = {nom: a["score"] for nom, a in axes_out.items()}
+    scores = {nom: a["score"] for nom, a in axes_out.items()
+              if a.get("score") is not None}
+    if not scores:
+        return {"meilleurs_axes": [], "score_meilleur": None,
+                "pires_axes": [], "score_pire": None, "egalite_totale": None}
     meilleur = max(scores.values())
     pire = min(scores.values())
     return {
@@ -185,7 +207,16 @@ def _decision_editoriale(axes, total, plancher):
     proposition, jamais un verdict ferme : seuls les signaux mesurables (total,
     axe effondre) sont mecaniques, le reste (hors perimetre, premature) exige
     une lecture humaine et n'est jamais deduit du score seul."""
-    effondres = sorted((nom, a["score"]) for nom, a in axes.items() if a["score"] < plancher)
+    effondres = sorted((nom, a["score"]) for nom, a in axes.items()
+                       if a.get("score") is not None and a["score"] < plancher)
+    if total is None:
+        return {
+            "decision": "non evaluable",
+            "plancher": plancher,
+            "axes_effondres": [],
+            "commentaire_sous_type": "aucun axe n'a pu etre mesure, aucune "
+                                     "decision editoriale n'est deduite",
+        }
 
     if total >= 85:
         decision = "accepter"
@@ -259,27 +290,45 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None):
         (1 if nu["separateur_decimal_mixte"] else 0, 2, 2, "separateur decimal mixte")])
 
     m = read.mesurer(texte)
-    reg = []
-    if m["mots"] >= 80:
-        reg.append((1 if m["longueur_phrase_ecart_type"] < 5 else 0, 5, 5, "rythme monotone"))
-        reg.append((1 if m["longueur_phrase_moyenne"] > 28 else 0, 4, 4, "phrases trop longues"))
-        reg.append((1 if (m["indice_lix"] > 56 or m["indice_lix"] < 30) else 0, 5, 5, "LIX hors bande"))
-        reg.append((1 if m["taux_passif_approx_pct"] > 25 else 0, 4, 4, "trop de passif"))
-        reg.append((1 if m["densite_lexicale"] < 0.35 else 0, 3, 3, "densite lexicale faible"))
-    axes["Lisibilite"] = _axe(20, reg)
+    non_evalues = {}
+    if m["mots"] >= MOTS_MINIMUM_LISIBILITE:
+        reg = [
+            (1 if m["longueur_phrase_ecart_type"] < 5 else 0, 5, 5, "rythme monotone"),
+            (1 if m["longueur_phrase_moyenne"] > 28 else 0, 4, 4, "phrases trop longues"),
+            (1 if (m["indice_lix"] > 56 or m["indice_lix"] < 30) else 0, 5, 5, "LIX hors bande"),
+            (1 if m["taux_passif_approx_pct"] > 25 else 0, 4, 4, "trop de passif"),
+            (1 if m["densite_lexicale"] < 0.35 else 0, 3, 3, "densite lexicale faible"),
+        ]
+        axes["Lisibilite"] = _axe(20, reg)
+    else:
+        # Sous ce seuil, l'ecart-type de longueur de phrase et l'indice LIX ne
+        # veulent rien dire. L'axe sort du calcul plutot que de rendre 20 sur
+        # 20 par absence de mesure, ce qui gonflait le total d'un texte court.
+        axes["Lisibilite"] = (None, [])
+        non_evalues["Lisibilite"] = (
+            "texte de %d mots, sous le seuil de %d ou la lisibilite se mesure"
+            % (m["mots"], MOTS_MINIMUM_LISIBILITE))
 
     poids_brut = dict(poids) if poids is not None else dict(POIDS_DEFAUT)
     poids_normalise = _normaliser_poids(poids_brut)
     total = _total_pondere(axes, poids_normalise)
 
-    if total >= 85:
+    if total is None:
+        verdict = "Non evaluable"
+    elif total >= 85:
         verdict = "Pret"
     elif total >= 70:
         verdict = "A reviser"
     else:
         verdict = "A refondre"
 
-    axes_out = {k: {"score": s, "deductions": d} for k, (s, d) in axes.items()}
+    axes_out = {}
+    for k, (s, d) in axes.items():
+        entree = {"score": s, "deductions": d}
+        if k in non_evalues:
+            entree["non_evalue"] = True
+            entree["motif"] = non_evalues[k]
+        axes_out[k] = entree
 
     resultat = {
         "axes": axes_out,
@@ -322,43 +371,62 @@ def trajectoire(a, b):
     ignores = sorted(set(axes_a) ^ set(axes_b))
 
     deltas = []
+    non_mesures = []
     for n in communs:
         sa, sb = axes_a[n]["score"], axes_b[n]["score"]
+        if sa is None or sb is None:
+            # Un axe non evalue d'un cote ne produit pas de delta : le comparer
+            # a zero fabriquerait une regression ou un gain qui n'existe pas.
+            non_mesures.append(n)
+            continue
         d = sb - sa
         deltas.append({"axe": n, "avant": sa, "apres": sb, "delta": d, "regression": d < -3})
 
-    total_a, total_b = a.get("total", 0), b.get("total", 0)
-    delta_total = total_b - total_a
+    total_a, total_b = a.get("total"), b.get("total")
+    if total_a is None or total_b is None:
+        delta_total = None
+    else:
+        delta_total = total_b - total_a
     regressions = [d["axe"] for d in deltas if d["regression"]]
 
     return {
         "deltas": deltas,
         "axes_ignores": ignores,
+        "axes_non_mesures": non_mesures,
         "total_avant": total_a,
         "total_apres": total_b,
         "delta_total": delta_total,
         "regressions": regressions,
         "verdict_avant": a.get("verdict"),
         "verdict_apres": b.get("verdict"),
-        "arret_anticipe": delta_total < 3 and not regressions,
+        "arret_anticipe": (delta_total is not None and delta_total < 3
+                           and not regressions),
     }
 
 
 def rapport_texte(r):
-    entete = f"Scorecard : {r['total']}/100, verdict {r['verdict']}"
+    tot = r["total"] if r["total"] is not None else "non evaluable"
+    entete = f"Scorecard : {tot}/100, verdict {r['verdict']}" \
+        if r["total"] is not None else f"Scorecard : {r['verdict']}"
     if r.get("seuil_type"):
         st = r["seuil_type"]
         tag = "atteint" if st["atteint"] else "non atteint"
         entete += f" | seuil {st['type']} {st['seuil']}/100 : {tag}"
     out = [entete, ""]
     for nom, a in r["axes"].items():
+        if a.get("non_evalue"):
+            out.append(f"  {nom:26} non evalue, hors calcul")
+            out.append(f"      {a.get('motif', '')}")
+            continue
         out.append(f"  {nom:26} {a['score']:>2}/20  {_barre_ascii(a['score'])}")
         for d in a["deductions"]:
             out.append(f"      {d}")
     out.append("")
 
     ff = r["forces_faiblesses"]
-    if ff["egalite_totale"]:
+    if ff["egalite_totale"] is None:
+        out.append("  Aucun axe mesure, ni force ni faiblesse a nommer.")
+    elif ff["egalite_totale"]:
         out.append(f"  Tous les axes a egalite ({ff['score_meilleur']}/20).")
     else:
         out.append(f"  Force(s) : {', '.join(ff['meilleurs_axes'])} ({ff['score_meilleur']}/20)")

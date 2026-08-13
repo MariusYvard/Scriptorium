@@ -40,7 +40,7 @@ Marquer une pause et demander validation à trois moments, jamais en bloc.
 2. Après le sourcing : suffisance des preuves et zones à risque.
 3. Après la révision : verdict et constats critiques restants.
 
-Entre ces points, avancer sans interrompre l'utilisateur à chaque micro-décision. Si un point de contrôle échoue de façon répétée (sujet qui reste trop large, scorecard qui stagne sous le seuil, désaccord de consensus qui persiste), consulter `chemins-defaillance.md` plutôt que de répéter la même correction.
+Entre ces points, avancer sans interrompre l'utilisateur à chaque micro-décision. Garde-fou de vigilance : après cinq relances brèves consécutives ("continue", "ok", "vas-y" ou équivalent, sans contenu nouveau), marquer un point de contrôle supplémentaire même hors des trois moments prévus. Rappeler l'objectif, ce qui est produit et ce qui reste, puis demander confirmation avant de poursuivre : une longue série d'acquiescements n'est pas une validation du travail produit. Si un point de contrôle échoue de façon répétée (sujet qui reste trop large, scorecard qui stagne sous le seuil, désaccord de consensus qui persiste), consulter `chemins-defaillance.md` plutôt que de répéter la même correction.
 
 ## Renforcement aux transitions
 

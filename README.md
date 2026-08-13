@@ -16,8 +16,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-215876" alt="26 genres sourcés">
   <img src="https://img.shields.io/badge/publics-14-215876" alt="14 publics">
-  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-20-BF9B6F" alt="20 scripts déterministes">
-  <img src="https://img.shields.io/badge/%C3%A9valuations-92%2F92-D97F30" alt="92 évaluations">
+  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-22-BF9B6F" alt="22 scripts déterministes">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-126%2F126-D97F30" alt="126 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
@@ -37,7 +37,7 @@
   <a href="#contribuer">Contribuer</a>
 </p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt-deux scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
 
 ---
 
@@ -97,7 +97,7 @@ Le comité de revue suit la même discipline : trois agents votent sur contrat d
 
 ```mermaid
 flowchart LR
-  A["<b>atelier</b><br/>piloter · cadrer · projet"] --> P["<b>produire</b><br/>genre · sourcer · veille · figure · tableau<br/>equation · style · charte · image"]
+  A["<b>atelier</b><br/>piloter · cadrer · projet"] --> P["<b>produire</b><br/>genre · sourcer · veille · figure · tableau<br/>equation · style · charte · image · gabarit · logos"]
   P --> C["<b>controler</b><br/>revue · contredire · consensus<br/>humaniser · audit · relecteurs"]
   C --> L["<b>livrer</b><br/>document · decliner"]
   L --> O(["Word · PDF · HTML · LaTeX · PowerPoint"])
@@ -108,9 +108,9 @@ Deux moteurs travaillent ensemble. Le modèle tranche le jugement : rédiger, cl
 | Compétence | Sous-commandes | Rôle |
 | --- | --- | --- |
 | `atelier` | piloter · cadrer · projet | Point d'entrée. Orchestre la production de A à Z avec bilan de fin de mission, qualifie le sujet (cadre FINER, dialogue socratique), tient le journal de projet entre les sessions (frontières, reprise par hash, tableau de bord). |
-| `produire` | genre · sourcer · revue-litterature · veille · figure · tableau · equation · style · charte · image | Produit le contenu et fixe la forme. Rédige les vingt-six genres, triangule les sources, met en place une veille, génère figures et tableaux, applique style et charte. |
-| `controler` | revue · contredire · consensus · humaniser · audit · relecteurs | Éprouve l'écrit. Revue à huit dimensions, contradiction disciplinée, consensus sur contrat de notation préenregistré, empreinte IA, audit d'un document ou d'un deck, réponse aux relecteurs avec trajectoire de score. |
-| `livrer` | document · decliner | Met en forme (Word, PDF, HTML, LaTeX charté) et décline par canal (présentation, poster, résumé bilingue FR/EN, abstract, post, communiqué). |
+| `produire` | genre · sourcer · revue-litterature · veille · figure · tableau · equation · style · charte · image · gabarit · logos | Produit le contenu et fixe la forme. Rédige les vingt-six genres, triangule les sources, met en place une veille, génère figures et tableaux, applique style et charte, inventorie et remplit un gabarit de document imposé, gère le registre de logos. |
+| `controler` | revue · contredire · consensus · humaniser · audit · relecteurs | Éprouve l'écrit. Revue à huit dimensions, contradiction disciplinée, consensus sur contrat de notation préenregistré, empreinte IA, audit d'un document ou d'un deck (y compris sa conformité à un gabarit imposé), réponse aux relecteurs avec trajectoire de score. |
+| `livrer` | document · decliner | Met en forme (Word, PDF, HTML, LaTeX charté), remplit un gabarit de document imposé plutôt que de régénérer et décline par canal (présentation, poster, résumé bilingue FR/EN, abstract, post, communiqué). |
 
 Chaque sous-commande charge à la demande son fichier de référence, le contexte reste léger. Décrire la cible suffit ; il est aussi possible de nommer l'action, par exemple `produire figure`.
 
@@ -118,10 +118,10 @@ Chaque sous-commande charge à la demande son fichier de référence, le context
 
 ## Garde-fous déterministes
 
-Vingt scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
+Vingt-deux scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
 
 <details>
-<summary><b>Les vingt scripts, en une ligne chacun</b></summary>
+<summary><b>Les vingt-deux scripts, en une ligne chacun</b></summary>
 <br>
 
 | Script | Ce qu'il attrape ou produit |
@@ -142,6 +142,8 @@ Vingt scripts en Python pur (aucune dépendance) déplacent la rigueur du jugeme
 | `tables.py` | Génération de tableaux depuis CSV ou JSON, audit des tableaux d'un document. |
 | `theme.py` | Validation de charte, contraste WCAG, palettes daltonisme-sûres, CSS et préambule LaTeX. |
 | `images.py` | Extraction d'images (Office, PDF), déduplication, dimensions, manifeste. |
+| `gabarit.py` | Inventaire d'un .docx ou .dotx imposé par un tiers, comparaison par identifiant de style, remplissage du gabarit lui-même sans régénération. |
+| `logos.py` | Registre de logos séparé de la charte, validation du format et de la résolution effective, placement par rang protocolaire. |
 | `plan-check.py` | Conformité du document au plan validé. |
 | `diff-versions.py` | Journal des écarts entre deux versions. |
 | `project.py` | Journal de mission append-only, frontières à hash, reprise unique, états d'étapes, tableau de bord. |
@@ -201,7 +203,7 @@ Le style par défaut applique des directives strictes : registre encyclopédique
 
 ## Qualité, évaluations, releases
 
-Le harnais (`evals/run-evals.py`, 92 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
+Le harnais (`evals/run-evals.py`, 126 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Contribuer
 
@@ -209,7 +211,7 @@ Les issues et propositions sont bienvenues, en français ou en anglais : signale
 
 ## Inspirations
 
-Les principes de conception sont documentés dans [`docs/CONCEPTION.md`](docs/CONCEPTION.md). Des mécanismes d'intégrité et de revue réimplémentent à neuf des idées observées dans [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) de Cheng-I Wu (CC BY-NC 4.0, zéro texte repris) ; la version 0.8.0 adapte du code et des gabarits du projet [openscience](https://github.com/synthetic-sciences/openscience) de Synthetic Sciences (Apache-2.0, attribution en tête de chaque fichier concerné). Les standards cités (PRISMA, CRediT, GRADE, EQUATOR, Bradford Hill) le sont depuis leurs sources primaires.
+Les principes de conception sont documentés dans [`docs/CONCEPTION.md`](docs/CONCEPTION.md). Des mécanismes d'intégrité et de revue réimplémentent à neuf des idées observées dans [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) de Cheng-I Wu (CC BY-NC 4.0, zéro texte repris) ; la version 0.9.0 réimplémente à neuf onze mécanismes supplémentaires depuis une seconde étude du même dépôt (état du 11 août 2026, idées seulement, licence CC BY-NC 4.0, zéro texte repris) ; la version 0.8.0 adapte du code et des gabarits du projet [openscience](https://github.com/synthetic-sciences/openscience) de Synthetic Sciences (Apache-2.0, attribution en tête de chaque fichier concerné). Les standards cités (PRISMA, CRediT, GRADE, EQUATOR, Bradford Hill) le sont depuis leurs sources primaires.
 
 ---
 

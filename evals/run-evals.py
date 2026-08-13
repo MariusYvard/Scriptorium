@@ -45,6 +45,8 @@ planc = charger("plan-check.py", "plan_check")
 proj = charger("project.py", "project")
 auditd = charger("audit-doc.py", "audit_doc")
 imgs = charger("images.py", "images")
+gab = charger("gabarit.py", "gabarit")
+logo = charger("logos.py", "logos")
 
 
 def lire(nom):
@@ -422,6 +424,159 @@ verifier("check-presentation : degradation declaree, rien d'invente",
          any("saut" in str(x).lower() or "aucun backend" in str(x).lower()
              for x in (_rapp.get("notes") or [])) or _rapp.get("pages") is None,
          f"rapport={_rapp.get('notes')}")
+
+
+# Gabarit : inventaire, comparaison, remplissage
+_gab_src = os.path.join(FIXT, "gabarit-ecole.docx")
+_inv = gab.inventorier(_gab_src)
+verifier("gabarit : styles nommes lus dans le zip",
+         len(_inv["styles"]) >= 5, f"n={len(_inv['styles'])}")
+verifier("gabarit : hierarchie de titres reconstituee par identifiant",
+         _inv["hierarchie_titres"].get("1") == "Heading1"
+         and _inv["style_corps"] == "Normal",
+         f"h={_inv['hierarchie_titres']} corps={_inv['style_corps']}")
+verifier("gabarit : marges lues en centimetres",
+         abs(_inv["mise_en_page"].get("left", 0) - 3.0) < 0.05,
+         f"mep={_inv['mise_en_page']}")
+verifier("gabarit : en-tete et pied reperes avec leurs champs",
+         {e["role"] for e in _inv["entetes_et_pieds"]} == {"en-tete", "pied"}
+         and any("PAGE" in e["champs"] for e in _inv["entetes_et_pieds"]),
+         f"ep={_inv['entetes_et_pieds']}")
+verifier("gabarit : l'inventaire declare ses propres lacunes",
+         len(_inv["lacunes"]) >= 2, f"lac={_inv['lacunes']}")
+
+_cmp_ok = gab.comparer(_inv, _gab_src)
+verifier("gabarit : un document conforme rend le verdict conforme",
+         _cmp_ok["verdict"] == "conforme" and _cmp_ok["majeurs"] == 0,
+         f"v={_cmp_ok['verdict']}")
+verifier("gabarit : un style declare mais non employe reste informatif",
+         any(e["gravite"] == "info" for e in _cmp_ok["ecarts"]),
+         f"ec={_cmp_ok['ecarts']}")
+_cmp_ko = gab.comparer(_inv, os.path.join(FIXT, "document-devie.docx"))
+verifier("gabarit : style hors gabarit et marge divergente sont majeurs",
+         _cmp_ko["verdict"] == "ecarts majeurs" and _cmp_ko["majeurs"] == 2,
+         f"v={_cmp_ko['verdict']} m={_cmp_ko['majeurs']}")
+verifier("gabarit : l'ecart nomme le style fautif, pas un compte anonyme",
+         any("StyleInconnu" in e["detail"] for e in _cmp_ko["ecarts"]),
+         f"ec={_cmp_ko['ecarts']}")
+
+_frag, _av_titre = gab.contenu_en_paragraphes("# Titre\n\nTexte.\n\n#### Trop bas\n", _inv)
+verifier("gabarit : un niveau de titre absent retombe sur le corps, avec avis",
+         any("niveau de titre 4" in a for a in _av_titre)
+         and 'w:val="Heading1"' in _frag[0], f"av={_av_titre}")
+
+import tempfile as _tf
+_sortie = os.path.join(_tf.mkdtemp(), "rempli.docx")
+_rap = gab.remplir(_inv, "# Introduction\n\nUn paragraphe.\n", _sortie,
+                   logo=os.path.join(FIXT, "logo-ecole.png"),
+                   logo_largeur_cm=5.0)
+import zipfile as _zf
+with _zf.ZipFile(_sortie) as _z:
+    _noms = _z.namelist()
+    _doc = _z.read("word/document.xml").decode("utf-8")
+    _rels = _z.read("word/_rels/document.xml.rels").decode("utf-8")
+    _ct = _z.read("[Content_Types].xml").decode("utf-8")
+verifier("gabarit : le remplissage injecte avant la derniere section",
+         _doc.index("Introduction") < _doc.index("<w:sectPr"))
+verifier("gabarit : les prefixes OOXML survivent au remplissage",
+         "ns0:" not in _doc and _doc.count("<w:p>") > 0)
+verifier("gabarit : le logo arrive avec sa relation et son type declare",
+         any("word/media/" in n for n in _noms)
+         and "relationships/image" in _rels and 'Extension="png"' in _ct)
+verifier("gabarit : la hauteur du logo suit le ratio du fichier",
+         abs(_rap["logo"]["hauteur_cm"] - 5.0 * 400 / 1200) < 0.05,
+         f"logo={_rap['logo']}")
+verifier("gabarit : le document rempli reste conforme a son gabarit",
+         gab.comparer(_inv, _sortie)["verdict"] == "conforme")
+
+_inv_protege = dict(_inv, protection={"edition": "readOnly", "applique": True})
+try:
+    gab.remplir(_inv_protege, "# X\n", _sortie)
+    _arret = False
+except SystemExit:
+    _arret = True
+verifier("gabarit : un gabarit protege arrete le remplissage", _arret)
+
+# Logos : registre, resolution effective, ordre protocolaire, placement
+_reg = {"_racine": FIXT, "logos": [
+    {"id": "ecole", "fichier": "logo-ecole.png", "rang": 1,
+     "usages": ["page-garde", "en-tete"], "respiration": 0.3},
+    {"id": "labo", "fichier": "logo-basse-def.png", "rang": 2,
+     "usages": ["page-garde", "co-signature"]},
+    {"id": "fantome", "fichier": "absent.png", "usages": ["page-garde"]},
+]}
+_err_l, _av_l = logo.valider(_reg)
+verifier("logos : un fichier absent est une erreur, pas un avertissement",
+         any("fantome" in e for e in _err_l)
+         and not any("fantome" in a for a in _av_l), f"err={_err_l}")
+verifier("logos : une resolution insuffisante reste consultative",
+         any("dpi" in a and "labo" in a for a in _av_l), f"av={_av_l}")
+verifier("logos : la resolution effective se calcule en pouces",
+         abs(logo.resolution_effective(1200, 5.0) - 1200 / (5.0 / 2.54)) < 0.5)
+verifier("logos : l'ordre protocolaire suit le rang, pas l'alphabet",
+         [x["id"] for x in logo.pour_usage(_reg, "page-garde")][:2]
+         == ["ecole", "labo"])
+_html, _av_h = logo.fragment(_reg, "page-garde", "html")
+verifier("logos : un logo sans fichier est ecarte du placement",
+         "absent.png" not in _html and any("fantome" in a for a in _av_h),
+         f"html={_html}")
+_tex, _ = logo.fragment(_reg, "page-garde", "latex")
+verifier("logos : le fragment latex contraint la largeur",
+         "includegraphics[width=" in _tex and "cm]" in _tex, f"tex={_tex}")
+_err_vide, _ = logo.valider({"_racine": FIXT, "logos": []})
+verifier("logos : un registre vide est une erreur declaree",
+         any("aucun logo" in e for e in _err_vide))
+
+# Scorecard : un axe dont la precondition ne tient pas sort du calcul
+_court = score.evaluer("Un texte tres court. Il tient en deux phrases propres.")
+verifier("scorecard : lisibilite non evaluee sous le seuil de mots",
+         _court["axes"]["Lisibilite"].get("non_evalue") is True
+         and _court["axes"]["Lisibilite"]["score"] is None,
+         f"ax={_court['axes']['Lisibilite']}")
+verifier("scorecard : l'axe non evalue porte son motif chiffre",
+         "mots" in (_court["axes"]["Lisibilite"].get("motif") or ""),
+         f"motif={_court['axes']['Lisibilite'].get('motif')}")
+verifier("scorecard : le total se renormalise sur les axes mesures",
+         _court["total"] == 100, f"total={_court['total']}")
+verifier("scorecard : un axe non evalue n'entre pas dans forces et faiblesses",
+         "Lisibilite" not in _court["forces_faiblesses"]["meilleurs_axes"]
+         and "Lisibilite" not in _court["forces_faiblesses"]["pires_axes"])
+verifier("scorecard : le rapport texte nomme l'axe hors calcul",
+         "non evalue, hors calcul" in score.rapport_texte(_court))
+_long = ("Le dispositif observe repose sur une mesure repetee et datee. "
+         "Les auteurs decrivent un protocole en trois etapes, chacune "
+         "documentee par un releve horodate et par une photographie. "
+         "La variance mesuree reste faible sur l'ensemble des series. ") * 8
+_lg = score.evaluer(_long)
+verifier("scorecard : au dela du seuil, la lisibilite reprend une note",
+         _lg["axes"]["Lisibilite"]["score"] is not None
+         and not _lg["axes"]["Lisibilite"].get("non_evalue"))
+_tr_ne = score.trajectoire(_court, _lg)
+verifier("scorecard : un axe non mesure d'un cote ne fabrique pas de delta",
+         "Lisibilite" in _tr_ne["axes_non_mesures"]
+         and all(d["axe"] != "Lisibilite" for d in _tr_ne["deltas"]),
+         f"tr={_tr_ne['axes_non_mesures']}")
+
+# Verify-sources : statut de retractation, lu hors ligne sur reponse simulee
+_msg_retracte = {"title": ["Un article"], "updated-by": [
+    {"type": "retraction", "DOI": "10.1000/avis",
+     "updated": {"date-time": "2025-03-04T00:00:00Z"}}]}
+_ret = vsrc._retractation_crossref(_msg_retracte)
+verifier("verify-sources : une retractation declaree par Crossref est lue",
+         _ret and _ret["statut"] == "retracte"
+         and _ret["avis_doi"] == "10.1000/avis", f"ret={_ret}")
+_msg_avis = {"title": ["Retraction notice"], "update-to": [
+    {"type": "retraction", "DOI": "10.1000/article", "updated": {}}]}
+_ret2 = vsrc._retractation_crossref(_msg_avis)
+verifier("verify-sources : l'avis de retractation ne se confond pas avec "
+         "l'article retracte",
+         _ret2 and _ret2["statut"] == "avis de retractation", f"ret={_ret2}")
+_msg_correction = {"title": ["Un article"], "updated-by": [
+    {"type": "correction", "DOI": "10.1000/erratum", "updated": {}}]}
+verifier("verify-sources : une simple correction n'est pas une retractation",
+         vsrc._retractation_crossref(_msg_correction) is None)
+verifier("verify-sources : sans declaration, le statut reste absent, pas sain",
+         vsrc._retractation_crossref({"title": ["Un article"]}) is None)
 
 
 def main():

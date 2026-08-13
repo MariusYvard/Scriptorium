@@ -31,6 +31,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py show
 
 Reprendre le genre, la problématique, la charte, le profil et le plan tels quels. La session continue le travail au lieu de le redécouvrir.
 
+À la reprise, trois gestes explicites priment sur le souvenir de la session : relire le passeport (`show` ou `status`), relire les artefacts nommés dans leur état courant et énoncer ce qui a changé depuis leur dernière version. Un souvenir de session ne vaut jamais preuve : ce qui n'est pas dans `projet.json` ou sur le disque est à revérifier, jamais supposé acquis.
+
 ## 4. Synchroniser avec Dream (optionnel)
 
 Si la mémoire Dream est disponible, y stocker les décisions de cadrage et la charte comme événements, pour une persistance en dehors du dossier de travail. Cette synchronisation est optionnelle, `projet.json` reste la source dans le dossier.

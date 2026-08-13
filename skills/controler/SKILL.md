@@ -1,9 +1,9 @@
 ---
 name: controler
 description: >
-  Éprouve, contrôle et corrige un écrit avant publication. Six sous-commandes. revue : revue adversariale et contrôle qualité (carte preuve-affirmation, sévérité, verdict, lettre de décision) "révise mon texte", "ce texte est-il prêt", "critique mon écrit". contredire : contradiction la plus forte d'une thèse, modèle de Toulmin, discipline de concession, points de rupture "joue l'avocat du diable", "conteste ma thèse", "où est la faille". consensus : vote de trois agents sur contrat de notation préenregistré, comparaison par paires, ancré sur le scorecard, profils de discipline "revue par consensus", "double validation". humaniser : détecter et corriger l'empreinte d'un texte généré "ça sonne IA", "enlève les tics d'écriture". audit : noter un PDF, un Word ou un deck existant (scorecard, contrôles, originalité) "audite ce document", "note ce rapport". relecteurs : réponse point par point, registre d'engagements, re-revue avec trajectoire de score. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
+  Éprouve, contrôle et corrige un écrit avant publication. Six sous-commandes. revue : revue adversariale et contrôle qualité (carte preuve-affirmation, sévérité, verdict, lettre de décision) "révise mon texte", "ce texte est-il prêt", "critique mon écrit". contredire : contradiction la plus forte d'une thèse, modèle de Toulmin, discipline de concession, points de rupture "joue l'avocat du diable", "conteste ma thèse", "où est la faille". consensus : vote de trois agents sur contrat de notation préenregistré, comparaison par paires, ancré sur le scorecard, profils de discipline "revue par consensus", "double validation". humaniser : détecter et corriger l'empreinte d'un texte généré "ça sonne IA", "enlève les tics d'écriture". audit : noter un PDF, un Word ou un deck existant (scorecard, contrôles, originalité) et vérifier la conformité à un gabarit imposé "audite ce document", "note ce rapport", "est-ce que ça respecte le modèle imposé". relecteurs : réponse point par point, registre d'engagements, re-revue avec trajectoire de score. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
 ---
 
 # Contrôler (réviser, contredire, valider, humaniser, auditer)
@@ -18,7 +18,7 @@ Si une action est passée en argument (par exemple `audit`), suivre directement 
 - contredire : construire la contradiction la plus forte d'une thèse (modèle de Toulmin, discipline de concession, points de rupture). Charger `references/contredire.md`.
 - consensus : revue par vote de trois agents, chacun engagé sur un contrat de notation préenregistré avant lecture (`references/contrat-notation.md`), ancrée sur le scorecard, calibrée par profil de discipline. Pour départager deux versions, comparaison par paires anti-biais de position. Charger `references/consensus.md`.
 - humaniser : détecter et corriger l'empreinte d'un texte généré. Charger `references/humaniser.md`.
-- audit : auditer un document déjà rédigé (PDF, Word, Markdown), extraction puis scorecard ; un deck exporté en PDF s'audite avec `scripts/check-presentation.py`. Charger `references/audit.md`. Pour un contrôle d'originalité, charger aussi `references/plagiat.md`.
+- audit : auditer un document déjà rédigé (PDF, Word, Markdown), extraction puis scorecard ; un deck exporté en PDF s'audite avec `scripts/check-presentation.py`. Quand un gabarit est imposé, la conformité de forme se contrôle en plus du fond : `python3 scripts/gabarit.py comparer gabarit-inventaire.json DOCUMENT.docx` rend un verdict fermé et liste les écarts. Charger `references/audit.md`. Pour un contrôle d'originalité, charger aussi `references/plagiat.md`.
 - relecteurs : réponse point par point aux relecteurs, registre d'engagements, re-revue et version en modifications suivies. Charger `references/relecteurs.md`.
 
 ## Contrôles déterministes d'abord
@@ -29,7 +29,7 @@ Avant toute lecture de fond, lancer les scripts sur le texte. Ils attrapent méc
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/audit-doc.py FICHIER
 ```
 
-Détail axe par axe : `lint-style.py`, `readability.py`, `verify-sources.py`, `traceability.py`, `terminology.py`, `numbers.py`, `scorecard.py` (plancher par axe, poids optionnels, seuil par type de document, trajectoire entre deux revues), `ai-fingerprint.py`, `coherence.py`, `check-temporel.py` (défaillances chronologiques), `check-presentation.py` (deck PDF), `tables.py audit`, `plan-check.py`. Traiter les constats critiques avant la revue de fond.
+Détail axe par axe : `lint-style.py`, `readability.py`, `verify-sources.py`, `traceability.py`, `terminology.py`, `numbers.py`, `scorecard.py` (plancher par axe, poids optionnels, seuil par type de document, trajectoire entre deux revues), `ai-fingerprint.py`, `coherence.py`, `check-temporel.py` (défaillances chronologiques), `check-presentation.py` (deck PDF), `gabarit.py comparer` (conformité à un gabarit imposé), `tables.py audit`, `plan-check.py`. Traiter les constats critiques avant la revue de fond.
 
 ## Références transverses
 

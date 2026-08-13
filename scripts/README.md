@@ -1,6 +1,6 @@
 # Scripts déterministes de Scriptorium
 
-Vingt outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Vingt-deux outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
@@ -195,6 +195,29 @@ Extrait les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel, OD
 python3 images.py extract SOURCE --out DIR [--min-bytes N]
 python3 images.py manifest DIR
 ```
+
+## gabarit.py
+
+Gabarits de document imposés par un tiers. Un .docx ou .dotx est un zip de fragments XML : le script les lit avec `zipfile` et `xml.etree`, sans dépendance. Trois actions. `inventorier` extrait la structure d'un gabarit fourni (styles nommés, hiérarchie de titres, style de corps, marges et format de page, en-têtes et pieds avec leurs champs, polices nommées, protection en édition) dans un JSON déclaratif, qui porte lui-même la liste de ce qu'il ne couvre pas. `comparer` confronte un document à cet inventaire et rend un verdict fermé (conforme, écarts mineurs, écarts majeurs) : un style inconnu du gabarit, une marge ou une orientation divergente, un en-tête manquant sont majeurs. `remplir` injecte le contenu dans le gabarit lui-même, dans ses styles existants, plutôt que de générer un fichier neuf qui perdrait filigrane, numérotation liée et thème de couleurs.
+
+```
+python3 gabarit.py inventorier GABARIT.docx [--out INVENTAIRE.json] [--format text|json]
+python3 gabarit.py comparer INVENTAIRE.json DOCUMENT.docx [--format text|json] [--strict]
+python3 gabarit.py remplir INVENTAIRE.json CONTENU.md --out SORTIE.docx [--logo FICHIER] [--logo-largeur-cm N]
+```
+
+La comparaison des styles se fait par identifiant (`w:styleId`), jamais par le libellé affiché, qu'un Word francisé renomme. Le remplissage s'arrête sur un gabarit protégé en édition plutôt que de produire un fichier douteux, et ajoute le contenu avant la dernière section sans supprimer les paragraphes de remplissage du gabarit. Code de sortie 1 sur écart majeur.
+
+## logos.py
+
+Registre de logos, séparé de la charte graphique parce qu'un logo obéit aux règles de l'organisation qui le possède (zone de respiration, taille minimale, usages autorisés, rang protocolaire) et non à celles du document. `valider` contrôle le format du registre, l'existence des fichiers, le ratio déclaré et la résolution effective de chaque logo à la taille où il sera affiché (pixels divisés par la largeur en pouces, seuils consultatifs de 300 dpi à l'impression et 150 dpi à l'écran). `placer` rend le fragment prêt à insérer pour un usage, en HTML ou en LaTeX ; en docx l'insertion réelle passe par `gabarit.py remplir --logo`, qui écrit aussi la relation et le manifeste de types.
+
+```
+python3 logos.py valider REGISTRE.json [--format text|json] [--strict]
+python3 logos.py placer REGISTRE.json --usage page-garde|en-tete|pied|co-signature --format docx|latex|html
+```
+
+Format du registre dans `assets/registre-logos.exemple.json`. Un fichier absent est une erreur, une résolution basse un avertissement. Un logo dont le fichier manque est écarté du placement plutôt que référencé à vide.
 
 ## tools/check.py
 

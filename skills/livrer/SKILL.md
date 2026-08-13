@@ -1,9 +1,9 @@
 ---
 name: livrer
 description: >
-  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
+  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées, gabarit imposé rempli plutôt que régénéré, logos placés selon leur registre "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document", "remplis le modèle imposé". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.8.0"
+  version: "0.9.0"
 ---
 
 # Livrer (mettre en forme, décliner)
@@ -16,6 +16,18 @@ Si une action est passée en argument (par exemple `decliner`), suivre directeme
 
 - document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes numérotées, résumé ou abstract), exigences de la destination vérifiées avant l'envoi. Charger `references/document.md`.
 - decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué). Charger `references/decliner.md`.
+
+## Gabarit imposé
+
+Quand la destination fournit son propre modèle (rapport de stage d'une école, mémoire d'un laboratoire, feuille de style d'une conférence, charte d'un client), ce modèle l'emporte sur les gabarits internes du plugin. Le geste change alors : au lieu de générer un fichier neuf, remplir le gabarit fourni, ce qui préserve son filigrane, sa numérotation liée et son thème de couleurs.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/gabarit.py inventorier MODELE.docx --out gabarit-inventaire.json
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/gabarit.py remplir gabarit-inventaire.json document.md --out livrable.docx --logo logo-ecole.png
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/gabarit.py comparer gabarit-inventaire.json livrable.docx
+```
+
+Les logos suivent leur propre registre (`produire`, action logos) : `logos.py placer` rend le fragment pour le HTML et le LaTeX, `gabarit.py remplir --logo` fait l'insertion en Word. Un conflit entre le gabarit de la destination et la charte graphique interne se signale à l'auteur, il ne s'arbitre pas en silence. Détail dans `produire`, actions gabarit et logos.
 
 ## Formats de sortie
 

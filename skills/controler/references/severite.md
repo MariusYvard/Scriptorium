@@ -49,6 +49,14 @@ Ce plancher est consultatif, jamais un seuil qui bloque une livraison à lui seu
 | Professionnel à enjeu de décision | Analyse stratégique, étude de marché, note financière, rapport d'évaluation | 6 sources, dont au moins deux triangulées sur toute affirmation centrale |
 | Bref ou à circulation interne | Pitch, post professionnel, communiqué | Pas de plancher fixe, mais toute affirmation chiffrée exige au moins une source vérifiée |
 
+## Remède minimal viable obligatoire
+
+Un constat classé critique ou majeur porte toujours le geste le plus petit qui le lève, jamais seulement un diagnostic. Si ce geste change l'intention de l'auteur (un choix de fond, pas une correction de forme), le signaler explicitement : la décision revient alors à l'auteur, pas au relecteur qui l'a repéré. Un constat sans remède associé est un constat, pas une critique exploitable.
+
+## Vocabulaire d'assurance interdit dans un avis
+
+Une sortie consultative (verdict de revue, note de consensus, avis de contrôle) n'emploie jamais un mot qui promet une garantie qu'elle ne peut pas tenir : approuvé, conforme, validé, certifié, sans risque, risque faible, prêt à publier. Elle dit ce qu'elle a mesuré et sur quel périmètre, jamais plus. L'étiquette consultative reste fixe : aucune reformulation, même prudente, ne la retire.
+
 ## Comment renvoyer ici
 
 Une référence ou un agent qui a besoin d'un niveau de sévérité ou d'un seuil charge ce fichier et cite la section précise, par exemple "critique, voir `controler/references/severite.md` section 1", plutôt que de redéfinir critique ou majeur avec ses propres mots. Une redéfinition locale dérive avec le temps sans que personne ne le remarque. Un renvoi ne dérive jamais, puisqu'il n'existe qu'à un seul endroit.

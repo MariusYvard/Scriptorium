@@ -43,6 +43,10 @@ Quand l'auteur ou un autre agent conteste un point de rupture, noter la réfutat
 
 Règles fermes : concession seulement à 4 ou 5. Jamais deux concessions consécutives, le seuil suivant remonte à 5 strict après une première concession. Pause obligatoire si plus de la moitié des points de rupture d'un même cycle ont été concédés : le déclarer explicitement à l'utilisateur avant de continuer, plutôt que de conclure en silence que la thèse tient.
 
+### Seuil de concession moyenne
+
+Calculer la moyenne des notes de réfutation attribuées sur l'ensemble d'une passe de contradiction. Une moyenne au-dessus de 3,5 sur 5 signale une contradiction trop tendre : un contradicteur qui concède beaucoup a cherché l'accord plutôt que la faille. Rejouer la passe en durcissant, en reprenant la preuve la plus faible identifiée à l'étape 3, jamais en haussant le ton.
+
 ## 5. Verrouillage de cadrage
 
 Au bout de plusieurs tours de réfutation sur les mêmes points, une thèse qui résiste point par point peut pourtant reposer sur une prémisse commune aux deux camps, jamais interrogée. Après trois tours ou plus sur le même point de rupture, interroger explicitement cette prémisse implicite plutôt que de continuer à discuter ses conséquences. Question type : les deux positions supposent X, qu'est-ce qui montre que X tient réellement ?

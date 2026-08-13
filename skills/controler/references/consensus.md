@@ -24,6 +24,10 @@ Chaque agent rend un verdict (Prêt, À réviser ou À refondre) accompagné d'u
 
 Chaque voix vote sans jamais voir le verdict, la confiance ou le motif des autres. La délégation en parallèle par l'outil Task assure déjà cette séparation par construction, mais la règle reste explicite pour ne pas se perdre si l'exécution devient un jour séquentielle : le premier verdict rendu n'est jamais montré aux voix qui rendent le leur ensuite. La synthèse (section 5) ne révèle les trois votes qu'une fois les trois rendus, jamais un par un au fil de l'eau. Montrer le premier verdict avant les deux autres en ferait une ancre, même sans intention de biaiser le résultat.
 
+### Fiche de juge transparente
+
+Tout second avis, qu'il vienne d'un agent délégué ou d'un modèle tiers, déclare son identité opérante avant de rendre son verdict : quel agent ou quelle configuration s'est prononcé, sur quelle preuve exacte et ce qu'il n'a pas lu. Un verdict sans cette fiche se rapporte comme non attribuable et ne pondère rien dans l'agrégation de la section 5.
+
 ## 4. Ancrer sur le scorecard déterministe
 
 Calculer la note objective du document.
@@ -57,6 +61,14 @@ Une dimension effondrée (sous le plancher, champ `decision_editoriale` de `scor
 ### Interdit ferme
 
 Ne jamais lisser deux dimensions contradictoires en une moyenne. Si `controle-qualite` et `contradicteur` jugent différemment la même dimension pour des raisons distinctes et fondées, rapporter les deux scores tels quels dans le verdict de consensus, jamais en un chiffre unique qui efface le désaccord.
+
+### Chevauchement jamais dédupliqué
+
+Quand deux voix indépendantes relèvent le même défaut sans s'être vues (anti-ancrage de la section 3), la répétition ne se supprime pas de la synthèse pour épurer la mise en forme. Deux constats qui convergent sans concertation sont un signal de force, pas un doublon. La synthèse compte les occurrences du même défaut plutôt que de les fusionner en une seule ligne.
+
+### Autorités en désaccord jamais fusionnées
+
+Quand deux sources faisant autorité se contredisent sur un même point, la synthèse affiche les deux positions séparément avec leur origine respective. Elle n'en fait ni une moyenne ni un arbitrage silencieux. Le désaccord entre deux autorités est une information à transmettre, sa disparition dans la synthèse est une perte.
 
 Surfacer les désaccords entre agents, ils signalent les zones à trancher. Un consensus mou qui efface un signal critique est un échec.
 

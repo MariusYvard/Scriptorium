@@ -34,7 +34,7 @@ import os
 import sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
-SCR = os.path.join(ICI, "..", "scripts")
+SCR = os.path.join(ICI, "..", "scriptorium", "scripts")
 FALLBACK = ".outrepassements.json"
 
 

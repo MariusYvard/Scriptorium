@@ -16,7 +16,7 @@ Un blocage se lève par `--outrepasser`, avec une friction croissante : le premi
 
 ## Porte en intégration continue
 
-Le modèle `templates/editorial-ci.yml` se copie dans `.github/workflows/` d'un projet d'écriture. À chaque push, la porte de scorecard s'exécute et bloque la fusion si un document n'atteint pas le seuil.
+Le modèle `scriptorium/templates/editorial-ci.yml` se copie dans `.github/workflows/` d'un projet d'écriture. À chaque push, la porte de scorecard s'exécute et bloque la fusion si un document n'atteint pas le seuil.
 
 ## CI du plugin
 
@@ -27,7 +27,7 @@ Le dépôt Scriptorium exécute `.github/workflows/evals.yml` : compilation des 
 Chaque playbook de genre porte une section Sources dont les URL vieillissent. Un contrôle périodique (mensuel suffit) les repasse en revue :
 
 ```
-python3 scripts/verify-sources.py skills/produire/references/genre-*.md --check-links
+python3 scriptorium/scripts/verify-sources.py scriptorium/skills/produire/references/genre-*.md --check-links
 ```
 
 Le contrôle est consultatif : une URL morte se remplace par une source équivalente vérifiée, elle ne bloque pas une release.

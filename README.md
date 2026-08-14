@@ -83,13 +83,26 @@ Le comité de revue suit la même discipline : trois agents votent sur contrat d
 
 ## Démarrer en une minute
 
-1. Télécharger `scriptorium-X.Y.Z.plugin` depuis la [page des releases](https://github.com/MariusYvard/Scriptorium/releases/latest).
-2. Cowork : ouvrir le fichier `.plugin` et accepter l'installation. Claude Code : `/plugin marketplace add MariusYvard/Scriptorium` puis installer `scriptorium`.
+1. Ajouter le marketplace : `/plugin marketplace add MariusYvard/Scriptorium`.
+2. Installer le plugin : `/plugin install scriptorium@scriptorium-marketplace`.
 3. Demander, par exemple :
 
 > « Rédige une analyse stratégique de 20 pages sur le marché X pour mon comité de direction, avec un SWOT et un PESTEL. »
 
 `atelier` enchaîne le cadrage (problématique fermée, plan validé), le sourcing (sources pondérées et triangulées, carte preuve-affirmation), la rédaction section par section, les figures en SVG, la revue adversariale, puis la mise en forme à la charte. Trois points de contrôle reviennent vers vous : le périmètre, la suffisance des preuves, le verdict de révision. Les scripts et le harnais tournent en Python sans dépendance (`python3 evals/run-evals.py`).
+
+### Mettre à jour
+
+La mise à jour ne demande aucune désinstallation. Rafraîchir le catalogue du marketplace, puis mettre à jour le plugin :
+
+```
+/plugin marketplace update scriptorium-marketplace
+/plugin update scriptorium@scriptorium-marketplace
+```
+
+Les compétences rechargées prennent effet à la session suivante, ou immédiatement avec `/reload-plugins`. La version installée se lit dans la fiche du plugin et doit correspondre au dernier numéro du [CHANGELOG](CHANGELOG.md).
+
+Le dépôt suit la disposition des marketplaces à plusieurs plugins : `.claude-plugin/marketplace.json` à la racine déclare le plugin dans son sous-dossier `scriptorium/`, et le numéro de version vit dans le seul `scriptorium/.claude-plugin/plugin.json`. Un fichier `.plugin` reste attaché à chaque release pour une installation hors ligne, mais un marketplace ajouté depuis le dépôt reçoit les versions suivantes sans réinstallation.
 
 ---
 
@@ -152,12 +165,12 @@ Vingt-trois scripts en Python pur (aucune dépendance) déplacent la rigueur du 
 
 </details>
 
-Un hook lance le linter après chaque écriture et bloque la finalisation tant qu'un écart critique subsiste. Le catalogue détaillé est dans [`scripts/README.md`](scripts/README.md).
+Un hook lance le linter après chaque écriture et bloque la finalisation tant qu'un écart critique subsiste. Le catalogue détaillé est dans [`scriptorium/scripts/README.md`](scriptorium/scripts/README.md).
 
 
 ## Vingt-six genres, quatorze publics
 
-Chaque genre est adossé à des sources citées dans son playbook (`skills/produire/references/genre-*.md`).
+Chaque genre est adossé à des sources citées dans son playbook (`scriptorium/skills/produire/references/genre-*.md`).
 
 <details>
 <summary><b>Les genres par famille</b></summary>
@@ -200,7 +213,7 @@ La méthode et le style maison ne changent pas, seuls le genre et les exemples s
 
 ## Style maison
 
-Le style par défaut applique des directives strictes : registre encyclopédique et neutre, zéro tiret cadratin, pas de virgule d'Oxford, guillemets droits, lexique promotionnel banni, faits précis ou rien, sources vérifiées sans paramètres de suivi. Il vit dans [`skills/produire/references/directives-strictes.md`](skills/produire/references/directives-strictes.md) et le linter applique les mêmes règles. La compétence `produire` (style) peut aussi calibrer un style personnel sur des échantillons fournis, toujours subordonné au style maison et aux conventions de la discipline.
+Le style par défaut applique des directives strictes : registre encyclopédique et neutre, zéro tiret cadratin, pas de virgule d'Oxford, guillemets droits, lexique promotionnel banni, faits précis ou rien, sources vérifiées sans paramètres de suivi. Il vit dans [`scriptorium/skills/produire/references/directives-strictes.md`](scriptorium/skills/produire/references/directives-strictes.md) et le linter applique les mêmes règles. La compétence `produire` (style) peut aussi calibrer un style personnel sur des échantillons fournis, toujours subordonné au style maison et aux conventions de la discipline.
 
 ## Qualité, évaluations, releases
 

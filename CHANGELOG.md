@@ -11,6 +11,18 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.10.1] - 2026-08-13
+
+Mise à jour sans désinstallation. Le dépôt adopte la disposition des marketplaces à plusieurs plugins, seule forme observée qui reçoit les versions suivantes chez un utilisateur déjà installé.
+
+### Changed
+- Le plugin vit dans le sous-dossier `scriptorium/`, et `.claude-plugin/marketplace.json` reste seul à la racine avec `"source": "./scriptorium"`. Les deux marketplaces qui se mettent à jour correctement sur une installation témoin (celui d'Anthropic et celui que l'application génère pour les dépôts locaux) déclarent tous leurs plugins dans un sous-dossier ; un plugin dont la source est la racine du marketplace restait figé à sa version d'installation. Les 145 fichiers déplacés l'ont été par renommage, l'historique suit.
+- Le numéro de version ne vit plus qu'à un seul endroit, `scriptorium/.claude-plugin/plugin.json`. Il était auparavant répété dans `marketplace.json`, où il pouvait diverger en silence. La porte de release vérifie désormais la structure de `marketplace.json` (une entrée nommée scriptorium dont la source est `./scriptorium`) au lieu d'y comparer une version.
+- L'artefact `.plugin` s'archive depuis `HEAD:scriptorium` et non depuis la racine, sinon il ne porterait plus son `plugin.json` à la racine de l'archive et serait ininstallable.
+- Le README documente la mise à jour en deux commandes, sans désinstallation ni retrait du marketplace.
+
+---
+
 ## [0.10.0] - 2026-08-13
 
 Gabarits multi-format (texte OOXML, diapositives OOXML, texte et diapositives ODF, PDF en lecture seule), préflight de lecture PDF, ancrage à trois couches et jeu d'or versionné. Trois mécanismes réimplémentent à neuf des idées d'une nouvelle étude d'academic-research-skills (CC BY-NC 4.0, idées seulement, zéro texte repris).

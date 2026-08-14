@@ -4,7 +4,7 @@ Principes transverses qui expliquent des choix répétés dans plusieurs fichier
 
 ## Mesure avant politique
 
-Toute nouvelle vérification déterministe entre dans le plugin consultative : elle mesure et signale, elle ne bloque rien. Sa politique de blocage (seuil, plancher, refus) n'arrive que dans une version ultérieure, une fois calibrée sur des documents réels. Le signal de contamination de source (`produire/references/integrite-sources.md`) reste consultatif par ce principe ; le plancher par axe du scorecard (`scripts/scorecard.py`) n'est arrivé qu'après que le score global lui-même ait été calibré sur plusieurs audits.
+Toute nouvelle vérification déterministe entre dans le plugin consultative : elle mesure et signale, elle ne bloque rien. Sa politique de blocage (seuil, plancher, refus) n'arrive que dans une version ultérieure, une fois calibrée sur des documents réels. Le signal de contamination de source (`produire/references/integrite-sources.md`) reste consultatif par ce principe ; le plancher par axe du scorecard (`scriptorium/scripts/scorecard.py`) n'est arrivé qu'après que le score global lui-même ait été calibré sur plusieurs audits.
 
 ## Dégradation gracieuse
 

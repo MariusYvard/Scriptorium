@@ -63,9 +63,9 @@ import os
 import sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
-SCR = os.path.join(ICI, "..", "scripts")
+SCR = os.path.join(ICI, "..", "scriptorium", "scripts")
 GOLD_DIR = os.path.join(ICI, "..", "evals", "gold")
-PLUGIN_JSON = os.path.join(ICI, "..", ".claude-plugin", "plugin.json")
+PLUGIN_JSON = os.path.join(ICI, "..", "scriptorium", ".claude-plugin", "plugin.json")
 FALLBACK = ".outrepassements-gold.json"
 
 

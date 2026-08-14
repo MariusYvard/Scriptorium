@@ -11,6 +11,6 @@ jobs:
         with:
           python-version: '3.x'
       - name: Compiler les scripts
-        run: python3 -m py_compile scripts/*.py tools/*.py hooks/scripts/*.py
+        run: python3 -m py_compile scriptorium/scripts/*.py tools/*.py scriptorium/hooks/scripts/*.py
       - name: Lancer le harnais d'evaluation
         run: python3 evals/run-evals.py

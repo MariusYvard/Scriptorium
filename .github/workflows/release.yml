@@ -23,21 +23,20 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           version="${TAG_NAME#v}"
-          manifest="$(python3 -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])")"
-          market="$(python3 -c "import json;print(json.load(open('.claude-plugin/marketplace.json'))['metadata']['version'])")"
+          manifest="$(python3 -c "import json;print(json.load(open('scriptorium/.claude-plugin/plugin.json'))['version'])")"
           if [ "$version" != "$manifest" ]; then
             echo "::error::Tag ${TAG_NAME} (${version}) ne correspond pas a plugin.json (${manifest})"
             exit 1
           fi
-          if [ "$version" != "$market" ]; then
-            echo "::error::Tag ${TAG_NAME} (${version}) ne correspond pas a marketplace.json (${market})"
+          if ! python3 -c "import json,sys; m=json.load(open('.claude-plugin/marketplace.json')); sys.exit(0 if any(p.get('name')=='scriptorium' and p.get('source')=='./scriptorium' for p in m.get('plugins',[])) else 1)"; then
+            echo "::error::marketplace.json ne declare pas d'entree name=scriptorium avec source=./scriptorium"
             exit 1
           fi
           if ! grep -q "^## \[${version}\]" CHANGELOG.md; then
             echo "::error::CHANGELOG.md n'a pas de section pour ${version}"
             exit 1
           fi
-          echo "Tag ${TAG_NAME} = manifestes ${manifest} ; section CHANGELOG presente."
+          echo "Tag ${TAG_NAME} = plugin.json ${manifest} ; section CHANGELOG presente."
 
       - name: Evals
         run: python3 evals/run-evals.py
@@ -47,7 +46,7 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           version="${TAG_NAME#v}"
-          git archive --format=zip -o "scriptorium-${version}.plugin" HEAD
+          git archive --format=zip -o "scriptorium-${version}.plugin" HEAD:scriptorium
           ls -la "scriptorium-${version}.plugin"
 
       - name: Extraire les notes du CHANGELOG

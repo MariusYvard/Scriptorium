@@ -16,7 +16,8 @@ import sys
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.abspath(os.path.join(ICI, ".."))
-SCRIPTS = os.path.join(ICI, "..", "scripts")
+PLUGIN = os.path.join(RACINE, "scriptorium")
+SCRIPTS = os.path.join(PLUGIN, "scripts")
 FIXT = os.path.join(ICI, "fixtures")
 
 
@@ -170,7 +171,7 @@ verifier("images : pdf sans backend renvoie une note", bool(imgs.extract(os.path
 
 
 import glob as _glob
-_gdir = os.path.join(ICI, "..", "skills", "produire", "references")
+_gdir = os.path.join(PLUGIN, "skills", "produire", "references")
 _genres = _glob.glob(os.path.join(_gdir, "genre-*.md"))
 verifier("genres : au moins 24 playbooks", len(_genres) >= 24, f"n={len(_genres)}")
 _sans_src = sorted(os.path.basename(f) for f in _genres if "## Sources" not in open(f, encoding="utf-8").read())
@@ -275,23 +276,23 @@ verifier("friction : cran 3 exige 100 caracteres", _cran3)
 
 # Lint de prompt : les fichiers du plugin comme donnees
 for _skill in ("atelier", "produire", "controler", "livrer"):
-    _p = os.path.join(ICI, "..", "skills", _skill, "SKILL.md")
+    _p = os.path.join(PLUGIN, "skills", _skill, "SKILL.md")
     _txt = open(_p, encoding="utf-8").read()
     _refs = set(_re.findall(r"`references/([a-z0-9-]+\.md)`", _txt))
     _manq = sorted(r for r in _refs
-                   if not os.path.isfile(os.path.join(ICI, "..", "skills", _skill, "references", r)))
+                   if not os.path.isfile(os.path.join(PLUGIN, "skills", _skill, "references", r)))
     verifier(f"routeur {_skill} : chaque reference citee existe", not _manq, f"manquantes={_manq}")
 
-for _a in sorted(_glob.glob(os.path.join(ICI, "..", "agents", "*.md"))):
+for _a in sorted(_glob.glob(os.path.join(PLUGIN, "agents", "*.md"))):
     _t = open(_a, encoding="utf-8").read()
     _fm = _t.split("---")[1] if _t.startswith("---") else ""
     verifier(f"agent {os.path.basename(_a)} : frontmatter name et description",
              "name:" in _fm and "description:" in _fm)
 
 _perimes = []
-for _f in (_glob.glob(os.path.join(ICI, "..", "agents", "*.md"))
-           + _glob.glob(os.path.join(ICI, "..", "skills", "*", "references", "*.md"))
-           + _glob.glob(os.path.join(ICI, "..", "skills", "*", "SKILL.md"))):
+for _f in (_glob.glob(os.path.join(PLUGIN, "agents", "*.md"))
+           + _glob.glob(os.path.join(PLUGIN, "skills", "*", "references", "*.md"))
+           + _glob.glob(os.path.join(PLUGIN, "skills", "*", "SKILL.md"))):
     _t = open(_f, encoding="utf-8").read()
     for _old in ("skills/rediger/", "skills/reviser/", "skills/style-maison/"):
         if _old in _t:
@@ -308,7 +309,7 @@ _avec_sources = [
 _sans = []
 for _skill, _fichiers in _avec_sources:
     for _n in _fichiers:
-        _p = os.path.join(ICI, "..", "skills", _skill, "references", _n)
+        _p = os.path.join(PLUGIN, "skills", _skill, "references", _n)
         if "## Sources" not in open(_p, encoding="utf-8").read():
             _sans.append(_n)
 verifier("lint de prompt : chaque nouvelle reference sourcee porte sa section Sources",
@@ -353,7 +354,7 @@ verifier("paliers : suffixe gouv.fr institutionnel et inconnu non classe",
          and _pal.get("site-inconnu-xyz.example") == "non-classe", f"pal={_pal}")
 
 # Reporting-standards : garde structurelle (URL sans utm, compte chiffre ou non confirme)
-_rs = open(os.path.join(ICI, "..", "skills", "produire", "references",
+_rs = open(os.path.join(PLUGIN, "skills", "produire", "references",
                         "reporting-standards.md"), encoding="utf-8").read()
 _lignes_std = [l for l in _rs.splitlines()
                if _re.match(r"^\| (CONSORT|STROBE|SPIRIT|STARD|TRIPOD|ARRIVE|CARE|SQUIRE|CHEERS|SRQR) ", l)]

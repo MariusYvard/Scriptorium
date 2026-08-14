@@ -9,16 +9,17 @@ Procédure versionnée pour publier une nouvelle version de Scriptorium. La publ
 
 ## 2. Aligner les versions
 
-Le numéro vit à deux endroits, qui doivent rester synchronisés. Le workflow refuse le tag sinon.
+Le numéro vit à un seul endroit. Le workflow refuse le tag s'il ne correspond pas.
 
-- `.claude-plugin/plugin.json`, champ `version`.
-- `.claude-plugin/marketplace.json`, champ `metadata.version` et le `version` de l'entrée plugin.
+- `scriptorium/.claude-plugin/plugin.json`, champ `version`.
+
+`.claude-plugin/marketplace.json` ne porte plus de version : il déclare seulement l'entrée `scriptorium` avec `"source": "./scriptorium"`, que le workflow vérifie.
 
 ## 3. Contrôler en local
 
 ```
 python3 evals/run-evals.py
-python3 scripts/lint-style.py <fichier>
+python3 scriptorium/scripts/lint-style.py <fichier>
 ```
 
 Tous les cas doivent passer.
@@ -31,7 +32,7 @@ git tag vX.Y.Z
 git push origin main --tags
 ```
 
-Le workflow `release.yml` vérifie que le tag correspond aux deux manifestes et qu'une section `## [X.Y.Z]` existe dans `CHANGELOG.md`, lance les evals, construit `scriptorium-X.Y.Z.plugin` avec `git archive`, extrait les notes du CHANGELOG et publie la Release avec l'artefact attaché.
+Le workflow `release.yml` vérifie que le tag correspond à `scriptorium/.claude-plugin/plugin.json`, que `marketplace.json` déclare bien l'entrée `scriptorium` pointant sur `./scriptorium` et qu'une section `## [X.Y.Z]` existe dans `CHANGELOG.md`, lance les evals, construit `scriptorium-X.Y.Z.plugin` avec `git archive`, extrait les notes du CHANGELOG et publie la Release avec l'artefact attaché.
 
 ## 5. Après publication
 

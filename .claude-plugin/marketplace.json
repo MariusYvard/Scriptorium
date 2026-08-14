@@ -2,15 +2,13 @@
   "name": "scriptorium-marketplace",
   "owner": { "name": "Marius Yvard" },
   "metadata": {
-    "description": "Atelier de rédaction de haut niveau pour quatorze publics, vingt-six genres sourcés.",
-    "version": "0.10.0"
+    "description": "Atelier de rédaction de haut niveau pour quatorze publics, vingt-six genres sourcés."
   },
   "plugins": [
     {
       "name": "scriptorium",
-      "source": "./",
+      "source": "./scriptorium",
       "description": "Atelier de rédaction de haut niveau : quatre compétences à sous-commandes, vingt-six genres adossés à des sources, quatorze publics, agents délégués, scripts déterministes (triangulation des sources, ancres de citation, scorecard à plancher et trajectoire, journal de projet, contrôle de deck), sorties Word, PDF, HTML et LaTeX pilotées par la charte graphique, style maison à directives strictes.",
-      "version": "0.10.0",
       "author": { "name": "Marius Yvard" },
       "category": "writing",
       "keywords": ["redaction", "ingenierie", "geopolitique", "droit", "sante", "finance", "business-plan", "imrad", "prisma", "equator", "credit", "veille", "poster", "latex", "charte-graphique", "html"]

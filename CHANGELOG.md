@@ -38,7 +38,7 @@ Mise à jour sans désinstallation. Le dépôt adopte la disposition des marketp
 
 ## [0.10.0] - 2026-08-13
 
-Gabarits multi-format (texte OOXML, diapositives OOXML, texte et diapositives ODF, PDF en lecture seule), préflight de lecture PDF, ancrage à trois couches et jeu d'or versionné. Trois mécanismes réimplémentent à neuf des idées d'une nouvelle étude d'academic-research-skills (CC BY-NC 4.0, idées seulement, zéro texte repris).
+Gabarits multi-format (texte OOXML, diapositives OOXML, texte et diapositives ODF, PDF en lecture seule), préflight de lecture PDF, ancrage à trois couches et jeu d'or versionné.
 
 ### Added
 - Gabarits multi-format : gabarit.py passe de Word seul à quatre familles, détectées par le contenu du fichier puis par son extension (un .docx renommé en .pdf reste traité comme un .docx, un fichier qui commence par `%PDF-` reste un PDF quelle que soit son extension). Texte OOXML (.docx, .dotx, .docm) et diapositives OOXML (.pptx, .potx, .pptm) gardent inventaire, comparaison et remplissage complets ; les diapositives ajoutent les dispositions nommées, les espaces réservés et la taille de diapositive à l'inventaire. Une nouvelle option `--disposition` choisit dans quelle disposition du gabarit le remplissage crée ses diapositives. Texte et diapositives ODF (.odt, .ott, .odp, .otp) gagnent l'inventaire et la comparaison ; leur remplissage reste ouvert. PDF gagne l'inventaire et la comparaison, jamais le remplissage : une page fixe déjà composée se compare, elle ne se remplit pas. Le script le refuse par un message nommé plutôt que par un résultat approximatif. L'inventaire d'un PDF se fait en lecture binaire pure, sans aucun moteur : nombre de pages, format de page nommé (A4, Letter) ou signalé non reconnu, orientation, polices utilisées et proportion incorporée, chiffrement, version PDF. Les marges d'un PDF ne sont pas inventoriées, faute d'être une donnée du fichier plutôt qu'un effet de sa composition. Comparer deux familles différentes est refusé plutôt que rendu à faux. Nouvelle sous-commande `formats` qui liste les familles et leurs extensions.
@@ -54,7 +54,7 @@ Gabarits multi-format (texte OOXML, diapositives OOXML, texte et diapositives OD
 
 ## [0.9.0] - 2026-08-13
 
-Gabarits de document imposés et registre de logos. Onze mécanismes de rigueur réimplémentés à neuf depuis une seconde étude d'academic-research-skills (état du 11 août 2026, idées seulement, licence CC BY-NC 4.0 respectée).
+Gabarits de document imposés et registre de logos, plus onze mécanismes de rigueur dans les références de revue et de sourcing.
 
 ### Added
 - Gabarits imposés : nouveau script gabarit.py (bibliothèque standard seule, zipfile et xml.etree). `inventorier` lit la structure d'un .docx ou .dotx fourni par un tiers (styles nommés, hiérarchie de titres, style de corps, marges et format de page, en-têtes et pieds avec leurs champs, polices, protection en édition) dans un JSON déclaratif qui porte sa propre liste de lacunes. `comparer` rend un verdict fermé (conforme, écarts mineurs, écarts majeurs) sur un document produit, par identifiant de style (`w:styleId`) et jamais par le libellé affiché, qu'un Word francisé renomme. `remplir` injecte le contenu dans le gabarit lui-même, dans ses styles existants, ce qui préserve filigrane, numérotation liée et thème de couleurs qu'une régénération perdrait ; l'insertion est chirurgicale sur ancre XML, sans réécriture complète d'un fragment (un aller-retour par ElementTree renommerait les préfixes OOXML). Un gabarit protégé en édition arrête le remplissage au lieu de produire un fichier douteux.
@@ -85,7 +85,7 @@ Livraison LaTeX chartée, genre poster, contrôle de deck, sources renforcées. 
 ---
 ## [0.7.0] - 2026-07-09
 
-Intégrité des sources, comité de revue durci, journal de projet. Quarante-sept mécanismes réimplémentés à neuf depuis l'étude du plugin academic-research-skills (idées seulement, licence CC BY-NC 4.0 respectée, standards cités depuis leurs sources primaires).
+Intégrité des sources, comité de revue durci, journal de projet. Quarante-sept mécanismes ajoutés, standards cités depuis leurs sources primaires.
 
 ### Added
 - Intégrité des sources : triangulation multi-index en option réseau (Crossref, OpenAlex, Semantic Scholar, similarité de titre 0,70) avec verdicts gradués par référence (vérifié, plausible, invérifiable, fabriqué) et signaux de contamination ; taxonomie des citations fabriquées ; ancre par citation dans le BibTeX (citation exacte ou localisation, `--exiger-ancres`) ; tags de lacune normalisés `[LACUNE MATERIELLE]` et `[PREUVE FAIBLE]` comptés par traceability.py ; nouveau script check-temporel.py (cinq défaillances chronologiques, consultatif par défaut) ; hiérarchie de preuve à sept niveaux et fiche source A-F ; logique GRADE générale ; chronologie des sources et garde anti-anachronisme ; corpus utilisateur pré-criblé (BibTeX, Zotero) avec traçabilité inclus/exclus. Références : integrite-sources.md, hierarchie-preuve.md, corpus-utilisateur.md, discipline-synthese.md.

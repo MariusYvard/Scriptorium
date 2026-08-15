@@ -226,7 +226,7 @@ Les issues et propositions sont bienvenues, en français ou en anglais : signale
 
 ## Inspirations
 
-Les principes de conception sont documentés dans [`docs/CONCEPTION.md`](docs/CONCEPTION.md). Des mécanismes d'intégrité et de revue réimplémentent à neuf des idées observées dans [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) de Cheng-I Wu (CC BY-NC 4.0, zéro texte repris) ; la version 0.10.0 poursuit cette réimplémentation à neuf (préflight de lecture PDF, ancrage à trois couches, jeu d'or versionné) ; la version 0.9.0 réimplémente à neuf onze mécanismes supplémentaires depuis une seconde étude du même dépôt (état du 11 août 2026, idées seulement, licence CC BY-NC 4.0, zéro texte repris) ; la version 0.8.0 adapte du code et des gabarits du projet [openscience](https://github.com/synthetic-sciences/openscience) de Synthetic Sciences (Apache-2.0, attribution en tête de chaque fichier concerné). Les standards cités (PRISMA, CRediT, GRADE, EQUATOR, Bradford Hill) le sont depuis leurs sources primaires.
+Les principes de conception sont documentés dans [`docs/CONCEPTION.md`](docs/CONCEPTION.md), qui porte aussi la règle d'attribution du dépôt : le code adapté d'un projet tiers est nommé et sa licence respectée, une idée réécrite à neuf ne l'est pas. À ce titre, la version 0.8.0 adapte du code et des gabarits du projet [openscience](https://github.com/synthetic-sciences/openscience) de Synthetic Sciences (Apache-2.0, attribution en tête de chaque fichier concerné). Les standards cités (PRISMA, CRediT, GRADE, EQUATOR, Bradford Hill) le sont depuis leurs sources primaires.
 
 ---
 

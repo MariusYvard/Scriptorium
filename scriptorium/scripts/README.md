@@ -1,12 +1,12 @@
 # Scripts déterministes de Scriptorium
 
-Vingt-trois outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Vingt-quatre outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
 ## lint-style.py
 
-Détecte les écarts au style maison sans jugement de modèle : tiret cadratin, typographie courbe, lexique promotionnel banni, paramètres de suivi dans les URL, virgule d'Oxford, métadiscours, pronom « on », quantificateurs vagues, verbes tics.
+Détecte les écarts au style maison sans jugement de modèle : tiret cadratin, typographie courbe, lexique promotionnel banni, paramètres de suivi dans les URL, virgule d'Oxford, métadiscours, pronom « on », quantificateurs vagues, verbes tics, caractères invisibles.
 
 ```
 python3 lint-style.py FICHIER [--format text|json] [--strict] [--quiet]
@@ -14,6 +14,10 @@ cat doc.md | python3 lint-style.py -
 ```
 
 Code de sortie 1 si un constat critique est présent (ou majeur avec `--strict`). Pragmas dans le document : une ligne contenant `lint-style:ignore` est sautée, un fichier contenant `lint-style:ignore-file` dans ses cinq premières lignes est ignoré.
+
+Six règles couvrent les caractères invisibles, ce qui ne s'affiche pas à l'écran mais voyage avec le fichier. `caractere-invisible` (majeur) relève la largeur nulle (U+200B, U+2060, U+FEFF) et le trait d'union conditionnel (U+00AD). `zone-privee` (majeur) relève la zone à usage privé (U+E000 à U+F8FF), dont le rendu dépend de la police installée. `controle-bidi` (critique) relève les marques d'écriture bidirectionnelle (U+202A à U+202E, U+2066 à U+2069), qui font lire un texte autrement qu'il n'est écrit. `caractere-tag` (critique) relève les caractères de tag (U+E0000 à U+E007F), invisibles et porteurs de données. `espace-exotique` (mineur) relève les espaces typographiques hors espace ordinaire et insécable (U+2000 à U+200A, U+2028, U+2029, U+205F, U+3000). Ces caractères survivent au copier-coller, cassent la recherche plein texte, l'appariement d'une citation à son ancre et la lecture d'un diff ; certaines revues rejettent un fichier qui en porte.
+
+`liant-inutile` (majeur) traite à part les liants de largeur nulle (U+200C, U+200D). Ils portent du sens dans les écritures arabe et indiennes ainsi que dans les séquences d'emoji composées, où ils soudent des codes distincts en un seul signe : les relever partout lèverait un faux positif à chaque drapeau et à chaque famille. Ils ne sont donc signalés qu'entre deux lettres latines, où ils ne servent à rien.
 
 ## verify-sources.py
 
@@ -222,6 +226,22 @@ python3 check-lecture-pdf.py FICHIER.pdf [--format text|json] [--strict]
 ```
 
 Module importable : `analyser(chemin)` renvoie le rapport, `rapport_texte(rapport)` le met en forme.
+
+## check-fuites.py
+
+Inventaire de ce qu'un livrable trahit de son auteur, à lancer avant de l'envoyer. Quatre familles lues avec la bibliothèque standard seule : texte OOXML (.docx, .dotx, .docm), diapositives OOXML (.pptx, .potx, .pptm), ODF (.odt, .ott, .odp, .otp) et PDF. Le script relève les propriétés de document (auteur d'origine, dernière personne à avoir enregistré, organisation, responsable déclaré, titre, sujet, mots-clés), l'historique d'édition (nombre d'enregistrements successifs, temps d'édition cumulé), les résidus de travail (modifications suivies non acceptées, commentaires avec le nom de leur auteur, texte masqué, notes du présentateur en PowerPoint, dossier customXml, liste des collaborateurs), les chemins locaux fuités par les relations du paquet et, pour un PDF, le dictionnaire Info, le bloc XMP, le chiffrement déclaré, les fichiers embarqués et les annotations.
+
+```
+python3 check-fuites.py FICHIER [--auteur "Prenom Nom"] [--format text|json] [--strict]
+```
+
+Chaque constat porte une confiance graduée, parce qu'un champ rempli et un champ présent ne disent pas la même chose : `confirme` (une valeur lisible identifie une personne, une organisation ou une machine), `probable` (une valeur existe et paraît identifiante sans certitude), `informatif` (une structure est présente sans contenu lisible), `douteux` (le constat a de bonnes chances d'être un faux positif, rapporté pour ne rien taire). Le verdict se ferme sur quatre valeurs : fuites confirmees, fuites probables, traces sans identite lisible, rien a signaler. L'option `--auteur` reclasse en `douteux` un champ qui porte l'auteur déclaré du document, déjà public sur la page de garde. Consultatif par défaut, `--strict` renvoie 1 dès le premier constat confirmé.
+
+Le script inspecte et ne nettoie jamais. Supprimer une trace est une décision éditoriale qui appartient à l'auteur, la repérer est une mesure ; un outil qui efface d'office déciderait à sa place et rendrait le geste invisible.
+
+La détection de mise à jour incrémentale d'un PDF suit la même logique. Un outil comme exiftool écrit dans un PDF de façon incrémentale : il ajoute un bloc en fin de fichier qui libère l'objet Info et le retire du trailer, mais les octets d'origine restent dans le fichier, verbatim et récupérables. La commande sort en succès, le lecteur n'affiche plus rien et le fichier grossit au lieu de maigrir. Croire une métadonnée supprimée alors qu'elle reste lisible est pire que de la savoir présente, donc le script compte les marqueurs `%%EOF` et les renvois `/Prev` vers une table xref antérieure. Deux marqueurs de fin ou plus accompagnés d'un renvoi donnent un constat confirmé. Un PDF à mise à jour incrémentale n'est pas fautif en soi (une signature électronique procède ainsi), mais son état antérieur reste dans le fichier.
+
+Le rapport se termine par ce que le contrôle ne regarde pas (contenu rédactionnel, métadonnées des images incorporées, macros et code embarqué, enveloppe seule d'un PDF chiffré, objets rangés dans un flux compressé), pour qu'une absence de constat ne se lise pas comme un quitus.
 
 ## logos.py
 

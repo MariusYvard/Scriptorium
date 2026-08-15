@@ -52,6 +52,20 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/lint-style.py FICHIER
 
 Vérifier la liste de contrôle avant publication (voir `reviser/references/checklist-pre-publication.md`) : sections obligatoires présentes, abréviations définies, figures et tableaux titrés et sourcés, pagination, résumé autonome.
 
+## 6. Contrôle de fuites avant envoi
+
+Un livrable qui part chez un client, une école ou une revue emporte plus que son texte : le nom de qui l'a rédigé et de qui l'a enregistré en dernier, celui de l'organisation, le nombre d'enregistrements successifs, les commentaires et les modifications suivies restés dans le fichier, les notes du présentateur d'un deck, le chemin local d'un fichier lié. Le contrôle porte sur le fichier final, pas sur le Markdown source.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/check-fuites.py livrable.docx --auteur "Prenom Nom"
+```
+
+Le verdict se ferme sur quatre valeurs (fuites confirmees, fuites probables, traces sans identite lisible, rien a signaler) et chaque constat porte sa confiance. L'option `--auteur` évite le faux positif du nom déjà imprimé sur la page de garde. Traiter les constats confirmés avant l'envoi, signaler les probables à l'auteur.
+
+Le script inspecte et ne nettoie pas : retirer une trace est une décision, elle ne s'automatise pas. Le nettoyage se fait dans l'application d'origine (inspecteur de document Word, export neuf pour un PDF), puis le contrôle se rejoue sur le fichier corrigé. Pour un PDF, ne pas éditer les métadonnées d'un fichier déjà produit : un outil comme exiftool écrit une mise à jour incrémentale qui masque l'ancienne valeur sans la retirer du fichier, où elle reste lisible ; le script signale ce cas. Réexporter depuis la source.
+
+Reporter dans la note de remise la ligne de verdict et ce qui reste ouvert. Détail du script dans `controler` (audit), section audit de fuites.
+
 ## Format de sortie
 
 Le fichier final (Word ou PDF), plus une note de remise courte : genre, format, nombre de pages, norme bibliographique, figures incluses, points de vigilance restants.

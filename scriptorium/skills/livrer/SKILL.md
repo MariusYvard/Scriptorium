@@ -1,9 +1,9 @@
 ---
 name: livrer
 description: >
-  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées, gabarit imposé rempli plutôt que régénéré, logos placés selon leur registre "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document", "remplis le modèle imposé". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
+  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées, gabarit imposé rempli plutôt que régénéré, logos placés selon leur registre, contrôle de fuites sur le fichier final avant envoi "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document", "remplis le modèle imposé". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.10.0"
+  version: "0.10.2"
 ---
 
 # Livrer (mettre en forme, décliner)
@@ -32,6 +32,16 @@ Les logos suivent leur propre registre (`produire`, action logos) : `logos.py pl
 ## Formats de sortie
 
 Le format natif de travail est le Markdown. La finalisation produit un Word (.docx via le skill `docx`), un PDF (skill `pdf`), un HTML autonome (CSS dérivé de la charte graphique, figures SVG embarquées, feuille d'impression), un document LaTeX (gabarit `assets/gabarit-rapport.tex`, préambule couleurs et polices émis par `theme.py --format latex`, compilation xelatex quand elle est disponible) ou une présentation (.pptx via le skill `pptx`). Le HTML offre la plus grande marge de mise en forme et respecte la charte graphique au plus près ; le LaTeX donne le rendu le plus abouti pour un rapport scientifique ou technique dense (encadrés sémantiques, macros statistiques). Le poster passe par `assets/gabarit-poster.tex`. Voir `references/document.md` pour le détail par format.
+
+## Contrôle avant envoi
+
+Un livrable qui part chez un client, une école ou une revue emporte les traces de sa fabrication : auteur d'origine, dernière personne à avoir enregistré, organisation, commentaires et modifications suivies oubliés, notes du présentateur, chemins locaux. Passer le fichier final, pas le Markdown source.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/check-fuites.py livrable.docx --auteur "Prenom Nom"
+```
+
+Le script inspecte et ne nettoie pas ; traiter les constats confirmés avant l'envoi. Détail dans `references/document.md`.
 
 ## Charte et style
 

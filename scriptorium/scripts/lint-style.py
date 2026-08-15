@@ -63,6 +63,33 @@ REGLES = [
      MINEUR, "quantif-vague", "Quantificateur vague. Chiffrer."),
     (re.compile(r"\b(reflète|souligne|met en avant)\b", re.I),
      MINEUR, "verbe-tic", "Verbe tic fréquent à l'écrit IA. Vérifier qu'il porte un fait."),
+    # Caractères invisibles : ils survivent au copier-coller, cassent la
+    # recherche plein texte, l'appariement de citations et les diffs, et
+    # certaines revues rejettent les fichiers qui en portent.
+    (re.compile(r"[​⁠﻿]"), MAJEUR, "caractere-invisible",
+     "Caractère de largeur nulle. Le retirer : il casse recherche et diff."),
+    (re.compile(r"­"), MAJEUR, "caractere-invisible",
+     "Trait d'union conditionnel invisible. Le retirer."),
+    (re.compile(r"[‪-‮⁦-⁩]"), CRITIQUE, "controle-bidi",
+     "Contrôle bidirectionnel. Il peut faire lire un texte autrement qu'il "
+     "n'est écrit."),
+    (re.compile(r"[\U000e0000-\U000e007f]"), CRITIQUE, "caractere-tag",
+     "Caractère de tag Unicode, invisible et porteur de données."),
+    (re.compile(r"[-]"), MAJEUR, "zone-privee",
+     "Caractère de zone à usage privé : son rendu dépend de la police."),
+    (re.compile(r"[ -    　]"), MINEUR,
+     "espace-exotique",
+     "Espace typographique exotique. Préférer l'espace ordinaire ou "
+     "l'insécable."),
+    # Les liants de largeur nulle portent du sens dans les écritures qui les
+    # emploient (arabe, persan, langues indiennes) et dans les séquences
+    # d'emoji, où ils composent un seul signe. Les signaler partout produirait
+    # un faux positif à chaque drapeau ou famille. Ils ne sont relevés
+    # qu'entre deux lettres latines, où ils ne servent à rien.
+    (re.compile(r"(?<=[A-Za-zÀ-ÿ])[‌‍](?=[A-Za-zÀ-ÿ])"), MAJEUR,
+     "liant-inutile",
+     "Liant de largeur nulle entre deux lettres latines, où il ne sert à "
+     "rien. En écriture arabe ou indienne il serait légitime."),
 ]
 
 # Termes bannis cités par les fichiers de référence du plugin : on n'analyse

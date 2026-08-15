@@ -376,13 +376,13 @@ CHAMPS_PDF = [
 def _fuites_pdf(chemin, auteur):
     """Dictionnaire Info, XMP, et surtout l'etat incremental du fichier.
 
-    Le piege documente par le projet watermarks-remover : exiftool ecrit dans
+    Le piege : un outil de nettoyage de metadonnees comme exiftool ecrit dans
     un PDF de facon INCREMENTALE. Il ajoute un bloc de mise a jour qui libere
     l'objet Info et le retire du trailer, mais les octets d'origine restent
     dans le fichier, verbatim et recuperables. La commande sort en succes, le
     lecteur n'affiche plus rien, et le fichier GROSSIT au lieu de maigrir :
     c'est le signe. Croire une metadonnee supprimee alors qu'elle est encore
-    lisible est pire que de la savoir presente, d'ou ce controle.
+    lisible ferme la verification, ce qui est pire que de la savoir presente.
 
     Un PDF a mise a jour incrementale porte plusieurs %%EOF et une chaine de
     tables xref reliees par /Prev. C'est parfaitement legitime en soi (une

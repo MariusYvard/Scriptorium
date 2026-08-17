@@ -9,7 +9,8 @@
 % Voir livrer/references/document.md ("Sortie LaTeX") pour la voie complete et le choix entre
 % LaTeX, Word, PDF et HTML.
 %
-% Compilation : xelatex gabarit-rapport.tex (deux passes pour la table des matieres).
+% Compilation : xelatex gabarit-rapport.tex (deux passes pour la table des matieres,
+% la table des figures, la liste des tableaux et les renvois \ref).
 % Avec bibliographie : xelatex, bibtex, xelatex, xelatex (fournir un fichier references.bib,
 % voir scripts/citations.py pour le produire depuis des sources verifiees).
 %
@@ -30,8 +31,19 @@
 \usepackage{titlesec}
 \usepackage{booktabs}
 \usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{float}
 \usepackage[colorlinks=true]{hyperref}
 \usepackage[numbers,sort&compress]{natbib}
+% caption apres hyperref : l'ordre inverse casse les ancres de legende.
+% subcaption charge caption et sert aux figures composees (a) (b).
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Dossiers ou chercher les images, en plus du dossier du .tex. Les figures SVG
+% produites par scripts/figures.py se convertissent en PDF avant inclusion
+% (rsvg-convert, inkscape ou cairosvg) : xelatex n'insere pas de SVG.
+\graphicspath{{figures/}{images/}}
 
 % ============================================================================
 % >>> DEBUT BLOC CHARTE (remplacer par : python3 scripts/theme.py CHARTE.json --format latex)
@@ -55,6 +67,18 @@
   urlcolor=ScriptoriumAccent,
   pdftitle={Rapport},
 }
+
+% Legendes : numero en gras a la couleur d'encre de la charte, separateur point,
+% corps reduit. Place apres le bloc CHARTE, qui definit les couleurs employees.
+\captionsetup{font=small, labelfont={bf,color=ScriptoriumEncre}, labelsep=period}
+\captionsetup[sub]{font=small, labelfont=bf}
+
+% Sans babel ni polyglossia, les titres des listes restent en anglais
+% (Contents, List of Figures, List of Tables). Pour un rapport en francais,
+% decommenter les trois lignes suivantes.
+% \renewcommand{\contentsname}{Sommaire}
+% \renewcommand{\listfigurename}{Table des figures}
+% \renewcommand{\listtablename}{Liste des tableaux}
 
 % --- Titres ---
 \titleformat{\section}{\normalfont\Large\bfseries\color{ScriptoriumEncre}}{\thesection}{1em}{}
@@ -137,6 +161,16 @@
 \thispagestyle{empty}
 \newpage
 
+% Pages liminaires exigees d'un rapport scientifique ou d'un memoire (voir
+% livrer/references/mise-en-forme.md). Chaque liste se remplit seule a la
+% deuxieme passe de compilation, depuis les \caption du document. Retirer ces
+% deux lignes pour un rapport court sans figure ni tableau : une liste vide
+% sous son titre est un defaut de remise.
+\listoffigures
+\listoftables
+\thispagestyle{empty}
+\newpage
+
 \section{Introduction}
 
 Contexte, objet du rapport et perimetre. Une phrase de portee generale, suivie de
@@ -171,6 +205,52 @@ Seconde serie  & 118 & 37,1 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+% ----------------------------------------------------------------------------
+% Figure. Bloc laisse en commentaire : le gabarit compile tel quel, sans exiger
+% de fichier image. Decommenter et remplacer courbe-mesures par le nom du
+% fichier (PDF, PNG ou JPEG), sans extension de preference : xelatex choisit
+% alors le format disponible.
+%
+% Ordre impose : \includegraphics, puis \caption, puis \label. Un \label pose
+% avant sa \caption renvoie au numero de section et non au numero de figure.
+% Le placeur [htbp] laisse LaTeX optimiser la page ; [H] (paquet float) impose
+% la position exacte, a n'employer que si la lecture le demande.
+% La legende est autonome : elle nomme l'objet mesure, l'unite et la source.
+%
+% \begin{figure}[htbp]
+% \centering
+% \includegraphics[width=0.8\textwidth]{courbe-mesures}
+% \caption{Evolution de la variable mesuree sur la periode observee, en unites SI. Source : releves de l'auteur, 2026.}
+% \label{fig:mesures}
+% \end{figure}
+%
+% Renvoi depuis le texte, tilde insecable pour eviter la coupure de ligne :
+% La dispersion se lit sur la figure~\ref{fig:mesures}, page~\pageref{fig:mesures}.
+%
+% Figure composee de deux vues (subcaption), numerotees 1a et 1b :
+%
+% \begin{figure}[htbp]
+% \centering
+% \begin{subfigure}[b]{0.48\textwidth}
+%   \centering
+%   \includegraphics[width=\textwidth]{vue-avant}
+%   \caption{Avant intervention.}
+%   \label{fig:vues-avant}
+% \end{subfigure}
+% \hfill
+% \begin{subfigure}[b]{0.48\textwidth}
+%   \centering
+%   \includegraphics[width=\textwidth]{vue-apres}
+%   \caption{Apres intervention.}
+%   \label{fig:vues-apres}
+% \end{subfigure}
+% \caption{Etat du dispositif avant et apres intervention. Source : photographies de l'auteur.}
+% \label{fig:vues}
+% \end{figure}
+%
+% Renvoi a une sous-figure : voir la figure~\ref{fig:vues-apres}.
+% ----------------------------------------------------------------------------
 
 \begin{resultat}[Constat principal]
 Resume verifiable du resultat central en une phrase, chiffre a l'appui (tableau~\ref{tab:exemple}).

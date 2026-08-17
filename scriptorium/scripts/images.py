@@ -9,15 +9,33 @@ optionnels (PyMuPDF, pdfimages, pypdf) puis, a defaut, indique de passer par
 le skill pdf. Aucune image n'est interpretee ici : l'alt et la legende sont
 ecrits par le modele a l'etape de placement.
 
+Catalogue un dossier d'illustrations deja produites (photos de dispositif,
+captures d'ecran, schemas faits ailleurs) avec les memes mesures que
+l'extraction : dimensions lues dans l'en-tete, empreinte, doublons, plus la
+resolution effective a la largeur d'insertion prevue et un verdict par
+illustration. Convertit aussi un SVG en PNG par backends optionnels en
+cascade, sans qu'aucun devienne une dependance obligatoire.
+
+Ce module porte le calcul de resolution effective pour tout le plugin :
+logos.py le reprend ici plutot que d'en tenir une seconde copie.
+
 Usage :
     python3 images.py extract SOURCE --out DIR [--min-bytes N]
     python3 images.py manifest DIR
+    python3 images.py catalogue DIR [--out FICHIER] [--largeur-cm N]
+                      [--usage impression|ecran] [--format text|json]
+    python3 images.py convertir FIGURE.svg --out FIGURE.png [--largeur-px N]
+                      [--format text|json]
 
 Importable : extract(source, outdir, min_bytes), extraire_office(path, outdir),
-dimensions(data) -> (largeur, hauteur, format), construire(items, outdir, min_bytes).
+dimensions(data) -> (largeur, hauteur, format), construire(items, outdir, min_bytes),
+resolution_effective(pixels, largeur_cm), seuil_dpi(usage),
+cataloguer(dossier, largeur_cm, usage), convertir(source, sortie, largeur_px),
+backends_svg_disponibles().
 """
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -31,9 +49,43 @@ OFFICE = (".docx", ".pptx", ".xlsx", ".docm", ".pptm", ".xlsm", ".odt", ".odp", 
 RASTER = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".tif", ".tiff"}
 VECTOR = {".emf", ".wmf", ".svg", ".eps"}
 
+# Seuils consultatifs de resolution effective, en points par pouce. Source
+# unique pour le plugin : un logo, une photo de dispositif et une capture
+# d'ecran se mesurent avec la meme regle.
+DPI_IMPRESSION = 300
+DPI_ECRAN = 150
+POUCE_CM = 2.54
+
+# Largeur d'insertion par defaut, en centimetres : une figure sur toute la
+# justification d'une page A4 a marges de 3 cm.
+LARGEUR_INSERTION_CM = 15.0
+
+# Verdicts fermes du catalogue : un fichier en recoit un et un seul.
+VERDICTS = ("utilisable", "sous le seuil", "doublon", "dimensions illisibles",
+            "vecteur, resolution sans objet", "hors perimetre")
+
 
 def sha1(b):
     return hashlib.sha1(b).hexdigest()
+
+
+def resolution_effective(pixels, largeur_cm):
+    """Points par pouce reels a la taille d'insertion demandee.
+
+    Une image de 1200 pixels de large inseree sur 5 cm rend 610 dpi, la meme
+    inseree sur 15 cm en rend 203 : la resolution n'est pas une propriete du
+    fichier, elle depend de la taille a laquelle il est pose sur la page.
+    Renvoie None quand une des deux grandeurs manque, plutot qu'un zero qui
+    passerait pour une mesure.
+    """
+    if not pixels or not largeur_cm:
+        return None
+    return pixels / (largeur_cm / POUCE_CM)
+
+
+def seuil_dpi(usage):
+    """Seuil consultatif pour un usage : impression ou ecran."""
+    return DPI_IMPRESSION if usage == "impression" else DPI_ECRAN
 
 
 def dimensions(data):
@@ -87,6 +139,15 @@ def dimensions(data):
 
 def _ext(name):
     return os.path.splitext(name)[1].lower()
+
+
+def _classer(ext):
+    """Famille d'un fichier d'apres son extension : vecteur, raster, autre."""
+    if ext in VECTOR:
+        return "vecteur"
+    if ext in RASTER:
+        return "raster"
+    return "autre"
 
 
 def extraire_office(path, outdir):
@@ -169,7 +230,7 @@ def construire(items, outdir, min_bytes=1024):
             images.append({"index": seen[h]["index"], "doublon_de": seen[h]["fichier"],
                            "ordre": order, "octets": len(data), "sha1": h, "origine": origine})
             continue
-        kind = "vecteur" if ext in VECTOR else ("raster" if ext in RASTER else "autre")
+        kind = _classer(ext)
         if len(data) < min_bytes and kind != "vecteur":
             skipped.append({"origine": origine, "octets": len(data), "raison": "micro-image"})
             continue
@@ -227,6 +288,273 @@ def extract(source, outdir, min_bytes=1024):
     return manifest
 
 
+def cataloguer(dossier, largeur_cm=LARGEUR_INSERTION_CM, usage="impression",
+               out=None, recursif=False):
+    """Catalogue un dossier d'illustrations deja produites.
+
+    Meme mecanique que l'extraction (dimensions lues dans l'en-tete, empreinte
+    sha1, drapeaux) appliquee a des fichiers deja sur le disque : photos de
+    dispositif, captures d'ecran, schemas faits ailleurs. Chaque entree recoit
+    en plus la resolution effective a LARGEUR_CM et un verdict ferme pris dans
+    VERDICTS. Ecrit le catalogue en JSON et le retourne.
+    """
+    if not os.path.isdir(dossier):
+        raise SystemExit("dossier introuvable : %s" % dossier)
+    seuil = seuil_dpi(usage)
+    chemins = []
+    if recursif:
+        for base, _sous, noms in os.walk(dossier):
+            chemins.extend(os.path.join(base, n) for n in sorted(noms))
+    else:
+        chemins = [os.path.join(dossier, n) for n in sorted(os.listdir(dossier))]
+    vus, illustrations, ignores, idx = {}, [], [], 0
+    for chemin in chemins:
+        if not os.path.isfile(chemin):
+            continue
+        nom = os.path.relpath(chemin, dossier).replace("\\", "/")
+        if os.path.basename(nom) in ("manifest.json", "catalogue.json"):
+            continue
+        try:
+            with open(chemin, "rb") as f:
+                data = f.read()
+        except OSError:
+            ignores.append({"fichier": nom, "raison": "fichier illisible"})
+            continue
+        ext = _ext(chemin)
+        kind = _classer(ext)
+        idx += 1
+        rec = {"index": idx, "fichier": nom,
+               "format": ext.lstrip(".") or "sans-extension", "type": kind,
+               "largeur": None, "hauteur": None, "octets": len(data),
+               "sha1": sha1(data), "largeur_cm": largeur_cm,
+               "dpi_effectif": None, "flags": [], "verdict": None}
+        if rec["sha1"] in vus:
+            rec["doublon_de"] = vus[rec["sha1"]]
+            rec["verdict"] = "doublon"
+            illustrations.append(rec)
+            continue
+        vus[rec["sha1"]] = nom
+        if kind == "autre":
+            rec["flags"].append("format-non-image")
+            rec["verdict"] = "hors perimetre"
+            illustrations.append(rec)
+            continue
+        if kind == "vecteur":
+            rec["flags"].append("vecteur-a-convertir")
+            rec["verdict"] = "vecteur, resolution sans objet"
+            illustrations.append(rec)
+            continue
+        larg, haut, det = dimensions(data)
+        if det:
+            rec["format"] = det
+        rec["largeur"], rec["hauteur"] = larg, haut
+        if larg == 1 and haut == 1:
+            rec["flags"].append("espaceur-1x1")
+        if not larg:
+            rec["flags"].append("dimensions-inconnues")
+            rec["verdict"] = "dimensions illisibles"
+            illustrations.append(rec)
+            continue
+        dpi = resolution_effective(larg, largeur_cm)
+        rec["dpi_effectif"] = round(dpi)
+        rec["largeur_cm_max"] = round(larg / (seuil / POUCE_CM), 2)
+        rec["verdict"] = "sous le seuil" if dpi < seuil else "utilisable"
+        illustrations.append(rec)
+    uniques = [i for i in illustrations if "doublon_de" not in i]
+    faibles = [i for i in illustrations if i["verdict"] == "sous le seuil"]
+    notes = []
+    if faibles:
+        notes.append(
+            "%d illustration(s) sous %d dpi a %.1f cm : reduire la largeur "
+            "d'insertion (colonne largeur_cm_max), retrouver le fichier "
+            "d'origine, ou refaire la prise de vue ou la capture."
+            % (len(faibles), seuil, largeur_cm))
+    if any("vecteur-a-convertir" in i["flags"] for i in illustrations):
+        notes.append("Illustrations vectorielles presentes : la voie Word "
+                     "passe par images.py convertir.")
+    if any(i["verdict"] == "dimensions illisibles" for i in illustrations):
+        notes.append("Dimensions illisibles sur au moins un fichier : format "
+                     "non couvert par la lecture d'en-tete, mesurer autrement "
+                     "plutot que supposer.")
+    catalogue = {
+        "dossier": os.path.abspath(dossier), "usage": usage,
+        "largeur_cm": largeur_cm, "seuil_dpi": seuil,
+        "count": len(uniques),
+        "doublons": sum(1 for i in illustrations if "doublon_de" in i),
+        "sous_le_seuil": len(faibles), "illustrations": illustrations,
+        "ignores": ignores, "notes": notes,
+    }
+    cible = out or os.path.join(dossier, "catalogue.json")
+    with open(cible, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(catalogue, f, ensure_ascii=False, indent=2)
+    catalogue["fichier_catalogue"] = cible
+    return catalogue
+
+
+def catalogue_texte(cat):
+    """Liste des figures lisible : une ligne par illustration, puis les notes."""
+    lignes = ["Catalogue : %s" % cat["dossier"],
+              "Largeur d'insertion prevue : %.1f cm, usage %s, seuil %d dpi"
+              % (cat["largeur_cm"], cat["usage"], cat["seuil_dpi"]),
+              "%d illustration(s) unique(s), %d doublon(s), %d sous le seuil"
+              % (cat["count"], cat["doublons"], cat["sous_le_seuil"]), ""]
+    lignes.append("  %-3s %-28s %-8s %-12s %-7s %s"
+                  % ("n", "fichier", "format", "dimensions", "dpi", "verdict"))
+    for i in cat["illustrations"]:
+        dims = ("%sx%s" % (i["largeur"], i["hauteur"])) if i["largeur"] else "-"
+        dpi = str(i["dpi_effectif"]) if i["dpi_effectif"] else "-"
+        suffixe = (" (doublon de %s)" % i["doublon_de"]) if i.get("doublon_de") else ""
+        lignes.append("  %-3d %-28s %-8s %-12s %-7s %s%s"
+                      % (i["index"], i["fichier"][:28], i["format"][:8], dims,
+                         dpi, i["verdict"], suffixe))
+    if cat["ignores"]:
+        lignes.append("")
+        for g in cat["ignores"]:
+            lignes.append("  ignore : %s (%s)" % (g["fichier"], g["raison"]))
+    if cat["notes"]:
+        lignes.append("")
+        for n in cat["notes"]:
+            lignes.append("  note : %s" % n)
+    return "\n".join(lignes)
+
+
+# --- Conversion SVG vers PNG, backends optionnels en cascade ---------------
+#
+# Meme discipline que check-presentation.py : plusieurs backends essayes dans
+# l'ordre de preference, aucun obligatoire, et si aucun n'est present la
+# commande le declare au lieu d'ecrire un fichier douteux. Un echec de backend
+# et une absence de backend sont deux statuts distincts, pour qu'un dossier
+# sans outil ne passe pas pour un SVG fautif.
+
+BACKENDS_SVG = ("rsvg-convert", "inkscape", "cairosvg", "magick", "convert")
+
+INSTALLATION_SVG = (
+    "Installer l'un de ces backends : librsvg (commande rsvg-convert, "
+    "paquet librsvg2-bin sous Debian, librsvg sous Homebrew), Inkscape "
+    "(inkscape.org), le module Python cairosvg (pip install cairosvg), ou "
+    "ImageMagick (imagemagick.org, commande magick).")
+
+
+def _est_imagemagick(cmd):
+    """Vrai si CMD est bien ImageMagick.
+
+    La presence sur le PATH ne suffit pas : sous Windows, convert.exe est
+    l'utilitaire systeme de conversion FAT vers NTFS, homonyme sans rapport,
+    present sur toute installation. L'appeler pour convertir un SVG echoue de
+    facon opaque, donc l'identite se verifie avant usage.
+    """
+    if not _have(cmd):
+        return False
+    try:
+        r = subprocess.run([cmd, "-version"], capture_output=True, text=True,
+                           timeout=20)
+        return "ImageMagick" in ((r.stdout or "") + (r.stderr or ""))
+    except Exception:
+        return False
+
+
+def _a_cairosvg():
+    try:
+        return importlib.util.find_spec("cairosvg") is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def backends_svg_disponibles():
+    """Backends de conversion reellement utilisables, dans l'ordre de preference."""
+    dispo = []
+    for cmd in ("rsvg-convert", "inkscape"):
+        if _have(cmd):
+            dispo.append(cmd)
+    if _a_cairosvg():
+        dispo.append("cairosvg")
+    for cmd in ("magick", "convert"):
+        if _est_imagemagick(cmd):
+            dispo.append(cmd)
+    return dispo
+
+
+def _lancer(cmd, args, sortie):
+    """Lance un backend externe. Vrai si la sortie existe et n'est pas vide."""
+    try:
+        subprocess.run([cmd] + args, check=True, capture_output=True, timeout=120)
+    except Exception:
+        return False
+    return os.path.isfile(sortie) and os.path.getsize(sortie) > 0
+
+
+def convertir(source, sortie, largeur_px=None):
+    """Convertit un SVG en PNG par le premier backend disponible.
+
+    Retourne un rapport dict : source, sortie, backend, statut, notes. Le
+    statut est ferme : converti, source-absente, source-non-svg,
+    aucun-backend, echec-backend. Aucun backend n'est une dependance du
+    plugin, l'absence de tous se declare plutot que de se traduire en erreur
+    de fichier.
+    """
+    rapport = {"source": source, "sortie": sortie, "backend": None,
+               "statut": None, "notes": [],
+               "backends_disponibles": backends_svg_disponibles()}
+    if not os.path.isfile(source):
+        rapport["statut"] = "source-absente"
+        rapport["notes"].append("Fichier source introuvable : %s" % source)
+        return rapport
+    if _ext(source) != ".svg":
+        rapport["statut"] = "source-non-svg"
+        rapport["notes"].append(
+            "Source attendue en .svg, recue en %s." % (_ext(source) or "sans extension"))
+        return rapport
+    if not rapport["backends_disponibles"]:
+        rapport["statut"] = "aucun-backend"
+        rapport["notes"].append(
+            "Aucun backend de conversion SVG present (essayes dans l'ordre : "
+            "%s). Le fichier source n'est pas en cause." % ", ".join(BACKENDS_SVG))
+        rapport["notes"].append(INSTALLATION_SVG)
+        rapport["notes"].append(
+            "Sans backend, garder le SVG pour les voies HTML, LaTeX et PDF, "
+            "qui l'affichent, et signaler la figure manquante dans la voie Word.")
+        return rapport
+    dossier = os.path.dirname(os.path.abspath(sortie))
+    if dossier:
+        os.makedirs(dossier, exist_ok=True)
+    for backend in rapport["backends_disponibles"]:
+        if backend == "rsvg-convert":
+            args = ["-f", "png", "-o", sortie]
+            if largeur_px:
+                args += ["-w", str(int(largeur_px))]
+            ok = _lancer("rsvg-convert", args + [source], sortie)
+        elif backend == "inkscape":
+            args = ["--export-type=png", "--export-filename=%s" % sortie]
+            if largeur_px:
+                args.append("--export-width=%d" % int(largeur_px))
+            ok = _lancer("inkscape", args + [source], sortie)
+        elif backend == "cairosvg":
+            try:
+                import cairosvg
+                cairosvg.svg2png(url=source, write_to=sortie,
+                                 output_width=int(largeur_px) if largeur_px else None)
+                ok = os.path.isfile(sortie) and os.path.getsize(sortie) > 0
+            except Exception:
+                ok = False
+        else:
+            args = ["-background", "none"]
+            if largeur_px:
+                args += ["-resize", "%d" % int(largeur_px)]
+            ok = _lancer(backend, args + [source, sortie], sortie)
+        if ok:
+            rapport["backend"] = backend
+            rapport["statut"] = "converti"
+            larg, haut, _f = dimensions(open(sortie, "rb").read())
+            rapport["largeur"], rapport["hauteur"] = larg, haut
+            return rapport
+        rapport["notes"].append("Backend %s essaye sans succes." % backend)
+    rapport["statut"] = "echec-backend"
+    rapport["notes"].append(
+        "Tous les backends presents ont echoue : le SVG lui-meme est en cause "
+        "(syntaxe, police absente, reference externe).")
+    return rapport
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Extraction d'images (PDF, Office).")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -236,7 +564,39 @@ def main(argv=None):
     pe.add_argument("--min-bytes", type=int, default=1024)
     pm = sub.add_parser("manifest")
     pm.add_argument("dir")
+    pc = sub.add_parser("catalogue")
+    pc.add_argument("dir")
+    pc.add_argument("--out")
+    pc.add_argument("--largeur-cm", type=float, default=LARGEUR_INSERTION_CM,
+                    dest="largeur_cm")
+    pc.add_argument("--usage", choices=("impression", "ecran"),
+                    default="impression")
+    pc.add_argument("--recursif", action="store_true")
+    pc.add_argument("--format", choices=("text", "json"), default="text")
+    pc.add_argument("--strict", action="store_true",
+                    help="code de sortie 1 si une illustration est sous le seuil")
+    pv = sub.add_parser("convertir")
+    pv.add_argument("source")
+    pv.add_argument("--out", required=True)
+    pv.add_argument("--largeur-px", type=int, dest="largeur_px")
+    pv.add_argument("--format", choices=("text", "json"), default="text")
     a = p.parse_args(argv)
+    if a.cmd == "catalogue":
+        cat = cataloguer(a.dir, a.largeur_cm, a.usage, a.out, a.recursif)
+        print(json.dumps(cat, ensure_ascii=False, indent=2)
+              if a.format == "json" else catalogue_texte(cat))
+        return 1 if (a.strict and cat["sous_le_seuil"]) else 0
+    if a.cmd == "convertir":
+        rap = convertir(a.source, a.out, a.largeur_px)
+        if a.format == "json":
+            print(json.dumps(rap, ensure_ascii=False, indent=2))
+        else:
+            print("%s : %s" % (rap["statut"], rap["backend"] or "aucun backend"))
+            for n in rap["notes"]:
+                print("  %s" % n)
+        if rap["statut"] == "converti":
+            return 0
+        return 3 if rap["statut"] == "aucun-backend" else 1
     if a.cmd == "extract":
         m = extract(a.source, a.out, a.min_bytes)
         resume = {k: m[k] for k in ("source", "type", "backend", "count", "doublons", "notes")}

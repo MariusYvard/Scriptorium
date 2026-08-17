@@ -20,7 +20,20 @@ Examinées (titre, résumé) : N3   dont écartées : N4 (motifs)
 Incluses dans la synthèse : N7
 ```
 
-Chaque écart porte un motif (hors sujet, méthode insuffisante, doublon, langue). Le schéma peut se rendre en figure avec `produire` (figure) ou en encadré.
+Chaque écart porte un motif (hors sujet, méthode insuffisante, doublon, langue).
+
+## Rendu en figure
+
+Le type `prisma` de `scripts/figures.py` rend ce schéma en SVG, avec les quatre étapes (identification, criblage, éligibilité, inclusion) et les exclusions sorties latéralement.
+
+```
+echo '{"identifiees":{"Bases de données":420,"Autres sources":15},"doublons":60,
+"examinees":375,"ecartees_titre":[{"motif":"Hors sujet","n":150},{"motif":"Langue non couverte","n":50}],
+"evaluees":175,"ecartees_texte":[{"motif":"Méthode insuffisante","n":90},{"motif":"Population différente","n":50}],
+"incluses":35}' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/figures.py prisma --data - --audit --out prisma.svg --title "Sélection des études"
+```
+
+Lancer `--audit` avant de rendre. Il vérifie que les comptes bouclent aux trois jonctions : identifiées moins doublons égale examinées, examinées moins la somme des écarts au criblage égale évaluées, évaluées moins la somme des écarts en texte intégral égale incluses. Un schéma dont les comptes ne tombent pas juste est faux, quel que soit le soin de son rendu.
 
 ## Tableau de preuves
 

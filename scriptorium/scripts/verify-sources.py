@@ -476,6 +476,16 @@ def rapport_texte(d):
 
 
 def main(argv=None):
+    # Une console Windows en page de code heritee ne sait pas encoder tout ce
+    # qu'un index renvoie (titre en japonais, tiret long, guillemet courbe).
+    # Sans garde, l'impression leve UnicodeEncodeError et la commande echoue
+    # alors que la mesure est juste : le caractere se degrade, jamais le
+    # resultat. Rien n'est reconfigure quand la sortie est deja detournee.
+    for _flux in (sys.stdout, sys.stderr):
+        try:
+            _flux.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
     p = argparse.ArgumentParser(description="Vérificateur de sources Scriptorium.")
     p.add_argument("fichier", help="chemin du fichier, ou - pour stdin")
     p.add_argument("--format", choices=["text", "json"], default="text")

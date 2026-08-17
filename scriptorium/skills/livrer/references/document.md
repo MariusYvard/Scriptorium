@@ -32,6 +32,21 @@ Si une charte graphique existe (`charte-graphique.json`, voir la compétence `pr
 
 Si le document comporte des figures, les produire avec `produire` (figure), vérifier leur regard critique, puis les insérer numérotées et titrées, avec leur source. Une figure est autonome : elle se comprend sans le texte.
 
+Contrôler la numérotation sur le Markdown source avant de couler le document, quelle que soit la voie de sortie.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/traceability.py FICHIER
+```
+
+Le script signale un numéro porté par deux légendes, un numéro sauté (figure 1 puis figure 3), une suite qui ne commence pas à 1, une numérotation d'annexes mêlant chiffres et lettres. Il signale aussi tout objet défini sans être appelé depuis le texte. Il couvre figures, tableaux, équations et annexes.
+
+La liste des figures et la liste des tableaux exigées par `references/mise-en-forme.md` se produisent différemment selon la voie :
+
+- LaTeX : `\listoffigures` et `\listoftables` du gabarit, remplis automatiquement depuis les `\caption` à la deuxième passe.
+- HTML : rien d'automatique, la liste s'écrit comme un `<nav>` de liens vers les `id` des `<figure>` et des `<table>`.
+- Word : rien d'automatique côté plugin, la liste s'écrit à l'insertion ou se délègue au champ "Table des illustrations" de Word, qui se met à jour dans l'application.
+- PDF : hérite de la voie qui l'a produit.
+
 ## 4. Formater et vérifier la bibliographie
 
 Passer la bibliographie au script de vérification avant de la couler dans le document.
@@ -125,6 +140,10 @@ La charte graphique cadre la légende et le filet, comme pour une figure génér
 ## Sortie LaTeX (gabarit charté, rapport professionnel)
 
 Une troisième voie de finalisation, à côté de Word, PDF et HTML : le gabarit `assets/gabarit-rapport.tex`, un rapport professionnel autonome avec page de titre, en-têtes, cinq encadrés sémantiques (résultat, méthode, avertissement, limite, note) et trois macros statistiques (`\pvalue`, `\CI`, `\effectsize`). Adapté du paquet `scientific_report` du dépôt openscience (Apache-2.0), simplifié à un seul fichier compilable.
+
+### Figures dans le gabarit
+
+Le gabarit charge `graphicx`, `float`, `caption` et `subcaption`. Il fixe le style des légendes sur la couleur d'encre de la charte. Un bloc laissé en commentaire dans la section Résultats donne l'environnement `figure` complet (`\includegraphics`, `\caption`, `\label`, dans cet ordre), le renvoi `\ref` depuis le texte et une figure composée en `subfigure`. Le décommenter et remplacer le nom de fichier. Les images se cherchent dans le dossier du `.tex`, dans `figures/` et dans `images/` (`\graphicspath`). Une figure SVG produite par `scripts/figures.py` se convertit en PDF avant inclusion (rsvg-convert, inkscape ou cairosvg) : xelatex n'insère pas de SVG. `\listoffigures` et `\listoftables` suivent le sommaire et se remplissent seuls à la deuxième passe.
 
 ### Quand préférer LaTeX au HTML
 

@@ -10,7 +10,7 @@ Au lancement d'un nouveau document, créer la mémoire de projet.
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py init
 ```
 
-Le squelette contient : titre, genre, problématique, brief, chemin de la charte, chemin du profil de discipline, chemin du plan, glossaire, sources, notes, plus un journal vide, un état vide par étape et un état vide par artefact.
+Le squelette contient : titre, genre, problématique, brief, chemin de la charte, chemin du profil de discipline, chemin du plan, glossaire, liste des objets numérotés, sources, notes, plus un journal vide, un état vide par étape et un état vide par artefact.
 
 ## 2. Remplir au fil du cadrage
 
@@ -41,13 +41,14 @@ Si la mémoire Dream est disponible, y stocker les décisions de cadrage et la c
 
 Chaque événement notable de la mission s'ajoute au journal (clé `journal`) comme une entrée horodatée (ISO 8601) et typée. Une entrée n'est jamais modifiée ni supprimée, seulement ajoutée : `project.py` ne fournit aucune commande qui réécrit une entrée existante, et sa fonction interne de journalisation numérote chaque entrée à la position courante plutôt que d'écrire à un index arbitraire.
 
-Six types d'entrée.
+Sept types d'entrée.
 
 - `etape` : un changement d'état d'étape (voir section 7), avec l'état avant et après.
 - `decision` : une décision clef, journalisée avec `project.py decision "libellé"`.
 - `artefact` : une nouvelle version d'un artefact (voir section 8).
 - `frontiere` : une frontière posée (voir section 6).
 - `reprise` : la reprise d'une frontière.
+- `objet` : le numéro d'une figure, d'un tableau, d'une équation ou d'une annexe, fixé pour la mission (voir section 11).
 - `outrepassement` : un passage outre un blocage, non supprimable (voir `tools/check.py` et `piloter.md`, section friction des outrepassements).
 
 ## 6. Frontières et reprise par hash
@@ -106,6 +107,35 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py reproductibilite --plugin-versi
 
 La commande enregistre une entrée de journal (type `reproductibilite`) avec la version du plugin, le modèle nommé et une date automatique (ISO 8601, comme toute autre entrée). Chaque entrée porte aussi, recopiée en clair, une déclaration de stochasticité fixe : documenter la configuration n'est pas garantir le rejeu, un modèle de langage reste stochastique par nature. Enregistrer une nouvelle configuration (changement de modèle en cours de mission, par exemple) ajoute une entrée, elle ne remplace jamais la précédente, par le même principe d'append-only que le reste du journal (section 5). `project.py status` affiche toutes les entrées de reproductibilité enregistrées.
 
+## 11. Glossaire et objets numérotés transmis au rédacteur
+
+Un document long se rédige section par section, chaque passe confiée à l'agent `redacteur`. Cet agent n'a que Read, Glob et Grep : il ne lit pas `projet.json` et n'y écrit rien. Sans transmission explicite, la passe suivante rebaptise un terme fixé par la précédente et rouvre la numérotation des figures à 1.
+
+Fixer un numéro dès qu'un objet légendé entre dans le document.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py objet figure 3 "Courbe de conversion"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py objet tableau 1 "Conditions opératoires"
+```
+
+Quatre types acceptés : `figure`, `tableau`, `equation`, `annexe`. Réenregistrer le même numéro avec le même libellé ne fait rien. Avec un libellé différent, c'est un refus : un numéro déjà servi ne se réaffecte pas, deux figures 3 dans un même document ne se rattrapent plus à la mise en forme.
+
+Émettre la passation avant chaque appel au rédacteur, puis la coller dans son prompt.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py passation
+```
+
+Elle porte le genre, la problématique, le glossaire des termes fixés, les objets déjà numérotés avec leur libellé et le prochain numéro libre par type. Le format `--format json` sert quand la passation alimente un autre script, le format texte quand elle va dans un prompt. Voir `passations.md`, section sur la passation vers un sous-agent.
+
+Le glossaire se remplit comme les autres champs, par `set`, chaque terme pointant sur sa définition retenue.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/project.py set glossaire '{"banc d essai": "montage instrumenté décrit en 2.1"}'
+```
+
+La clé `objets_numerotes` suit la règle de compatibilité générale : un `projet.json` écrit avant elle se recharge sans erreur, la clé est complétée à vide en mémoire et le fichier reste inchangé tant qu'aucune écriture ne survient.
+
 ## Format de sortie
 
 L'état du projet rechargé (genre, problématique, charte, profil, plan, nombre de sources) et la confirmation de ce qui a été repris. Pour un état complet, utiliser `status` (section 9) plutôt que `show`.
@@ -118,3 +148,4 @@ L'état du projet rechargé (genre, problématique, charte, profil, plan, nombre
 4. Ne jamais stocker de secret ni de token dans `projet.json`.
 5. Le journal ne se réécrit jamais. Une correction s'ajoute comme nouvelle entrée, elle ne remplace pas l'ancienne.
 6. Une entrée de reproductibilité documente la configuration au moment de son enregistrement. Elle ne promet jamais qu'un rejeu ultérieur produise un texte identique.
+7. Un numéro de figure ou de tableau se fixe au moment où l'objet entre dans le document, pas à la mise en forme. Aucune passe de rédaction ne part sans le glossaire ni la liste des numéros déjà servis.

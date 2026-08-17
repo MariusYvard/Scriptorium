@@ -7,7 +7,14 @@ decisions, artefacts, frontieres, reprises, outrepassements), l'etat de
 chaque etape et la version courante de chaque artefact. Recharge au debut
 de chaque session, il evite de repartir de zero. Lit sans casser les
 projet.json ecrits avant cette extension : les cles manquantes (journal,
-etapes, artefacts) sont completees en memoire avec des valeurs vides.
+etapes, artefacts, objets_numerotes) sont completees en memoire avec des
+valeurs vides.
+
+Il porte aussi le contrat de passation vers l'agent redacteur, qui rend son
+texte au parent sans ecrire dans le projet : le glossaire des termes fixes et
+la liste des objets deja numerotes (figures, tableaux, equations, annexes)
+voyagent explicitement, pour qu'une section redigee en deuxieme passe
+n'invente ni un synonyme ni un numero deja pris.
 
 Usage :
     python3 project.py init [--out projet.json]
@@ -42,6 +49,15 @@ Usage :
         journalise la reprise.
     python3 project.py decision LIBELLE [--file projet.json]
         Journalise une decision cle, pour le bilan de fin de mission.
+    python3 project.py objet TYPE NUMERO LIBELLE [--file projet.json]
+        Fixe le numero d'un objet legende (figure, tableau, equation,
+        annexe) pour toute la mission. Reenregistrer le meme numero avec
+        le meme libelle ne fait rien ; avec un libelle different, refus.
+    python3 project.py passation [--format text|json] [--file projet.json]
+        Emet le contrat de passation vers l'agent redacteur : glossaire,
+        objets deja numerotes, prochain numero libre par type. Se colle
+        dans le prompt du sous-agent, qui n'a que Read, Glob et Grep et ne
+        peut donc pas lire le projet lui-meme.
     python3 project.py outrepasser LIBELLE [--justification TEXTE] [--file projet.json]
         Journalise un outrepassement au cran de friction courant (voir
         prochain_cran). tools/check.py appelle en pratique la fonction
@@ -49,8 +65,9 @@ Usage :
         sous-commande, qui reste utile pour un outrepassement hors check.py.
     python3 project.py status [--file projet.json]
         Tableau de bord texte : etapes avec symbole d'etat, artefacts et
-        version courante, decisions en attente, frontieres et hashes,
-        compte d'outrepassements, configuration(s) de reproductibilite.
+        version courante, objets numerotes, decisions en attente,
+        frontieres et hashes, compte d'outrepassements, configuration(s)
+        de reproductibilite.
     python3 project.py reproductibilite --plugin-version X --modele NOM [--file projet.json]
         Documente une configuration de generation (version du plugin,
         modele nomme, date automatique) dans le journal (type
@@ -64,9 +81,12 @@ etat, motif) ; enregistrer_artefact(d, nom) ; poser_frontiere(d, libelle,
 decision_attente) ; reprendre(d, hash_) ; journaliser_outrepassement(path,
 libelle, cran, justification) ; prochain_cran(d) ; compter_outrepassements(d) ;
 valider_justification(cran, justification) ; enregistrer_reproductibilite(d,
-plugin_version, modele) ; statut_texte(d).
+plugin_version, modele) ; statut_texte(d) ; enregistrer_objet(d, type_objet,
+numero, libelle) ; prochain_numero(d, type_objet) ; passation_redacteur(d) ;
+passation_texte(d).
 """
 import argparse
+import copy
 import datetime
 import hashlib
 import json
@@ -82,11 +102,15 @@ SQUELETTE = {
     "profil": "profil.json",
     "plan": "plan.json",
     "glossaire": {},
+    "objets_numerotes": [],
     "sources": [],
     "notes": "",
 }
 
 ETATS_VALIDES = ("en_attente", "en_cours", "termine", "saute", "bloque")
+
+# Objets legendes dont le numero se fixe une fois pour toute la mission.
+TYPES_OBJET = ("figure", "tableau", "equation", "annexe")
 
 # Transitions legales : cle = etat de depart, valeur = ensemble des etats
 # d'arrivee autorises (l'etat de depart s'y trouve toujours, une transition
@@ -120,7 +144,10 @@ STOCHASTICITE_DECLAREE = (
 
 
 def _squelette_v2():
-    d = dict(SQUELETTE)
+    # copie profonde : SQUELETTE porte des conteneurs mutables (glossaire,
+    # objets_numerotes, sources) qu'une copie de surface ferait partager
+    # entre deux projets charges dans le meme processus.
+    d = copy.deepcopy(SQUELETTE)
     d["journal"] = []
     d["etapes"] = {}
     d["artefacts"] = {}
@@ -139,6 +166,13 @@ def charger(path):
         d["etapes"] = {}
     if "artefacts" not in d:
         d["artefacts"] = {}
+    # Meme regle pour la liste des objets numerotes, arrivee apres : un
+    # projet.json ecrit sans elle se lit sans erreur, la cle est completee
+    # a vide en memoire et le fichier reste inchange sur le disque.
+    if "objets_numerotes" not in d:
+        d["objets_numerotes"] = []
+    if "glossaire" not in d:
+        d["glossaire"] = {}
     return d
 
 
@@ -211,6 +245,98 @@ def enregistrer_artefact(d, nom):
     entree = {"type": "artefact", "horodatage": _horodatage(), "nom": nom, "version": nouvelle}
     _ajouter_journal(d, entree)
     return nouvelle
+
+
+def enregistrer_objet(d, type_objet, numero, libelle):
+    """Fixe le numero d'un objet legende pour toute la mission.
+
+    Un document long se redige section par section : sans numero fixe, la
+    deuxieme passe rouvre la numerotation a 1 ou saute un rang. Reenregistrer
+    le meme couple (type, numero) avec le meme libelle est un no-op accepte,
+    avec un libelle different c'est un refus, parce que deux figures 3 dans un
+    meme document ne se rattrapent plus a la mise en forme.
+    """
+    if type_objet not in TYPES_OBJET:
+        raise ValueError(
+            f"type d'objet inconnu : '{type_objet}' (valides : {', '.join(TYPES_OBJET)}).")
+    try:
+        numero = int(numero)
+    except (TypeError, ValueError):
+        raise ValueError(f"numero non entier : {numero!r}.")
+    if numero < 1:
+        raise ValueError(f"numero hors bornes : {numero} (le premier rang est 1).")
+    libelle_propre = (libelle or "").strip()
+    if not libelle_propre:
+        raise ValueError("un objet numerote porte un libelle non vide.")
+    objets = d.setdefault("objets_numerotes", [])
+    for o in objets:
+        if o.get("type") == type_objet and o.get("numero") == numero:
+            if o.get("libelle") == libelle_propre:
+                return o
+            raise ValueError(
+                f"{type_objet} {numero} est deja pris par '{o.get('libelle')}' : "
+                f"choisir un autre numero plutot que reaffecter celui-ci.")
+    objet = {"type": type_objet, "numero": numero, "libelle": libelle_propre,
+             "maj": _horodatage()}
+    objets.append(objet)
+    _ajouter_journal(d, {"type": "objet", "horodatage": _horodatage(),
+                         "objet": type_objet, "numero": numero,
+                         "libelle": libelle_propre})
+    return objet
+
+
+def prochain_numero(d, type_objet):
+    """Premier numero libre pour un type d'objet : le maximum pose, plus un."""
+    poses = [o["numero"] for o in d.get("objets_numerotes") or []
+             if o.get("type") == type_objet and isinstance(o.get("numero"), int)]
+    return max(poses) + 1 if poses else 1
+
+
+def passation_redacteur(d):
+    """Contrat de passation vers l'agent redacteur.
+
+    L'agent redacteur n'a que Read, Glob et Grep et rend son texte au parent :
+    il ne lit pas projet.json et n'y ecrit rien. Ce que le parent ne lui passe
+    pas explicitement n'existe pas pour lui, donc le glossaire des termes
+    fixes et les objets deja numerotes voyagent ici, avec le prochain numero
+    libre par type pour que la section suivante ne rouvre pas la serie.
+    """
+    return {
+        "genre": d.get("genre", ""),
+        "problematique": d.get("problematique", ""),
+        "glossaire": dict(d.get("glossaire") or {}),
+        "objets_numerotes": [dict(o) for o in (d.get("objets_numerotes") or [])],
+        "prochains_numeros": {t: prochain_numero(d, t) for t in TYPES_OBJET},
+    }
+
+
+def passation_texte(p):
+    """Passation en texte, a coller dans le prompt du sous-agent redacteur."""
+    lignes = ["=== Passation vers le redacteur ==="]
+    if p.get("genre"):
+        lignes.append(f"Genre : {p['genre']}")
+    if p.get("problematique"):
+        lignes.append(f"Problematique : {p['problematique']}")
+    lignes.append("")
+    lignes.append("Glossaire (termes fixes, a employer tels quels, sans synonyme) :")
+    if not p["glossaire"]:
+        lignes.append("  (aucun terme fixe)")
+    else:
+        for terme in sorted(p["glossaire"]):
+            lignes.append(f"  {terme} : {p['glossaire'][terme]}")
+    lignes.append("")
+    lignes.append("Objets deja numerotes (ne pas renumeroter, ne pas reutiliser) :")
+    if not p["objets_numerotes"]:
+        lignes.append("  (aucun objet numerote)")
+    else:
+        for o in sorted(p["objets_numerotes"],
+                        key=lambda x: (x.get("type", ""), x.get("numero", 0))):
+            lignes.append(f"  {o.get('type')} {o.get('numero')} : {o.get('libelle')}")
+    lignes.append("")
+    lignes.append("Prochain numero libre : "
+                  + ", ".join(f"{t} {p['prochains_numeros'][t]}"
+                              for t in sorted(p["prochains_numeros"])))
+    return "\n".join(lignes)
 
 
 def enregistrer_reproductibilite(d, plugin_version, modele):
@@ -340,6 +466,14 @@ def statut_texte(d):
         for nom in sorted(artefacts):
             lignes.append(f"  {nom:<20} {artefacts[nom]['version']}")
     lignes.append("")
+    lignes.append("Objets numerotes :")
+    objets = d.get("objets_numerotes") or []
+    if not objets:
+        lignes.append("  (aucun)")
+    else:
+        for o in sorted(objets, key=lambda x: (x.get("type", ""), x.get("numero", 0))):
+            lignes.append(f"  {o.get('type')} {o.get('numero'):<3} {o.get('libelle')}")
+    lignes.append("")
     repro = [e for e in d.get("journal", []) if e.get("type") == "reproductibilite"]
     lignes.append("Reproductibilite :")
     if not repro:
@@ -417,6 +551,16 @@ def main(argv=None):
     dc = sub.add_parser("decision")
     dc.add_argument("libelle")
     dc.add_argument("--file", default="projet.json")
+
+    ob = sub.add_parser("objet")
+    ob.add_argument("type_objet", choices=list(TYPES_OBJET))
+    ob.add_argument("numero", type=int)
+    ob.add_argument("libelle")
+    ob.add_argument("--file", default="projet.json")
+
+    ps = sub.add_parser("passation")
+    ps.add_argument("--format", choices=("text", "json"), default="text")
+    ps.add_argument("--file", default="projet.json")
 
     op = sub.add_parser("outrepasser")
     op.add_argument("libelle")
@@ -513,6 +657,23 @@ def main(argv=None):
         _ajouter_journal(d, entree)
         sauver(a.file, d)
         print(f"Decision journalisee : {a.libelle}")
+        return 0
+
+    if a.cmd == "objet":
+        d = charger(a.file)
+        try:
+            objet = enregistrer_objet(d, a.type_objet, a.numero, a.libelle)
+        except ValueError as e:
+            print(f"Erreur : {e}")
+            return 1
+        sauver(a.file, d)
+        print(f"{objet['type']} {objet['numero']} : {objet['libelle']}")
+        return 0
+
+    if a.cmd == "passation":
+        p = passation_redacteur(charger(a.file))
+        print(json.dumps(p, ensure_ascii=False, indent=2)
+              if a.format == "json" else passation_texte(p))
         return 0
 
     if a.cmd == "outrepasser":

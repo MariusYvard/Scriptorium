@@ -130,9 +130,21 @@ Spécifications appliquées à l'étape de finalisation. Le fond est déjà vali
 
 - Préambule, définitions, articles numérotés, clauses énumérées, annexes ; "doit" pour les obligations.
 
+## Listes de figures et de tableaux
+
+Les pages liminaires d'un rapport scientifique ou d'un mémoire comprennent une liste des figures et une liste des tableaux. Elles ne se produisent pas de la même façon selon la voie de sortie.
+
+- LaTeX : `\listoffigures` et `\listoftables`, placés après `\tableofcontents` dans `assets/gabarit-rapport.tex`. Les deux listes se remplissent seules à partir des `\caption`, à la deuxième passe de compilation. Une figure sans `\caption` n'y figure pas.
+- HTML : aucune génération automatique. La liste se construit à la main, en `<nav>` de liens vers les `id` posés sur chaque `<figure>` et chaque `<table>`, avec le numéro et la légende repris à l'identique du `<figcaption>` et du `<caption>`. La feuille produite par `theme.py --format css` met en forme figures et légendes, elle ne fabrique aucune liste.
+- Word : aucune génération par le plugin. Deux options. La liste s'écrit comme un paragraphe de renvois numérotés à l'insertion du document. Ou elle se délègue au champ natif "Table des illustrations" de Word, qui exige que chaque légende ait été posée avec le style de légende de Word et se met à jour dans l'application, pas depuis le skill `docx`.
+- PDF : hérite de la voie qui l'a produit, LaTeX ou conversion du HTML.
+
+Avant de générer les listes, vérifier la numérotation sur le Markdown source : `traceability.py` signale un numéro en double, un numéro sauté, une suite qui ne commence pas à 1 et un objet jamais appelé depuis le texte. Une liste de figures construite sur une numérotation fautive reproduit la faute.
+
 ## Constantes de forme
 
 - Style maison respecté jusque dans les légendes et les notes.
 - Une seule norme bibliographique par document.
 - Figures et tableaux autonomes : titre, axes, unités, source.
+- Numérotation continue par type d'objet, commençant à 1, sans trou ni doublon, chaque objet appelé depuis le texte.
 - Pagination, sommaire à jour, abréviations définies.

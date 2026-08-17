@@ -54,7 +54,13 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/plan-check.py plan.json FICHIER
 
 Pour un audit consolidé en une commande, lancer `audit-doc.py FICHIER` (scorecard, empreinte IA, cohérence, tableaux).
 
-Le linter signale les ecarts de style par severite (code de sortie 1 si un constat critique subsiste). Les metriques chiffrent le rythme (longueur de phrase, ecart-type, indice LIX). Le verificateur nettoie les URL et repere doublons et DOI douteux. La traçabilité contrôle les références orphelines ou pendantes et les appels de figures, la terminologie le glossaire et les sigles, les nombres les pourcentages et les unités. Le scorecard agrège le tout en une note sur 100 (départ 20 par axe, pénalités fixes, calcul montré). Traiter les constats critiques avant la revue de fond. L'empreinte IA mesure les tics d'écriture générée, la cohérence repère les redites et duplications, l'audit de tableaux et la conformité au plan ferment les dernières boucles. Pour une validation à fort enjeu, lancer la compétence `controler` (consensus) (vote de trois agents ancré sur le scorecard).
+Le linter signale les ecarts de style par severite (code de sortie 1 si un constat critique subsiste). Les metriques chiffrent le rythme (longueur de phrase, ecart-type, indice LIX). Le verificateur nettoie les URL et repere doublons et DOI douteux. La traçabilité contrôle les références orphelines ou pendantes, les appels de figures, de tableaux, d'équations et d'annexes, ainsi que la séquence de leurs numéros (voir plus bas), la terminologie le glossaire et les sigles, les nombres les pourcentages et les unités. Le scorecard agrège le tout en une note sur 100 (départ 20 par axe, pénalités fixes, calcul montré). Traiter les constats critiques avant la revue de fond. L'empreinte IA mesure les tics d'écriture générée, la cohérence repère les redites et duplications, l'audit de tableaux et la conformité au plan ferment les dernières boucles. Pour une validation à fort enjeu, lancer la compétence `controler` (consensus) (vote de trois agents ancré sur le scorecard).
+
+### Séquence des numéros d'objets
+
+Un objet numéroté ne se contrôle pas seulement par son appel. La séquence se vérifie aussi, type par type (figures, tableaux, équations, annexes) : deux légendes portant le même numéro, un numéro absent de l'intervalle observé (figure 1 puis figure 3), une suite qui ne commence pas à 1, une numérotation d'annexes mêlant chiffres et lettres. `traceability.py` rend ces constats sous la clé `numerotation_anomalies`. Le détail par type se lit sous `sequences`.
+
+Sévérité : un doublon ou un saut est un constat majeur, la lecture renvoyant à un objet introuvable ou ambigu. Une suite qui ne commence pas à 1 est un constat mineur quand le document est un extrait d'un ensemble plus large (le préciser alors dans le texte), majeur sinon.
 
 ## Revue adversariale
 

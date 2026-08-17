@@ -1,6 +1,6 @@
 # Scripts déterministes de Scriptorium
 
-Vingt-quatre outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Vingt-six outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
@@ -49,14 +49,14 @@ python3 theme.py charte.json [--format text|json|css|latex]
 
 ## figures.py
 
-Génère des figures stratégiques en SVG (sans dépendance) et porte un regard critique déterministe sur la figure avant insertion.
+Génère des figures en SVG (sans dépendance) et porte un regard critique déterministe sur la figure avant insertion. Deux familles : les figures stratégiques rangent des éléments dans des cases, les figures de données portent des axes gradués dont chacun reçoit un titre et son unité.
 
 ```
 python3 figures.py TYPE --out fichier.svg [--data data.json|-] [--title "Titre"]
 python3 figures.py TYPE --data - --audit < data.json
 ```
 
-TYPE : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`. L'option `--audit` liste les défauts structurels (cases vides, surcharge, déséquilibre, valeurs hors bornes, points non étiquetés) sans écrire de fichier.
+TYPE stratégiques : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`. TYPE de données : `courbe`, `nuage`, `histogramme`, `boite`, `flux`, `prisma`. L'option `--audit` liste les défauts structurels (cases vides, surcharge, déséquilibre, valeurs hors bornes, points non étiquetés, axe sans titre ou sans unité, échelle d'histogramme tronquée, quartiles hors ordre, comptes PRISMA qui ne bouclent pas) sans écrire de fichier.
 
 Formats de données attendus :
 
@@ -66,10 +66,27 @@ Formats de données attendus :
 - pestel : `{"politique":[...],"economique":[...],"social":[...],"technologique":[...],"environnemental":[...],"legal":[...]}`
 - chaine-valeur : `{"soutien":[...],"principales":[...]}`
 - tam-sam-som : `{"tam":{"libelle":"...","valeur":"..."},"sam":{...},"som":{...}}` (audit : ordre TAM >= SAM >= SOM)
+- courbe : `{"axe_x":{"titre":"...","unite":"..."},"axe_y":{...},"series":[{"nom":"...","points":[[x,y]],"erreurs":[e]}]}`
+- nuage : `{"axe_x":{...},"axe_y":{...},"series":[{"nom":"...","points":[[x,y]],"ajustement":true}]}` (droite des moindres carrés déclarée en légende)
+- histogramme : `{"axe_x":{"titre":"..."},"axe_y":{"titre":"...","unite":"..."},"barres":[{"categorie":"...","valeur":n,"erreur":e}]}` (ordonnées à partir de zéro)
+- boite : `{"axe_x":{...},"axe_y":{...},"groupes":[{"nom":"...","valeurs":[...]}]}` ou les cinq nombres `min`, `q1`, `mediane`, `q3`, `max` avec `aberrants`
+- flux : `{"niveaux":[{"titre":"...","boites":[{"libelle":"...","effectif":n,"sous":[...],"exclusions":[{"libelle":"...","effectif":n}]}]}]}`
+- prisma : `{"identifiees":{"source":n},"doublons":n,"examinees":n,"ecartees_titre":[{"motif":"...","n":n}],"evaluees":n,"ecartees_texte":[...],"incluses":n}` (audit : les comptes bouclent aux trois jonctions)
+
+Les séries d'une figure de données se distinguent par la couleur et par un second canal (forme du marqueur, style de trait). Les couleurs viennent de la palette de la charte, filtrées sur leur contraste avec le fond.
 
 ## traceability.py
 
-Boucle la traçabilité : références citées mais absentes de la bibliographie, références listées mais jamais citées, figures et tableaux définis mais non appelés, appels à un objet inexistant. Compte aussi les tags de lacune normalisés `[LACUNE MATERIELLE]` et `[PREUVE FAIBLE]` (casse stricte), ventilés par section, et signale toute variante mal formée.
+Boucle la traçabilité : références citées mais absentes de la bibliographie, références listées mais jamais citées, objets définis mais non appelés, appels à un objet inexistant. Quatre types d'objets sont suivis : figures, tableaux, équations et annexes. Compte aussi les tags de lacune normalisés `[LACUNE MATERIELLE]` et `[PREUVE FAIBLE]` (casse stricte), ventilés par section, et signale toute variante mal formée.
+
+Contrôle en plus la séquence des numéros, type par type : deux légendes portant le même numéro, un numéro absent de l'intervalle observé (figure 1 puis figure 3), une suite qui ne commence pas à 1, une numérotation d'annexes qui mélange chiffres et lettres. Apparier les numéros ne suffit pas, un document où la figure 2 manque reste cohérent au sens des appels alors qu'il est faux à la lecture.
+
+Motifs de légende retenus, sur le Markdown source :
+
+- Figure, tableau, annexe : une ligne qui ouvre sur le nom du type suivi de son numéro et d'un séparateur (`Figure 1 :`, `Tableau 2.`, `Annexe B :`), précédée au besoin d'une image Markdown. Les annexes se numérotent en chiffres ou en lettres capitales, sont lues sur le texte entier (elles se placent après la bibliographie) et la lettre doit rester capitale pour que "l'annexe a été jointe" ne passe pas pour une annexe A.
+- Équation : trois notations acceptées, la légende en toutes lettres (`Équation 3 :`), la balise LaTeX `\tag{3}`, le numéro de droite en fin de ligne d'affichage (`$$ ... $$ (3)`). Une seule est comptée par ligne. La numérotation automatique de LaTeX (`\begin{equation}` sans `\tag`) ne laisse aucun numéro dans la source et sort du périmètre, le compilateur tenant alors la séquence.
+
+Clés ajoutées à la sortie de `analyser()` : `equations_definies_non_appelees`, `equations_appelees_non_definies`, `annexes_definies_non_appelees`, `annexes_appelees_non_definies`, `sequences` (par type d'objet : `numeros`, `doublons`, `manquants`, `commence_a`, `commence_a_un`, `notation`) et `numerotation_anomalies` (liste de constats nommés `numero_duplique`, `numero_manquant`, `ne_commence_pas_a_un`, `notation_mixte`). Les clés antérieures sont inchangées, `scorecard.py` continue de les lire.
 
 ```
 python3 traceability.py FICHIER [--format text|json]
@@ -169,10 +186,14 @@ python3 plan-check.py PLAN.json DOCUMENT.md [--format text|json]
 
 Mémoire de projet : un fichier projet.json conserve le brief, la charte, le glossaire, les sources, le profil et le plan, plus un journal de mission append-only (entrées horodatées, jamais modifiées). Les frontières portent un hash de continuité (SHA-256 du journal, 12 hexadécimaux) et la reprise se fait par ce hash, une seule fois chacune. Les étapes suivent cinq états à transitions vérifiées, les artefacts des versions strictement croissantes, la configuration de génération se documente sans promettre le rejeu.
 
+Il porte aussi le contrat de passation vers l'agent `redacteur`. Cet agent n'a que Read, Glob et Grep et rend son texte au parent : il ne lit pas `projet.json` et n'y écrit rien, donc ce que le parent ne lui passe pas explicitement n'existe pas pour lui. `objet` fixe le numéro d'un objet légendé (figure, tableau, équation, annexe) pour toute la mission, refuse de réaffecter un numéro déjà pris à un autre libellé et accepte le même enregistrement à l'identique. `passation` émet le glossaire des termes fixés, les objets déjà numérotés et le prochain numéro libre par type, en JSON ou en texte à coller dans le prompt du sous-agent, pour que la section suivante n'invente ni un synonyme ni un numéro déjà servi. La clé `objets_numerotes` suit la règle de compatibilité du script : absente d'un `projet.json` écrit avant elle, elle est complétée à vide en mémoire sans rien réécrire sur le disque.
+
 ```
 python3 project.py init | show | get CLE | set CLE VALEUR
 python3 project.py etape NOM ETAT [--motif TEXTE]
 python3 project.py artefact NOM | frontiere "LIBELLE" | reprendre HASH
+python3 project.py objet figure|tableau|equation|annexe NUMERO "LIBELLE"
+python3 project.py passation [--format text|json]
 python3 project.py reproductibilite --plugin-version X.Y.Z --modele NOM
 python3 project.py status
 ```
@@ -197,9 +218,17 @@ python3 audit-doc.py FICHIER [--format text|json]
 
 Extrait les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel, ODF), déduplique par empreinte, lit les dimensions dans l'en-tête, écrit un manifeste JSON. Le PDF passe par un backend optionnel (PyMuPDF, pdfimages, pypdf) ou, à défaut, par le skill pdf.
 
+`catalogue` applique les mêmes mesures à un dossier d'illustrations déjà produites (photos de dispositif, captures d'écran, schémas faits ailleurs) plutôt qu'aux médias tirés d'un document. Le catalogue écrit sert de liste des figures : par illustration, nom de fichier, format, dimensions, poids, empreinte, doublon éventuel, résolution effective à la largeur d'insertion prévue, largeur maximale qui tiendrait encore le seuil, plus un verdict pris dans une liste fermée (`utilisable`, `sous le seuil`, `doublon`, `dimensions illisibles`, `vecteur, resolution sans objet`, `hors perimetre`). Un fichier vectoriel n'est pas jugé sur une résolution qu'il n'a pas, un fichier qui n'est pas une image sort du périmètre sans devenir une alerte.
+
+`convertir` rend un SVG en PNG pour la voie Word, qui n'affiche pas un SVG de façon fiable. Backends optionnels en cascade, dans l'ordre `rsvg-convert`, `inkscape`, le module Python `cairosvg`, puis ImageMagick (`magick` ou `convert`), aucun n'étant une dépendance du plugin. L'identité d'ImageMagick est vérifiée par `-version` avant usage : sous Windows, `convert.exe` est l'utilitaire système de conversion FAT vers NTFS, homonyme sans rapport, présent sur toute installation. Sans aucun backend, la commande sort en code 3 avec le statut `aucun-backend`, dit ce qu'il faut installer et déclare que le fichier source n'est pas en cause, ce qui la distingue de `echec-backend` (les backends présents ont échoué, le SVG est fautif), `source-absente` et `source-non-svg`.
+
+Le calcul de résolution effective (pixels divisés par la largeur en pouces) et ses seuils consultatifs (300 dpi à l'impression, 150 dpi à l'écran) vivent ici pour tout le plugin. `logos.py` les reprend par import de chemin, comme `gabarit.py` importe déjà `images.py` : une photo de dispositif se mesure avec la même règle qu'un logo.
+
 ```
 python3 images.py extract SOURCE --out DIR [--min-bytes N]
 python3 images.py manifest DIR
+python3 images.py catalogue DIR [--out FICHIER] [--largeur-cm N] [--usage impression|ecran] [--recursif] [--format text|json] [--strict]
+python3 images.py convertir FIGURE.svg --out FIGURE.png [--largeur-px N] [--format text|json]
 ```
 
 ## gabarit.py
@@ -243,9 +272,50 @@ La détection de mise à jour incrémentale d'un PDF suit la même logique. Un o
 
 Le rapport se termine par ce que le contrôle ne regarde pas (contenu rédactionnel, métadonnées des images incorporées, macros et code embarqué, enveloppe seule d'un PDF chiffré, objets rangés dans un flux compressé), pour qu'une absence de constat ne se lise pas comme un quitus.
 
+## check-droits.py
+
+Droits de réutilisation d'une figure tierce, à contrôler avant de reproduire une image extraite d'une publication. Citer la source règle l'honnêteté intellectuelle, pas le droit de reproduction : une figure est une oeuvre protégée indépendamment du texte de l'article qui la porte. Le script résout la licence déclarée d'une source par son DOI, la classe sur quatre verdicts fermés, écrit la ligne d'attribution conforme puis valide le registre des figures empruntées.
+
+```
+python3 check-droits.py licence --doi 10.xxxx/yyyy [--reseau] [--openalex-cle CLE] [--format text|json] [--strict]
+python3 check-droits.py registre REGISTRE.json [--reseau] [--format text|json] [--strict]
+python3 check-droits.py credits REGISTRE.json [--sortie texte|html|latex]
+```
+
+Quatre verdicts : `reutilisable avec attribution` (CC BY, CC0, domaine public), `reutilisable sous conditions` (CC BY-SA impose sa licence au document dérivé, CC BY-NC ferme l'usage commercial, CC BY-ND interdit toute adaptation donc tout recadrage), `autorisation requise` (tous droits réservés, cas ordinaire d'une revue sur abonnement), `licence inconnue` (aucun index n'a répondu ou aucune licence déclarée). Le quatrième ne se confond jamais avec le troisième, comme `non mesurable` ne se confond pas avec `lecture non fiable` dans check-lecture-pdf.py : une absence d'information n'est ni une interdiction, ni une permission.
+
+Le réseau est optionnel derrière `--reseau` et réutilise les fonctions de requête de verify-sources.py, chargées par chemin. Crossref porte un tableau `license` (URL, date d'application, version de contenu visée), OpenAlex porte la licence de la meilleure localisation ouverte plus le statut d'accès ouvert. Un tableau `license` rempli ne vaut pas licence de réutilisation : une revue sur abonnement y déclare souvent ses seules conditions de fouille de textes, qui ne couvrent pas la republication d'une figure. Un index qui ne répond pas sort du calcul et le dit.
+
+Sur `autorisation requise` ou `licence inconnue`, le script nomme l'alternative qui évite la question. Les données ne sont pas protégeables : refaire la figure à partir des valeurs publiées, avec son propre rendu et la mention "d'après les données de X", ne reproduit aucune oeuvre. Il renvoie vers les types de figures de données de figures.py (`courbe`, `nuage`, `histogramme`, `boite`, `flux`, `prisma`).
+
+Le registre est un JSON déclaratif de même forme que `assets/registre-logos.exemple.json` : une entrée par figure empruntée, avec sa source, son DOI, sa licence, son verdict, l'état de la demande d'autorisation (`non demandee`, `demandee`, `obtenue`, `refusee`) et la mention des modifications. La validation refuse un identifiant dupliqué, une source absente, un verdict hors liste fermée, un verdict que la licence déclarée contredit, un recadrage sous licence ND, une autorisation refusée. Le verdict du registre se ferme sur quatre valeurs : registre invalide, autorisations a obtenir, licences a etablir, credits complets. Consultatif par défaut, `--strict` renvoie 1 hors de `credits complets`.
+
+Le script rapporte ce que la licence déclare, il ne prononce pas la légalité d'un usage : le contrat d'une revue ou la politique d'un employeur peuvent en décider autrement. Familles de licences, procédure d'autorisation auprès d'un éditeur et forme du registre dans `skills/produire/references/droits-figures.md`.
+
+## emprunts.py
+
+Chaînon amont de check-droits.py : celui-ci dit ce que la licence permet, celui-là dit de quelle figure il s'agit et d'où le fichier vient. `images.py` sort des images anonymes, que rien ne relie à "Figure 3" ni à sa légende ; `emprunts.py` pose ce lien avec une confiance mesurée et refuse de l'affirmer quand la page est ambiguë.
+
+```
+python3 emprunts.py inventorier SOURCE.pdf [--out DIR] [--min-bytes N] [--format text|json] [--strict]
+python3 emprunts.py localiser --doi 10.xxxx/yyyy [--reseau] [--openalex-cle CLE] [--format text|json] [--strict]
+python3 emprunts.py recuperer --doi 10.xxxx/yyyy --out FICHIER.pdf [--reseau] [--format text|json] [--strict]
+python3 emprunts.py chainer --doi 10.xxxx/yyyy [--out DIR] [--source FICHIER.pdf] [--figure N] [--modifications TEXTE] [--registre R.json] [--reseau] [--format text|json] [--strict]
+```
+
+`inventorier` extrait les images par `images.py`, lit le texte page par page par la cascade de backends de check-presentation.py (déjà partagée avec check-lecture-pdf.py, chargée par chemin plutôt que redite), repère les légendes en tête de ligne (`Figure 3.`, `Fig. 3`, `Figure 3:`, `Tableau 2.`, plus les formes anglaises `Figure`, `Fig.` et `Table`) puis les apparie aux images de la même page. L'appariement est une heuristique de mise en page et chaque fiche porte son niveau : `elevee` (une image et une légende sur la page), `moyenne` (comptes égaux pour plus d'une image, appariement par ordre de lecture), `faible` (comptes divergents), `nulle` (aucune légende disponible, le libellé restant vide). Cinq verdicts fermés : `inventaire apparie`, `inventaire partiel`, `inventaire sans legende`, `inventaire non apparie`, `extraction impossible`. Sans backend de texte, l'inventaire rend les images sans légende et le déclare, comme check-lecture-pdf.py dégrade vers `non mesurable` : il n'invente aucune légende. Les légendes repérées sans image extraite sont listées à part, signe d'une figure vectorielle tracée dans la page.
+
+`localiser` interroge OpenAlex pour l'état d'accès ouvert (`is_oa`, `oa_status`), l'adresse du PDF de la meilleure localisation ouverte et la licence déclarée. État fermé sur quatre valeurs : `acces ouvert confirme`, `acces ouvert sans fichier`, `acces non ouvert`, `localisation inconnue`. Sans `--reseau` ou quand l'index ne répond pas, l'état reste inconnu : une mesure omise, jamais une valeur supposée.
+
+`recuperer` ne télécharge que depuis une localisation déclarée en accès ouvert par l'index. Le script ne contourne aucun contrôle d'accès, ne présente aucun identifiant et ne tente aucune adresse devinée. La garantie est structurelle : la fonction prend la fiche produite par `localiser` plutôt qu'une adresse libre, puis elle lit l'adresse dedans. Les refus sont des chemins de première classe, distincts et testés : `refus source non ouverte` (un article sous abonnement se demande à son éditeur, il ne se contourne pas, voir la procédure de `droits-figures.md`), `refus adresse absente` (source ouverte mais aucune adresse publiée, ouvrir la page de dépôt à la main), `refus localisation inconnue` (une absence d'information ne vaut pas licence de télécharger). Une réponse sans en-tête `%PDF-` n'est pas écrite, pour qu'une page intermédiaire de dépôt ne passe pas pour un article.
+
+`chainer` enchaîne localisation, récupération quand la source est ouverte, inventaire, appel à check-droits.py pour le verdict de licence et la ligne d'attribution, puis écriture de l'entrée dans le registre des figures empruntées. L'entrée porte la source, le DOI, le numéro de figure, la légende d'origine, la licence, le verdict, la mention des modifications et le chemin du fichier récupéré ; elle est validée par `valider_registre` de check-droits.py avant d'être écrite. Un registre existant se complète entrée par entrée. Verdict fermé sur cinq valeurs : `emprunt prepare`, `autorisation a demander`, `licence a etablir`, `source non ouverte`, `chaine incomplete`. Sur `autorisation requise` ou `licence inconnue`, le rapport nomme les deux voies ouvertes : demande écrite à l'éditeur ou redessin depuis les données publiées avec les types de figures.py. `--source` court-circuite la récupération quand le PDF est déjà possédé.
+
+Limite honnête de l'appariement : il lit une mise en page, pas une figure. Une légende posée sur la page voisine de son image, une figure pleine page dont la légende tombe à la page suivante, une image découpée en quatre objets par le producteur du PDF, un backend qui ne dit pas la page d'origine (`pdfimages`) sortent tous de sa portée. Ils se traduisent par une confiance basse ou nulle plutôt que par un appariement affirmé.
+
 ## logos.py
 
-Registre de logos, séparé de la charte graphique parce qu'un logo obéit aux règles de l'organisation qui le possède (zone de respiration, taille minimale, usages autorisés, rang protocolaire) et non à celles du document. `valider` contrôle le format du registre, l'existence des fichiers, le ratio déclaré et la résolution effective de chaque logo à la taille où il sera affiché (pixels divisés par la largeur en pouces, seuils consultatifs de 300 dpi à l'impression et 150 dpi à l'écran). `placer` rend le fragment prêt à insérer pour un usage, en HTML ou en LaTeX ; en docx l'insertion réelle passe par `gabarit.py remplir --logo`, qui écrit aussi la relation et le manifeste de types.
+Registre de logos, séparé de la charte graphique parce qu'un logo obéit aux règles de l'organisation qui le possède (zone de respiration, taille minimale, usages autorisés, rang protocolaire) et non à celles du document. `valider` contrôle le format du registre, l'existence des fichiers, le ratio déclaré et la résolution effective de chaque logo à la taille où il sera affiché (calcul et seuils repris de `images.py`, source unique pour toute illustration du plugin). `placer` rend le fragment prêt à insérer pour un usage, en HTML ou en LaTeX ; en docx l'insertion réelle passe par `gabarit.py remplir --logo`, qui écrit aussi la relation et le manifeste de types.
 
 ```
 python3 logos.py valider REGISTRE.json [--format text|json] [--strict]

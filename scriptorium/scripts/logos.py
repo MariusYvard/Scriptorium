@@ -18,12 +18,18 @@ Deux actions :
 Aucune verification n'est bloquante a ce stade sauf une erreur de format ou un
 fichier absent : une resolution basse est un avertissement, pas un refus.
 
+Le calcul de resolution effective et ses seuils vivent dans images.py, qui les
+porte pour toute illustration du plugin. Ce module les reprend sous les memes
+noms (resolution_effective, DPI_IMPRESSION, DPI_ECRAN, POUCE_CM) sans en tenir
+une seconde copie.
+
 Usage :
   python3 logos.py valider REGISTRE.json [--format text|json] [--strict]
   python3 logos.py placer REGISTRE.json --usage page-garde|en-tete|pied|
                    co-signature --format docx|latex|html [--sortie text|json]
 """
 import argparse
+import importlib.util
 import json
 import os
 import sys
@@ -31,25 +37,40 @@ import sys
 USAGES = ("page-garde", "en-tete", "pied", "co-signature")
 VECTORIELS = ("svg", "eps", "pdf", "emf", "wmf")
 
-# Seuils consultatifs de resolution effective, en points par pouce.
-DPI_IMPRESSION = 300
-DPI_ECRAN = 150
-POUCE_CM = 2.54
-
 # Largeurs par defaut, en centimetres, quand le registre n'en fixe pas.
 LARGEURS = {"page-garde": 5.0, "en-tete": 2.5, "pied": 2.0,
             "co-signature": 3.0}
 
 
-def _images():
-    """Delegue la lecture des dimensions a images.py, source unique."""
-    import importlib.util
+def _charger_images():
+    """Charge images.py par chemin, une seule fois au niveau module.
+
+    Meme idiome que gabarit.py et check-lecture-pdf.py : le plugin n'est pas
+    un paquet importable, ses scripts se chargent par chemin depuis le
+    dossier voisin.
+    """
     chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "images.py")
     spec = importlib.util.spec_from_file_location("images_mod", chemin)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+_IMG = _charger_images()
+
+# Seuils et calcul de resolution effective : images.py les porte pour tout le
+# plugin (une photo de dispositif se mesure comme un logo), ils sont repris
+# ici sous les memes noms plutot que redits.
+DPI_IMPRESSION = _IMG.DPI_IMPRESSION
+DPI_ECRAN = _IMG.DPI_ECRAN
+POUCE_CM = _IMG.POUCE_CM
+resolution_effective = _IMG.resolution_effective
+
+
+def _images():
+    """Module images.py deja charge, source unique de la lecture de dimensions."""
+    return _IMG
 
 
 def charger(source):
@@ -69,13 +90,6 @@ def charger(source):
     reg.setdefault("logos", [])
     reg["_racine"] = racine
     return reg
-
-
-def resolution_effective(pixels, largeur_cm):
-    """Points par pouce reels a la taille d'affichage demandee."""
-    if not pixels or not largeur_cm:
-        return None
-    return pixels / (largeur_cm / POUCE_CM)
 
 
 def largeur_usage(logo, usage):

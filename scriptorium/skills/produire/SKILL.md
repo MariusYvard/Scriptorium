@@ -1,9 +1,9 @@
 ---
 name: produire
 description: >
-  Produit le contenu d'un document et fixe ses règles d'écriture. Onze sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-six genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer, trianguler et vérifier sources et citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA, standards EQUATOR. veille : surveillance documentaire, rétractations "mets en place une veille". figure : schéma SVG (SWOT, PESTEL, BCG). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale, calibrage d'un style personnel. charte : identité visuelle. gabarit : inventorier un gabarit de document imposé (texte ou diapositives OOXML, ODF, PDF) ou une consigne de forme, et le rendre vérifiable "j'ai un modèle imposé", "le rapport doit suivre le gabarit de l'école". logos : registre de logos, zone de respiration, ordre protocolaire, placement "place le logo", "mets les logos de l'école et du labo". image : extraire et replacer les images d'un document. Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
+  Produit le contenu d'un document et fixe ses règles d'écriture. Onze sous-commandes. genre : rédiger ou réécrire un texte de haut niveau parmi vingt-six genres sourcés (académique, professionnel, stratégique, commercial, juridique, technique, financier, public, médical, communication) "rédige un rapport", "écris l'introduction". sourcer : trouver, pondérer, trianguler et vérifier sources et citations "trouve des sources", "vérifie ce fait". revue-litterature : synthèse multi-sources, PRISMA, standards EQUATOR. veille : surveillance documentaire, rétractations "mets en place une veille". figure : schéma stratégique en SVG (SWOT, PESTEL, BCG) ou figure de données avec audit structurel (courbe, histogramme, PRISMA). tableau : générer ou auditer un tableau. equation : LaTeX, unités SI. style : style maison, charte éditoriale, calibrage d'un style personnel. charte : identité visuelle. gabarit : inventorier un gabarit de document imposé (texte ou diapositives OOXML, ODF, PDF) ou une consigne de forme, et le rendre vérifiable "j'ai un modèle imposé", "le rapport doit suivre le gabarit de l'école". logos : registre de logos, zone de respiration, ordre protocolaire, placement "place le logo", "mets les logos de l'école et du labo". image : extraire, cataloguer et apparier les images d'un document ou d'un dossier d'illustrations, contrôler les droits de réutilisation d'une figure empruntée. Sert le chercheur, l'ingénieur, l'analyste géopolitique, le juriste, le soignant, le financier, le consultant, le communicant, l'étudiant et l'agent public.
 metadata:
-  version: "0.10.2"
+  version: "0.11.0"
 ---
 
 # Produire (rédiger, sourcer, illustrer, styler)
@@ -18,14 +18,14 @@ Si une action est passée en argument (par exemple `figure`), suivre directement
 - sourcer : trouver, pondérer et vérifier les sources, formater les citations, bâtir la carte preuve-affirmation. Charger `references/sourcer.md`. Il renvoie vers `references/integrite-sources.md` (triangulation, citations fabriquées), `references/hierarchie-preuve.md` (niveaux de preuve, fiche A-F, paliers de domaine) et `references/corpus-utilisateur.md` (bibliothèque fournie) selon le besoin, et dose la profondeur du sourcing selon la complexité de la question.
 - revue-litterature : synthétiser plusieurs sources en une revue unique (tableau de preuves, schéma PRISMA, discipline de synthèse). Charger `references/revue-litterature.md`. Le standard de compte rendu se choisit selon le devis dans `references/reporting-standards.md`.
 - veille : mettre en place une surveillance documentaire périodique sur un sujet (requêtes arXiv, PubMed, Google Scholar, digest, contrôle des rétractations). Charger `references/veille.md`.
-- figure : générer un schéma stratégique en SVG (SWOT, BCG, Ansoff, PESTEL, chaîne de valeur, TAM-SAM-SOM) et vérifier son rendu avant livraison. Charger `references/figure.md`.
+- figure : générer un schéma stratégique en SVG (SWOT, BCG, Ansoff, PESTEL, chaîne de valeur, TAM-SAM-SOM) ou une figure de données (courbe, nuage, histogramme, boîte, flux, PRISMA), et vérifier son rendu avant livraison. Charger `references/figure.md`.
 - tableau : générer un tableau autonome ou auditer les tableaux d'un document. Charger `references/tableau.md`.
 - equation : poser des équations en LaTeX, contrôler unités SI et chiffres significatifs. Charger `references/equation.md`.
 - style : générer, appliquer ou faire respecter la charte éditoriale, calibrer un style personnel sur des échantillons fournis. Charger `references/style.md`.
 - charte : définir, appliquer ou valider une identité visuelle sur le texte et les figures, palettes daltonisme-sûres comprises. Charger `references/charte.md`.
 - gabarit : inventorier un gabarit imposé par un tiers (école, laboratoire, revue, client) et le rendre vérifiable, que le gabarit arrive en fichier Word ou en consigne écrite. Charger `references/gabarit.md`.
 - logos : constituer le registre des logos (zone de respiration, taille minimale, usages autorisés, rang protocolaire), le valider et produire le fragment de placement. Charger `references/logos.md`.
-- image : extraire les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel), les cataloguer et les préparer au placement. Charger `references/image.md`.
+- image : extraire les images d'un PDF ou d'un document Office (Word, PowerPoint, Excel), les cataloguer, les apparier à leur légende et à leur page puis les préparer au placement. Charger `references/image.md`. Quand la figure vient d'une publication tierce, charger aussi `references/droits-figures.md` : citer la source ne donne pas le droit de la reproduire. Un fichier ne se récupère que depuis une localisation déclarée en accès ouvert.
 
 ## Genres et publics
 
@@ -55,7 +55,7 @@ Pour un document de plus de cinq pages ou à sections denses, déléguer la réd
 
 ## Scripts déterministes
 
-Les actions s'appuient sur le dossier `scripts/` : `figures.py` pour figure, `tables.py` pour tableau, `citations.py` (cinq formats, ancres par citation, résolution DOI, PMID et arXiv, validation de champs, tri) et `verify-sources.py` (triangulation en option, paliers de domaine sans réseau) pour sourcer, `theme.py` pour charte, `gabarit.py` pour gabarit, `logos.py` pour logos, `images.py` pour image, `lint-style.py` et `readability.py` pour style. Voir `scripts/README.md`.
+Les actions s'appuient sur le dossier `scripts/` : `figures.py` pour figure, `tables.py` pour tableau, `citations.py` (cinq formats, ancres par citation, résolution DOI, PMID et arXiv, validation de champs, tri) et `verify-sources.py` (triangulation en option, paliers de domaine sans réseau) pour sourcer, `theme.py` pour charte, `gabarit.py` pour gabarit, `logos.py` pour logos, `images.py`, `emprunts.py` (appariement image-légende-page, localisation en accès ouvert, chaînage) et `check-droits.py` (licence d'une figure empruntée, ligne d'attribution, registre des crédits) pour image, `lint-style.py` et `readability.py` pour style. Voir `scripts/README.md`.
 
 ## Règles
 

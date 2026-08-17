@@ -1,4 +1,4 @@
-# Schématiser (figures stratégiques et regard critique)
+# Schématiser (figures stratégiques, figures de données et regard critique)
 
 Produire des figures sobres, justes et autonomes, puis les passer au crible avant insertion. Une figure est du contenu, pas de la décoration. Elle se comprend sans le texte.
 
@@ -28,7 +28,21 @@ Corriger les défauts signalés avant de rendre la figure. Une case vide ou une 
 echo 'DONNEES_JSON' | python3 ${CLAUDE_PLUGIN_ROOT}/scripts/figures.py TYPE --data - --out figure.svg --title "Titre"
 ```
 
-TYPE : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`. Le SVG est portable. Pour l'insérer dans un document Word, le convertir en PNG avec l'outil disponible.
+TYPE, figures stratégiques (à cases, sans axes) : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`.
+
+TYPE, figures de données (à axes gradués) : `courbe`, `nuage`, `histogramme`, `boite`, `flux`, `prisma`.
+
+La distinction commande la vérification. Une figure stratégique range des éléments dans des cases : elle n'a pas d'axes, le point 1 de l'étape 4 ne s'y applique pas. Une figure de données porte deux axes gradués dont chacun reçoit un titre et son unité, déclarés dans les données (`{"titre": "Durée", "unite": "h"}`). Le type `prisma` rend le schéma de sélection des études d'une revue, sur le même moteur que `flux`.
+
+Le SVG est portable et les voies HTML, LaTeX et PDF l'affichent tel quel. La voie Word demande un PNG, un .docx n'affichant pas un SVG de façon fiable.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/images.py convertir figure.svg --out figure.png --largeur-px 1800
+```
+
+La commande essaie les backends présents dans l'ordre `rsvg-convert`, `inkscape`, `cairosvg`, ImageMagick. Aucun n'est une dépendance du plugin. Si aucun n'est installé, elle sort en code 3 avec le statut `aucun-backend`, nomme ce qu'il faut installer et dit que le fichier source n'est pas en cause : ne pas lire cette sortie comme un SVG défectueux et ne jamais fabriquer un PNG de remplacement. Garder alors le SVG pour les autres voies et signaler la figure manquante dans la voie Word.
+
+Dimensionner `--largeur-px` d'après la largeur d'insertion prévue : 300 dpi sur 15 cm demandent 1772 pixels (voir `image.md`, étape 1 bis, pour le contrôle de résolution appliqué au PNG obtenu).
 
 Si une charte graphique existe (`charte-graphique.json` dans le dossier de travail, voir la compétence `produire` (charte)), l'ajouter avec `--theme charte-graphique.json`. La figure suit alors l'identité visuelle : couleurs, police, filet d'accent, filigrane. Toutes les figures d'un même document partagent la charte.
 

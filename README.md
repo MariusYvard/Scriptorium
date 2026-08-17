@@ -16,8 +16,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-215876" alt="26 genres sourcés">
   <img src="https://img.shields.io/badge/publics-14-215876" alt="14 publics">
-  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-24-BF9B6F" alt="24 scripts déterministes">
-  <img src="https://img.shields.io/badge/%C3%A9valuations-238%2F238-D97F30" alt="238 évaluations">
+  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-26-BF9B6F" alt="26 scripts déterministes">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-347%2F347-D97F30" alt="347 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
@@ -37,7 +37,7 @@
   <a href="#contribuer">Contribuer</a>
 </p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt-quatre scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt-six scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
 
 ---
 
@@ -131,10 +131,10 @@ Chaque sous-commande charge à la demande son fichier de référence, le context
 
 ## Garde-fous déterministes
 
-Vingt-quatre scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
+Vingt-six scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
 
 <details>
-<summary><b>Les vingt-quatre scripts, en une ligne chacun</b></summary>
+<summary><b>Les vingt-six scripts, en une ligne chacun</b></summary>
 <br>
 
 | Script | Ce qu'il attrape ou produit |
@@ -145,23 +145,25 @@ Vingt-quatre scripts en Python pur (aucune dépendance) déplacent la rigueur du
 | `check-temporel.py` | Futur présenté comme passé, inversion causale, version anachronique, langage à péremption. |
 | `check-presentation.py` | Deck PDF : pages par durée annoncée, densité de texte, backends optionnels, jamais de mesure inventée. |
 | `scorecard.py` | Note de 0 à 100 sur cinq axes, barres ASCII, plancher par axe, poids externes, seuils par type de document, décision éditoriale, trajectoire entre deux revues. |
-| `traceability.py` | Références orphelines ou pendantes, appels de figures et tableaux, tags de lacune normalisés. |
+| `traceability.py` | Références orphelines ou pendantes, appels de figures, tableaux, équations et annexes, séquence de numérotation, tags de lacune normalisés. |
 | `ai-fingerprint.py` | Rythme uniforme, ouvertures répétées, cadence ternaire, connecteurs suremployés. |
 | `coherence.py` | Paragraphes quasi dupliqués, phrases répétées, promesses non tenues. |
 | `terminology.py` | Sigles non définis ou employés avant définition, variantes d'un même terme. |
 | `numbers.py` | Pourcentages impossibles, partitions qui ne somment pas, séparateur décimal mixte. |
 | `readability.py` | Longueurs de phrase et de paragraphe, densité lexicale, indice LIX. |
-| `figures.py` | SWOT, BCG, Ansoff, PESTEL, chaîne de valeur, TAM-SAM-SOM en SVG, avec audit structurel. |
+| `figures.py` | SWOT, BCG, Ansoff, PESTEL, chaîne de valeur, TAM-SAM-SOM et figures de données (courbe, nuage, histogramme, boîte, flux, PRISMA) en SVG, avec audit structurel. |
 | `tables.py` | Génération de tableaux depuis CSV ou JSON, audit des tableaux d'un document. |
 | `theme.py` | Validation de charte, contraste WCAG, palettes daltonisme-sûres, CSS et préambule LaTeX. |
-| `images.py` | Extraction d'images (Office, PDF), déduplication, dimensions, manifeste. |
+| `images.py` | Extraction d'images (Office, PDF), catalogue d'illustrations, conversion SVG vers PNG, déduplication, dimensions, manifeste. |
 | `gabarit.py` | Gabarit texte OOXML, diapositives OOXML, texte ou diapositives ODF ou PDF imposé par un tiers : inventaire, comparaison par identifiant stable, remplissage du gabarit lui-même sans régénération (sauf ODF et PDF, en lecture seule). |
 | `check-lecture-pdf.py` | Préflight d'intégrité de lecture PDF avant tout ancrage de citation : verdict fermé, pages ancrables et non ancrables. |
 | `check-fuites.py` | Ce qu'un livrable trahit de son auteur avant envoi (Word, PowerPoint, ODF, PDF) : propriétés de document, résidus de travail, chemins locaux, états antérieurs d'un PDF mis à jour de façon incrémentale ; constats à confiance graduée, inspection sans nettoyage. |
+| `check-droits.py` | Licence de réutilisation d'une figure empruntée, résolue par DOI (Crossref, OpenAlex), quatre verdicts fermés, ligne d'attribution, registre des figures empruntées. |
+| `emprunts.py` | Appariement image-légende-page dans un PDF avec confiance graduée, localisation d'une version en accès ouvert par DOI, récupération limitée aux sources ouvertes, chaînage vers les droits. |
 | `logos.py` | Registre de logos séparé de la charte, validation du format et de la résolution effective, placement par rang protocolaire. |
 | `plan-check.py` | Conformité du document au plan validé. |
 | `diff-versions.py` | Journal des écarts entre deux versions. |
-| `project.py` | Journal de mission append-only, frontières à hash, reprise unique, états d'étapes, tableau de bord. |
+| `project.py` | Journal de mission append-only, frontières à hash, reprise unique, états d'étapes, tableau de bord, numérotation partagée des objets et passation au rédacteur. |
 | `audit-doc.py` | Audit consolidé en une commande. |
 
 </details>
@@ -218,7 +220,7 @@ Le style par défaut applique des directives strictes : registre encyclopédique
 
 ## Qualité, évaluations, releases
 
-Le harnais (`evals/run-evals.py`, 238 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
+Le harnais (`evals/run-evals.py`, 347 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Contribuer
 

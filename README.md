@@ -16,8 +16,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-215876" alt="26 genres sourcés">
   <img src="https://img.shields.io/badge/publics-14-215876" alt="14 publics">
-  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-26-BF9B6F" alt="26 scripts déterministes">
-  <img src="https://img.shields.io/badge/%C3%A9valuations-347%2F347-D97F30" alt="347 évaluations">
+  <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-27-BF9B6F" alt="27 scripts déterministes">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-457%2F457-D97F30" alt="457 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
@@ -37,7 +37,7 @@
   <a href="#contribuer">Contribuer</a>
 </p>
 
-Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt-six scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
+Scriptorium est un plugin Claude (Cowork et Claude Code) qui transforme une demande de rédaction en document fini : rapport, article, analyse stratégique, note juridique, poster scientifique. La forme suit le fond, et le fond se vérifie. Une affirmation majeure sans preuve cartographiée est affaiblie ou retirée, c'est une contrainte dure. Les sources ne se déclarent pas, elles se vérifient : triangulation multi-index, verdicts fermés, standards cités depuis leurs textes primaires. Le modèle rédige et juge, vingt-sept scripts rejouables en Python pur mesurent et vérifient, à chaque étape, sur vingt-six genres adossés à des sources faisant autorité.
 
 ---
 
@@ -131,10 +131,10 @@ Chaque sous-commande charge à la demande son fichier de référence, le context
 
 ## Garde-fous déterministes
 
-Vingt-six scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
+Vingt-sept scripts en Python pur (aucune dépendance) déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Une porte d'intégration continue (`tools/check.py`) verrouille un document contre un seuil de note ; passer outre exige une justification à friction croissante, journalisée.
 
 <details>
-<summary><b>Les vingt-six scripts, en une ligne chacun</b></summary>
+<summary><b>Les vingt-sept scripts, en une ligne chacun</b></summary>
 <br>
 
 | Script | Ce qu'il attrape ou produit |
@@ -160,6 +160,7 @@ Vingt-six scripts en Python pur (aucune dépendance) déplacent la rigueur du ju
 | `check-fuites.py` | Ce qu'un livrable trahit de son auteur avant envoi (Word, PowerPoint, ODF, PDF) : propriétés de document, résidus de travail, chemins locaux, états antérieurs d'un PDF mis à jour de façon incrémentale ; constats à confiance graduée, inspection sans nettoyage. |
 | `check-droits.py` | Licence de réutilisation d'une figure empruntée, résolue par DOI (Crossref, OpenAlex), quatre verdicts fermés, ligne d'attribution, registre des figures empruntées. |
 | `emprunts.py` | Appariement image-légende-page dans un PDF avec confiance graduée, localisation d'une version en accès ouvert par DOI, récupération limitée aux sources ouvertes, chaînage vers les droits. |
+| `check-disponibilite.py` | Déclaration de disponibilité des données et du code sur un manuscrit : régime déclaré, preuve exigée par régime, verdict fermé sur cinq valeurs. |
 | `logos.py` | Registre de logos séparé de la charte, validation du format et de la résolution effective, placement par rang protocolaire. |
 | `plan-check.py` | Conformité du document au plan validé. |
 | `diff-versions.py` | Journal des écarts entre deux versions. |
@@ -220,7 +221,7 @@ Le style par défaut applique des directives strictes : registre encyclopédique
 
 ## Qualité, évaluations, releases
 
-Le harnais (`evals/run-evals.py`, 347 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
+Le harnais (`evals/run-evals.py`, 457 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Contribuer
 

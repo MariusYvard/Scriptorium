@@ -2,6 +2,10 @@
 
 Couvre le mémoire universitaire, le rapport de recherche et l'article scientifique original. Finalité : transférer une connaissance scientifique, valider un cursus, publier auprès de pairs. Critères clés : cohérence théorico-pratique, reproductibilité, validité interne, significativité.
 
+## Langue
+
+La langue du document se fixe au cadrage, avec le genre et le plan, et ne change plus ensuite. Un mémoire ou un article rédigé en anglais suit `produire` (style), référence `style-anglais.md` : les règles de forme calibrées sur le français y sont remplacées, non ajoutées, et le contrôle mécanique se lance avec `scripts/lint-style.py --langue en`. Deux points y pèsent plus que les autres pour ce genre : `significant` se réserve à la signification statistique, et la règle de temps ci-dessous est la convention anglaise, que le linter ne contrôle pas.
+
 ## A. Mémoire universitaire et rapport de recherche
 
 Longueur idéale 30 à 60 pages pour un travail de fin d'études. Équilibre classique : un tiers de partie théorique, deux tiers de partie pratique (matériels, méthodes, analyses). Présentation : texte justifié, police classique (Arial ou Times, 10 à 12), interligne 1,25 ou 1,5.
@@ -13,7 +17,8 @@ Structure universelle :
 3. Partie théorique et méthodologique : asseoir les fondements conceptuels sur des sources reconnues. Placer le principe théorique en début de paragraphe, avant l'observation de terrain.
 4. Résultats et discussion : présenter les données analysées, puis une interprétation critique. Tenir une position d'extériorité et de prudence. Masquer l'identité réelle des acteurs ou des lieux pour la confidentialité.
 5. Conclusion : résumer les résultats, souligner les limites, ouvrir sur des perspectives.
-6. Bibliographie : par ordre d'apparition ou alphabétique, selon la norme exigée (APA 7 ou Vancouver).
+6. Déclarations de fin de manuscrit : contribution, financement, usage de l'IA (`credit-divulgation.md`), puis disponibilité des données et du code (`disponibilite.md`).
+7. Bibliographie : par ordre d'apparition ou alphabétique, selon la norme exigée (APA 7 ou Vancouver).
 
 ## B. Article scientifique original (IMRAD)
 
@@ -38,6 +43,10 @@ Présenter les observations de façon neutre : texte, graphiques, tableaux auton
 Commencer par une première phrase clé qui répond à l'objectif principal formulé dans l'introduction. Évaluer ensuite forces et faiblesses méthodologiques, comparer à la littérature, conclure en adéquation stricte avec les résultats. Ne pas surinterpréter.
 
 Paternité : l'ordre des co-auteurs suit la contribution scientifique réelle, le premier auteur est le contributeur principal (règles ICMJE).
+
+### Déclarations (après la discussion, avant la bibliographie)
+
+Quatre déclarations distinctes, jamais fondues en un paragraphe unique : contribution CRediT, financement, usage de l'IA (`credit-divulgation.md`), disponibilité des données et du code (`disponibilite.md`). La déclaration de disponibilité nomme son régime et porte la preuve que ce régime exige : identifiant pérenne pour un dépôt ouvert, date de levée pour un embargo, licence nommée pour du code, détenteur pour des données de tiers. Contrôle mécanique par `scripts/check-disponibilite.py`. Pour un essai clinique, l'ICMJE impose en plus des éléments précis, listés dans la référence.
 
 ## Guides de section (article)
 

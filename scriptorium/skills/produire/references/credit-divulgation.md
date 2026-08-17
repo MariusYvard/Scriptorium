@@ -2,6 +2,8 @@
 
 Trois déclarations distinctes exigées par la plupart des éditeurs académiques en fin de manuscrit : qui a contribué et comment (CRediT), qui a financé le travail et avec quelle influence, quel usage de l'IA a été fait et comment le documenter. Les trois se rédigent séparément, jamais fondues en un seul paragraphe vague.
 
+La quatrième déclaration de fin de manuscrit, la disponibilité des données et du code, obéit à d'autres règles : elle se décline en régimes (dépôt ouvert, demande motivée, embargo, restriction légale, données de tiers, absence de donnée nouvelle) dont chacun exige sa propre preuve, puis elle se contrôle mécaniquement. `disponibilite.md` la traite avec ses formulations types en français comme en anglais. Elle n'est pas reprise ici.
+
 ## 1. Les quatorze rôles CRediT
 
 CRediT (Contributor Roles Taxonomy) est un standard ANSI/NISO (Z39.104-2022, approuvé le 14 janvier 2022) coproduit à l'origine par CASRAI et NISO, adopté par un grand nombre d'éditeurs. Il remplace la notion binaire d'auteur par quatorze rôles nommés, qu'un même auteur peut cumuler.

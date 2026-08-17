@@ -28,7 +28,8 @@ Produire un résumé structuré en français, puis sa traduction anglaise compos
 1. Rédiger le résumé français, structuré selon le genre (contexte, méthode, résultats, portée pour un texte académique ; accroche, message clé, conclusion pour un texte professionnel).
 2. Aligner l'anglais phrase à phrase sur le français : chaque phrase française porte sa phrase anglaise correspondante, dans le même ordre, pour la même affirmation. Un alignement qui ajoute ou retire une affirmation d'une langue à l'autre est une erreur, pas une variante de style.
 3. Fournir des mots-clefs dans les deux langues, cinq à sept par langue, choisis pour compléter le titre plutôt que le répéter.
-4. Signaler les faux amis techniques rencontrés pendant la traduction, des termes qui se ressemblent mais divergent de sens. Deux exemples fréquents : "évidence" (français : ce qui est manifeste) contre "evidence" (anglais : preuve) : et "actuellement" (français : en ce moment) contre "actually" (anglais : en fait). Un glissement sur un faux ami déforme le résumé sans que rien ne le signale à la lecture.
+4. Contrôler chaque volet dans sa langue : `scripts/lint-style.py --langue en` sur le volet anglais, l'appel par défaut sur le volet français. Un passage unique sur le fichier entier appliquerait les règles d'une seule langue aux deux moitiés, et signalerait par exemple la virgule sérielle anglaise comme une virgule d'Oxford, ou le pronom « on » dans une phrase française qui n'en porte pas. Le volet anglais suit `produire` (style), référence `style-anglais.md`.
+5. Signaler les faux amis techniques rencontrés pendant la traduction, des termes qui se ressemblent mais divergent de sens. Deux exemples fréquents : "évidence" (français : ce qui est manifeste) contre "evidence" (anglais : preuve) : et "actuellement" (français : en ce moment) contre "actually" (anglais : en fait). Un glissement sur un faux ami déforme le résumé sans que rien ne le signale à la lecture.
 
 ### Contrôle de traçabilité
 
@@ -44,7 +45,7 @@ Quand une déclinaison impose une contrainte de longueur stricte (résumé d'une
 
 ## 5. Appliquer la charte et le style
 
-Appliquer la même charte graphique (voir `produire` (charte)) à tous les livrables visuels, et le style maison à tous les textes. Repasser chaque déclinaison par `scripts/lint-style.py` et le scorecard.
+Appliquer la même charte graphique (voir `produire` (charte)) à tous les livrables visuels, et le style maison à tous les textes. Repasser chaque déclinaison par `scripts/lint-style.py` et le scorecard, avec `--langue en` pour toute déclinaison rédigée en anglais (abstract, résumé bilingue, post destiné à un canal anglophone).
 
 ## Format de sortie
 

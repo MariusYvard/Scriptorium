@@ -6,6 +6,8 @@ Garantir une voix constante et des règles de forme respectées sur tout écrit.
 
 Charger `references/directives-strictes.md`. Réécrire ou rédiger le texte en appliquant chaque règle. Conserver le fond, ajuster la forme. Voir aussi `references/lexique-banni.md` pour les substitutions.
 
+Document en anglais : charger `references/style-anglais.md` en plus, et avant de rédiger. Cette référence dit ce qui se transpose du style maison, ce qui change (la virgule sérielle est recommandée en anglais par Chicago, l'APA et la MLA ; le tiret cadratin y est une ponctuation légitime) et les règles propres à l'écriture scientifique anglaise. Le contrôle mécanique correspondant est `scripts/lint-style.py --langue en`. Appelé sans cette option, le linter analyse en français et rend des constats faux sur un texte anglais.
+
 Boucle d'application : produire, vérifier, expliquer.
 
 1. Produire le texte conforme.
@@ -92,3 +94,4 @@ Résumé, détail dans `references/directives-strictes.md`.
 3. Omettre une section de charte sans donnée plutôt que d'y mettre un fragment vide.
 4. Le style maison s'applique aussi aux textes produits par les autres compétences du plugin.
 5. La hiérarchie discipline, support puis style personnel ne s'inverse jamais, quel que soit le nombre d'échantillons fournis. Le style maison la domine toutes les deux.
+6. La langue du document se fixe au cadrage et ne change plus. En anglais, `references/style-anglais.md` remplace les règles de forme calibrées sur le français ; les directives de fond (registre, rigueur, sources) sont inchangées.

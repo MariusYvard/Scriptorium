@@ -2,6 +2,10 @@
 
 Couvre l'article éditorial, la tribune, la vulgarisation, la note de fond et l'article de blog professionnel. Finalité : éclairer, expliquer ou convaincre un lectorat large ou semi-spécialisé. Critères clés : accroche, fil conducteur, preuve, lisibilité.
 
+## Langue
+
+La langue du document se fixe au cadrage, avec le genre et le plan, et ne change plus ensuite. Un article rédigé en anglais suit `produire` (style), référence `style-anglais.md` : les règles de forme calibrées sur le français y sont remplacées, non ajoutées, et le contrôle mécanique se lance avec `scripts/lint-style.py --langue en`. Changer de langue en cours de rédaction accumule deux jeux de règles contradictoires sans en satisfaire aucun.
+
 ## Structure
 
 1. Accroche : une donnée surprenante, une question, ou une situation concrète. Elle crée la curiosité et promet une valeur.
@@ -10,6 +14,8 @@ Couvre l'article éditorial, la tribune, la vulgarisation, la note de fond et l'
 4. Contre-arguments : adresser les objections sérieuses, c'est gagner en crédibilité.
 5. Conclusion : synthèse des points, et selon le but, ouverture ou appel à l'action.
 6. Références : sources vérifiées, liens nettoyés des paramètres de suivi.
+
+Un article qui s'appuie sur un jeu de données ou sur du code produits pour l'occasion (note de fond chiffrée, article de blog technique) porte en plus une déclaration de disponibilité, juste avant les références : où se trouvent les données, sous quel identifiant pérenne, sous quelle licence. Régimes, formulations et contrôle mécanique dans `disponibilite.md`. Un article d'opinion sans donnée propre n'en a pas besoin.
 
 ## Quatre angles selon le but
 

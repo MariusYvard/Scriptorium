@@ -1,0 +1,32 @@
+{
+  "horodatage": "2026-08-17T16:17:02+00:00",
+  "version_plugin": "0.11.0",
+  "polarites": {
+    "exactitude": "haut",
+    "faux_positifs": "bas",
+    "faux_negatifs": "bas"
+  },
+  "taches": {
+    "lint-style": {
+      "statut": "mesure",
+      "n_cas": 10,
+      "exactitude": 1.0,
+      "faux_positifs": 0,
+      "faux_negatifs": 0
+    },
+    "scorecard": {
+      "statut": "mesure",
+      "n_cas": 10,
+      "exactitude": 1.0,
+      "faux_positifs": 0,
+      "faux_negatifs": 0
+    }
+  },
+  "mises_en_garde": [
+    "corpus de dix cas par tache : une exactitude ponctuelle, pas une estimation statistiquement stable.",
+    "voir le champ non_couvert de chaque manifeste (evals/gold/*/manifeste.json) pour les limites detaillees de cette tache.",
+    "la porte issue de ce rapport reste consultative par defaut ; voir docs/CONCEPTION.md et tools/gold.py comparer --bloquant.",
+    "tache lint-style : jeu d'or fige a la version 0.9.0, mesure a la version 0.11.0 ; un ecart de version n'est pas en soi une regression.",
+    "tache scorecard : jeu d'or fige a la version 0.9.0, mesure a la version 0.11.0 ; un ecart de version n'est pas en soi une regression."
+  ]
+}

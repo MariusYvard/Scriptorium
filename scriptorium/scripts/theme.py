@@ -258,15 +258,31 @@ _GENERIQUES_LATEX = {
 
 def _polices_installees():
     """Ensemble des noms de famille connus de fontconfig (fc-list), en minuscules.
-    None si fc-list est absent : disponibilité inconnue, jamais supposée vraie à l'aveugle."""
+    None si fc-list est absent ou muet : disponibilité inconnue, jamais supposée
+    vraie à l'aveugle.
+
+    Le premier appel est réessayé une fois avec un délai large. Sur un cache
+    fontconfig froid (conteneur neuf, machine qui vient d'installer des
+    polices), fc-list met plus de dix secondes à répondre la première fois et
+    moins d'une seconde ensuite : sans ce second essai, la mesure échouait
+    alors qu'elle était possible, et le préambule annonçait une police dont
+    rien ne garantissait la présence.
+    """
     if not shutil.which("fc-list"):
         return None
-    try:
-        out = subprocess.run(["fc-list", "--format", "%{family[0]}\n"],
-                              capture_output=True, text=True, timeout=10).stdout
-        return {ligne.strip().lower() for ligne in out.splitlines() if ligne.strip()}
-    except Exception:
-        return None
+    for delai in (10, 90):
+        try:
+            out = subprocess.run(["fc-list", "--format", "%{family[0]}\n"],
+                                 capture_output=True, text=True,
+                                 timeout=delai).stdout
+            noms = {l.strip().lower() for l in out.splitlines() if l.strip()}
+            if noms:
+                return noms
+        except subprocess.TimeoutExpired:
+            continue
+        except Exception:
+            return None
+    return None
 
 
 def _police_latex(pile_css):
@@ -278,23 +294,28 @@ def _police_latex(pile_css):
     famille Latin Modern indiquée par le dernier mot-clé générique de la pile (serif,
     sans-serif, monospace), présente dans toute distribution TeX Live standard.
 
-    Retourne (nom_retenu, avertissement_ou_None). L'avertissement est un texte à faire
-    remonter (jamais une erreur : la compilation xelatex reste possible avec le repli)."""
+    Retourne (nom_retenu, avertissement_ou_None, repli). L'avertissement est un texte à
+    faire remonter (jamais une erreur : la compilation xelatex reste possible avec le
+    repli). Le repli est rendu pour que le préambule puisse le poser en second choix,
+    évalué au moment de compiler et non ici : voir _bloc_police."""
     noms = [n.strip().strip("'\"") for n in pile_css.split(",") if n.strip()]
     disponibles = _polices_installees()
     repli = "Latin Modern Roman"
     demandes_precises = []
+    trouve = None
     for n in noms:
         if n.lower() in _GENERIQUES_LATEX:
             repli = _GENERIQUES_LATEX[n.lower()]
             continue
         demandes_precises.append(n)
-        if disponibles is None or n.lower() in disponibles:
-            return n, None
+        if trouve is None and (disponibles is None or n.lower() in disponibles):
+            trouve = n
+    if trouve is not None:
+        return trouve, None, repli
     if demandes_precises:
         return repli, (f"aucune des polices demandées ({', '.join(demandes_precises)}) "
-                        f"n'a été trouvée par fc-list, repli sur {repli}.")
-    return repli, None
+                        f"n'a été trouvée par fc-list, repli sur {repli}."), repli
+    return repli, None, repli
 
 
 def latex(t):
@@ -318,16 +339,40 @@ def latex(t):
     for nom, c in zip(noms_pal, pal[:4]):
         if _hex_ok(c):
             lignes.append(f"\\definecolor{{{nom}}}{{HTML}}{{{_slug_hex(c)}}}")
-    police_principale, avert_princ = _police_latex(t['police'])
+    police_principale, avert_princ, repli_princ = _police_latex(t['police'])
     if avert_princ:
         lignes.append(f"% Attention : {avert_princ}")
-    lignes.append(f"\\setmainfont{{{police_principale}}}")
+    lignes += _bloc_police("\\setmainfont", police_principale, repli_princ)
     if t["police_titre"] and t["police_titre"] != t["police"]:
-        police_titre, avert_titre = _police_latex(t["police_titre"])
+        police_titre, avert_titre, repli_titre = _police_latex(t["police_titre"])
         if avert_titre:
             lignes.append(f"% Attention : {avert_titre}")
-        lignes.append(f"\\newfontfamily\\policetitre{{{police_titre}}}")
+        lignes += _bloc_police("\\newfontfamily\\policetitre", police_titre,
+                               repli_titre)
     return "\n".join(lignes)
+
+
+def _bloc_police(commande, police, repli):
+    """Sélection de police qui se replie au moment de compiler, pas ici.
+
+    Une police nommée par la charte peut manquer sur la machine qui compile,
+    même quand elle est présente sur celle qui rédige : un document envoyé à un
+    tiers, un service en ligne, un conteneur d'intégration continue. fontspec
+    échoue durement sur une police absente, et le repli calculé par ce script
+    ne vaut que pour la machine qui l'exécute. \\IfFontExistsTF déporte la
+    décision dans le document lui-même : la police de la charte sert quand elle
+    existe, la famille Latin Modern la remplace sinon, et la compilation
+    aboutit dans les deux cas.
+    """
+    if police == repli:
+        return [f"{commande}{{{police}}}"]
+    return [
+        f"\\IfFontExistsTF{{{police}}}%",
+        f"  {{{commande}{{{police}}}}}%",
+        f"  {{{commande}{{{repli}}}%",
+        f"   \\PackageWarningNoLine{{scriptorium}}{{police {police} absente, "
+        f"repli sur {repli}}}}}",
+    ]
 
 
 def main(argv=None):

@@ -7,8 +7,15 @@ modèle : tiret cadratin, typographie courbe, lexique promotionnel banni,
 paramètres de suivi dans les URL, virgule d'Oxford, métadiscours, pronom
 indéfini « on », quantificateurs vagues, verbes tics.
 
+Le moteur connait deux langues. En francais (defaut) le comportement est celui
+d'origine. En anglais les regles calibrees sur le francais sont retirees (la
+virgule serielle y est recommandee par Chicago, APA et MLA, la signaler serait
+un faux positif) et remplacees par des regles propres a l'ecriture scientifique
+anglaise.
+
 Usage :
     python3 lint-style.py FICHIER [--format text|json] [--strict] [--quiet]
+                          [--langue fr|en|auto]
     cat doc.md | python3 lint-style.py -
 
 Codes de sortie :
@@ -20,8 +27,10 @@ Pragmas dans le document analysé :
     une ligne contenant « lint-style:ignore » n'est pas analysée.
     un fichier dont les 5 premières lignes contiennent « lint-style:ignore-file »
     est ignoré entièrement.
+    un fichier dont les 5 premieres lignes contiennent « lint-style:langue=en »
+    est analyse en anglais sans qu'aucune option soit passee.
 
-Le module est importable : lint_text(texte) -> liste de constats.
+Le module est importable : lint_text(texte, langue=None) -> liste de constats.
 """
 import argparse
 import json
@@ -30,6 +39,80 @@ import sys
 
 CRITIQUE, MAJEUR, MINEUR = "critique", "majeur", "mineur"
 ORDRE = {CRITIQUE: 0, MAJEUR: 1, MINEUR: 2}
+
+LANGUES = ("fr", "en")
+LANGUE_DEFAUT = "fr"
+
+# Mots outils sans ambiguite entre les deux langues. Sont ecartes ceux qui
+# existent dans les deux (a, on, or, as, note, son, but, pour un titre anglais
+# cite dans un texte francais), qui fausseraient le comptage.
+MOTS_OUTILS_FR = frozenset("""le la les des du une dans pour que qui est sont
+avec cette ces sur par plus aux leur nous mais comme entre aussi dont ainsi
+chaque leurs elle ils sans deja etre ete quand alors donc car""".split())
+MOTS_OUTILS_EN = frozenset("""the of and to in is are that for with this these
+we was were be been from not which their have has its than such also each
+they there where while both any into upon""".split())
+
+# En deca de ce nombre de mots outils reconnus, un echantillon ne tranche rien
+# (titre seul, liste de mots-clefs, tableau de chiffres).
+SEUIL_DETECTION = 12
+# Part minimale du gagnant. Un texte francais qui cite une bibliographie
+# anglaise passe sous cette barre et reste classe francais.
+PART_DETECTION = 0.60
+
+PRAGMA_LANGUE = re.compile(r"lint-style:langue\s*=\s*(fr|en)", re.I)
+
+
+def detecter_langue(texte, defaut=LANGUE_DEFAUT):
+    """Devine la langue par frequence de mots outils exclusifs a chacune.
+
+    Retourne 'fr' ou 'en'. Rend le defaut quand l'echantillon est trop court
+    ou trop partage : la detection ne tranche jamais a la majorite d'une voix.
+    """
+    mots = re.findall(r"[a-zà-ÿ']+", texte.lower())
+    n_fr = sum(1 for m in mots if m in MOTS_OUTILS_FR)
+    n_en = sum(1 for m in mots if m in MOTS_OUTILS_EN)
+    total = n_fr + n_en
+    if total < SEUIL_DETECTION:
+        return defaut
+    if n_en / total >= PART_DETECTION:
+        return "en"
+    if n_fr / total >= PART_DETECTION:
+        return "fr"
+    return defaut
+
+
+def langue_declaree(texte):
+    """Lit le pragme de langue dans les cinq premieres lignes, sinon None."""
+    for ligne in texte.splitlines()[:5]:
+        m = PRAGMA_LANGUE.search(ligne)
+        if m:
+            return m.group(1).lower()
+    return None
+
+
+def resoudre_langue(texte, demandee=None, defaut=LANGUE_DEFAUT):
+    """Tranche la langue d'analyse selon un ordre de priorite fixe.
+
+    1. l'option explicite --langue fr|en, qui prime sur tout ;
+    2. --langue auto, qui delegue a la detection ;
+    3. le pragme du document, seul canal disponible pour le hook, qui n'a
+       aucun moyen de passer une option par document ;
+    4. le defaut, francais.
+
+    La detection n'est pas le defaut : le linter est appele sans argument par
+    le hook et par scorecard.py, et basculer de langue tout seul changerait en
+    silence le verdict d'un document existant.
+    """
+    if demandee in LANGUES:
+        return demandee
+    if demandee == "auto":
+        return detecter_langue(texte, defaut)
+    declaree = langue_declaree(texte)
+    if declaree in LANGUES:
+        return declaree
+    return defaut
+
 
 # (regex, sévérité, règle, message)
 REGLES = [
@@ -92,21 +175,290 @@ REGLES = [
      "rien. En écriture arabe ou indienne il serait légitime."),
 ]
 
+# Famille de chaque regle de REGLES. Une regle commune vaut dans les deux
+# langues, une regle « fr » est calibree sur le francais et sort de l'analyse
+# anglaise. La virgule d'Oxford est le cas decisif : la virgule serielle est
+# recommandee par Chicago, APA et MLA, la signaler en anglais serait un faux
+# positif systematique.
+FAMILLE = {
+    "typographie-courbe": "commune",
+    "url-suivi": "commune",
+    "caractere-invisible": "commune",
+    "controle-bidi": "commune",
+    "caractere-tag": "commune",
+    "zone-privee": "commune",
+    "espace-exotique": "commune",
+    "liant-inutile": "commune",
+    "tiret-cadratin": "fr",
+    "lexique-promo": "fr",
+    "virgule-oxford": "fr",
+    "tournure-faible": "fr",
+    "lexique-faible": "fr",
+    "metadiscours": "fr",
+    "pronom-on": "fr",
+    "quantif-vague": "fr",
+    "verbe-tic": "fr",
+}
+
+# Contexte statistique explicite. Sa presence sur la ligne rend legitime
+# l'emploi de « significant » et fait taire la regle.
+_CONTEXTE_STAT = re.compile(
+    r"\bp\s*[<>=]|\bp-?values?\b|\bstatistical|\bconfidence intervals?\b"
+    r"|\b\d+\s*%\s*CI\b|\banova\b|\bt-tests?\b|\bchi-squared?\b|\bwilcoxon\b"
+    r"|\bmann-whitney\b|\bkruskal\b|\bbonferroni\b|\balpha\s*=|\bnon-?significan",
+    re.I)
+
+
+def _garde_significant(ligne, m):
+    """Tait la regle quand la ligne ancre deja le mot dans un test statistique."""
+    return bool(_CONTEXTE_STAT.search(ligne))
+
+
+# Regles propres a l'anglais. Meme forme que REGLES, avec un cinquieme element
+# optionnel : une garde contextuelle qui annule le constat quand elle rend vrai.
+REGLES_EN = [
+    # Transposition directe du lexique promotionnel banni. pivotal et crucial
+    # figurent aussi au vocabulaire en exces mesure par Kobak et al. (2025).
+    (re.compile(r"\b(pivotal|crucial|groundbreaking|revolutionary|visionary|"
+                r"game-chang(?:er|ing)|cutting-edge|unparalleled)\b", re.I),
+     CRITIQUE, "lexique-promo", "Terme promotionnel banni."),
+    (re.compile(r"rich tapestry|shap(?:e|es|ing) the landscape", re.I),
+     CRITIQUE, "lexique-promo", "Tournure promotionnelle bannie."),
+    # Vocabulaire en exces mesure sur 15 millions de resumes PubMed (Kobak et
+    # al., Science Advances 2025) et sur les revues ICLR (Liang et al., ICML
+    # 2024). Marqueur de texte assiste, pas faute de langue.
+    (re.compile(r"\b(delve[sd]?|delving|intricate|intricacies|intricately|"
+                r"realms?|meticulous(?:ly)?|seamless(?:ly)?|commendable|"
+                r"multifaceted|interplay|garnered|elucidate[sd]?|"
+                r"unveil(?:s|ed|ing)?)\b", re.I),
+     MAJEUR, "lexique-ia-en",
+     "Terme du vocabulaire en excès mesuré dans les textes assistés par "
+     "modèle. Nommer le fait plutôt que le qualifier."),
+    (re.compile(r"\b(?:research|academic|scientific|technological|competitive|"
+                r"evolving|changing|digital|regulatory|therapeutic)\s+landscape\b"
+                r"|\blandscape of\b", re.I),
+     MAJEUR, "lexique-ia-en",
+     "« landscape » au sens figuré. Nommer le domaine ou l'ensemble visé."),
+    (re.compile(r"\b(underscor(?:e|es|ed|ing)|showcas(?:e|es|ed|ing)|"
+                r"highlight(?:s|ed|ing)?|foster(?:s|ed|ing)?|"
+                r"harness(?:es|ed|ing)?|streamlin(?:e|es|ed|ing)|"
+                r"leverag(?:e|es|ed|ing))\b", re.I),
+     MINEUR, "verbe-tic",
+     "Verbe tic fréquent à l'écrit assisté. Vérifier qu'il porte un fait."),
+    (re.compile(r"\bnavigat(?:e|es|ed|ing)\s+(?:the\s+|these\s+|its\s+)?"
+                r"(?:complex|challeng|landscape|intricac|difficult|nuanc)", re.I),
+     MINEUR, "verbe-tic",
+     "« navigate » au sens figuré. Nommer l'action réelle."),
+    (re.compile(r"\butili[sz](?:e|es|ed|ing)\b", re.I),
+     MINEUR, "lexique-faible",
+     "« utilize » sans gain de sens sur « use ». Simplifier."),
+    (re.compile(r"(it is worth noting|it is important to note|"
+                r"in today's fast-paced|in the ever-evolving|"
+                r"in this (?:article|paper|section),? (?:we will|i will)|"
+                r"as an ai (?:language )?model|without further ado|"
+                r"let us delve|needless to say|"
+                r"in conclusion, it can be said)", re.I),
+     MAJEUR, "metadiscours", "Métadiscours. Entrer directement en matière."),
+    # Regle de fond, pas de style : « significant » sans marque statistique
+    # sur la ligne. Recommandation ICMJE, section Results : ne pas employer
+    # hors de son sens technique un terme technique de la statistique.
+    (re.compile(r"\bsignificant(?:ly)?\b", re.I),
+     MAJEUR, "significance-non-statistique",
+     "« significant » hors contexte statistique explicite. Le réserver à la "
+     "signification statistique et écrire important, substantial ou large "
+     "pour l'ampleur.",
+     _garde_significant),
+    (re.compile(r"\b(?:mak(?:e|es|ing)|made)\s+an?\s+"
+                r"(?:assessment|analysis|comparison|evaluation|estimation|"
+                r"observation|assumption|selection|determination|decision)\s+of\b"
+                r"|\b(?:perform|performs|performed|conduct|conducts|conducted|"
+                r"carry out|carried out|undertake|undertook|undertaken)\s+an?\s+"
+                r"(?:analysis|assessment|evaluation|examination|investigation|"
+                r"comparison|measurement|calculation|review)\s+of\b"
+                r"|\b(?:provide|provides|provided|give|gives|given)\s+an?\s+"
+                r"(?:description|explanation|overview|indication|assessment)\s+of\b"
+                r"|\bis indicative of\b|\bhas the ability to\b"
+                r"|\bdue to the fact that\b|\bin the event that\b"
+                r"|\bfor the purpose of\b|\bmake use of\b", re.I),
+     MINEUR, "nominalisation",
+     "Verbe caché sous un substantif. Employer le verbe (assess, analyse, "
+     "compare) plutôt que sa périphrase."),
+    (re.compile(r"\b(?:may|might|could|can)\s+(?:potentially|possibly|perhaps|"
+                r"conceivably|arguably)\b"
+                r"|\b(?:potentially|possibly|perhaps)\s+(?:may|might|could)\b"
+                r"|\b(?:seems?|appears?)\s+to\s+(?:potentially|possibly)\b"
+                r"|\b(?:may|might|could)\s+(?:\w+\s+){0,2}"
+                r"(?:suggest|indicate|imply)s?\s+that\s+(?:\w+\s+){0,3}"
+                r"(?:may|might|could)\b", re.I),
+     MAJEUR, "hedge-empile",
+     "Modalisateurs empilés. Un seul degré de réserve par affirmation, sinon "
+     "la réserve ne dit plus rien."),
+    # Piege du francophone : l'espace avant le signe double, correcte en
+    # francais, fautive en anglais. Le tiret qui suit est exclu, sinon la
+    # rangee d'alignement d'un tableau markdown ( :--- ) leverait un constat
+    # a chaque tableau aligne a gauche.
+    (re.compile("(?<=\\S)[   \t]+[;:!?](?!-)"), MAJEUR,
+     "espace-avant-ponctuation",
+     "Espace avant deux-points, point-virgule, point d'exclamation ou "
+     "d'interrogation. Correcte en français, fautive en anglais : coller le "
+     "signe au mot."),
+    (re.compile(r"\b(informations|researches|evidences|softwares|feedbacks|"
+                r"equipments|advices|knowledges|trainings)\b", re.I),
+     MAJEUR, "indenombrable-en",
+     "Nom indénombrable mis au pluriel. Écrire information, research, "
+     "evidence, software au singulier."),
+    (re.compile(r"\bactually\b|\beventually\b|\bsensible\b"
+                r"|\b(?:to|we|they|it)\s+precise\b|\bprecised\b"
+                r"|\bcontrol\s+(?:that|if|whether)\b"
+                r"|\ban important\s+(?:number|quantity|amount|part)\s+of\b"
+                r"|\b(?:allow|allows|permit|permits|enable|enables)\s+to\s+\w+"
+                r"|\bin the frame of\b|\bassist(?:ed|s)?\s+at\s+the\b"
+                r"|\binconvenients?\b", re.I),
+     MINEUR, "faux-ami",
+     "Faux ami ou calque du français. Vérifier le sens visé (actually = en "
+     "fait, eventually = finalement, sensible = raisonnable, allow to + verbe "
+     "n'existe pas)."),
+]
+
 # Termes bannis cités par les fichiers de référence du plugin : on n'analyse
 # pas ces fichiers (ils énoncent les interdits). Détection par marqueur.
 MARQUEUR_FICHIER = "lint-style:ignore-file"
 MARQUEUR_LIGNE = "lint-style:ignore"
 
+# Formes exclusivement britanniques et exclusivement americaines. Le suffixe
+# -ize ne figure pas cote americain : l'orthographe d'Oxford (OED, Oxford
+# University Press, Nature) ecrit -ize en anglais britannique, donc -ize ne
+# prouve aucune appartenance. Seules les formes -ise de verbes qui admettent
+# -ize sont retenues cote britannique. Les verbes toujours en -ise (exercise,
+# comprise, revise, surprise, supervise, advertise, improvise, devise) sont
+# hors liste par construction : aucune regle n'emploie de motif general
+# en -ise, qui les prendrait tous pour des britannismes.
+ORTHOGRAPHE_GB = frozenset("""colour colours coloured behaviour behaviours
+favour favours labour honour neighbour endeavour centre centres metre metres
+litre litres fibre fibres theatre defence offence licence practise practised
+analyse analysed analysing paralyse catalyse catalysed modelling modelled
+labelling labelled travelling travelled sulphur organise organised organising
+organisation recognise recognised recognising characterise characterised
+characterisation summarise summarised emphasise emphasised standardise
+standardised normalise normalised minimise minimised maximise maximised
+generalise generalised hypothesise categorise prioritise optimise optimised
+optimisation realise realised specialised visualise visualised""".split())
+ORTHOGRAPHE_US = frozenset("""color colors colored behavior behaviors favor
+favors labor honor neighbor endeavor center centers liter liters fiber fibers
+theater defense offense analyze analyzed analyzing paralyze catalyze modeling
+modeled labeling labeled traveling traveled sulfur""".split())
 
-def lint_text(texte, chemin=None):
+_MOT = re.compile(r"[A-Za-zÀ-ÿ']+")
+_FIN_DE_PHRASE = re.compile(r"[.!?]+\s|\n")
+_PASSIF_EN = re.compile(
+    r"\b(?:is|are|was|were|be|been|being)\s+(?:\w+ly\s+)?"
+    r"(?:\w{3,}ed|shown|given|taken|known|drawn|written|chosen|made|found|"
+    r"seen|held|built|done|sent|kept)\b", re.I)
+
+# Le tiret cadratin est une ponctuation legitime en anglais : seul son exces
+# fait signal. Aucune norme ne fixe de densite, ces deux seuils sont une
+# convention maison, reglable, pas une mesure.
+SEUIL_TIRET_POUR_MILLE = 3.0
+SEUIL_TIRET_MINIMUM = 3
+SEUIL_PASSIF = 0.50
+SEUIL_PASSIF_PHRASES = 6
+
+
+def regles_pour(langue):
+    """Retourne les regles applicables a la langue demandee.
+
+    Le francais rejoue REGLES telle quelle, dans son ordre d'origine : c'est
+    ce qui garantit qu'aucun constat ne bouge d'une version a l'autre.
+    """
+    if langue == "en":
+        return ([r for r in REGLES if FAMILLE.get(r[2]) == "commune"]
+                + REGLES_EN)
+    return REGLES
+
+
+def _constat(ligne, colonne, severite, regle, message, extrait, trouve):
+    return {"ligne": ligne, "colonne": colonne, "severite": severite,
+            "regle": regle, "message": message, "extrait": extrait,
+            "trouve": trouve}
+
+
+def _premiere_ligne(utiles, mots_cibles):
+    """Numero de la premiere ligne analysable portant un des mots vises."""
+    for numero, ligne in utiles:
+        for m in _MOT.finditer(ligne):
+            if m.group(0).lower() in mots_cibles:
+                return numero
+    return utiles[0][0] if utiles else 1
+
+
+def regles_document_en(utiles):
+    """Constats anglais qui ne se lisent qu'a l'echelle du document entier.
+
+    utiles est la liste des couples (numero de ligne, ligne) reellement
+    analysees, blocs de code et lignes ignorees deja retires.
+    """
+    constats = []
+    texte = "\n".join(ligne for _, ligne in utiles)
+    mots = [m.group(0).lower() for m in _MOT.finditer(texte)]
+    if not mots:
+        return constats
+
+    gb = sorted({m for m in mots if m in ORTHOGRAPHE_GB})
+    us = sorted({m for m in mots if m in ORTHOGRAPHE_US})
+    if gb and us:
+        constats.append(_constat(
+            _premiere_ligne(utiles, ORTHOGRAPHE_US), 1, MAJEUR,
+            "orthographe-melangee",
+            "Orthographes britannique et américaine mêlées dans le même "
+            "document. Choisir une variante et la tenir partout.",
+            "britannique : " + ", ".join(gb[:3])
+            + " / américain : " + ", ".join(us[:3]),
+            us[0]))
+
+    n_cadratin = texte.count("—")
+    if (n_cadratin >= SEUIL_TIRET_MINIMUM
+            and n_cadratin * 1000.0 / len(mots) > SEUIL_TIRET_POUR_MILLE):
+        constats.append(_constat(
+            _premiere_ligne(utiles, frozenset()), 1, MINEUR,
+            "tiret-cadratin-densite",
+            "Tiret cadratin employé %d fois pour %d mots. La ponctuation est "
+            "légitime en anglais, sa densité est un marqueur d'écriture "
+            "assistée : en garder deux ou trois par document."
+            % (n_cadratin, len(mots)),
+            "densité mesurée : %.1f pour mille mots"
+            % (n_cadratin * 1000.0 / len(mots)),
+            "—"))
+
+    phrases = [p for p in _FIN_DE_PHRASE.split(texte) if len(p.split()) >= 4]
+    if len(phrases) >= SEUIL_PASSIF_PHRASES:
+        n_passives = sum(1 for p in phrases if _PASSIF_EN.search(p))
+        part = n_passives / len(phrases)
+        if part > SEUIL_PASSIF:
+            constats.append(_constat(
+                _premiere_ligne(utiles, frozenset()), 1, MINEUR,
+                "passif-excessif",
+                "Voix passive sur %d phrases sur %d. La section Methods "
+                "l'admet (APA 7, section 4.13), le reste du texte gagne au "
+                "sujet explicite." % (n_passives, len(phrases)),
+                "part mesurée : %d %%" % round(part * 100),
+                "passive"))
+    return constats
+
+
+def lint_text(texte, chemin=None, langue=None):
     """Analyse un texte et retourne la liste des constats.
 
     Chaque constat est un dict : ligne, colonne, severite, regle, message, extrait.
+    langue vaut fr, en, auto ou None. None conserve le comportement d'origine :
+    le pragme du document s'il en porte un, sinon le francais.
     """
     lignes = texte.splitlines()
     if any(MARQUEUR_FICHIER in l for l in lignes[:5]):
         return []
+    langue = resoudre_langue(texte, langue)
+    regles = regles_pour(langue)
     constats = []
+    utiles = []
     dans_code = False
     for i, ligne in enumerate(lignes, start=1):
         depouille = ligne.strip()
@@ -117,8 +469,13 @@ def lint_text(texte, chemin=None):
             continue
         if MARQUEUR_LIGNE in ligne:
             continue
-        for regex, severite, regle, message in REGLES:
+        utiles.append((i, ligne))
+        for definition in regles:
+            regex, severite, regle, message = definition[:4]
+            garde = definition[4] if len(definition) > 4 else None
             for m in regex.finditer(ligne):
+                if garde is not None and garde(ligne, m):
+                    continue
                 deb = max(0, m.start() - 20)
                 fin = min(len(ligne), m.end() + 20)
                 extrait = ligne[deb:fin].strip()
@@ -131,6 +488,8 @@ def lint_text(texte, chemin=None):
                     "extrait": extrait,
                     "trouve": m.group(0),
                 })
+    if langue == "en":
+        constats.extend(regles_document_en(utiles))
     constats.sort(key=lambda c: (ORDRE[c["severite"]], c["ligne"], c["colonne"]))
     return constats
 
@@ -142,11 +501,12 @@ def compter(constats):
     return n
 
 
-def rapport_texte(constats, chemin):
+def rapport_texte(constats, chemin, langue=LANGUE_DEFAUT):
     n = compter(constats)
     out = []
     titre = chemin or "(stdin)"
     out.append(f"Linter de style maison : {titre}")
+    out.append(f"  langue analysée : {langue}")
     out.append(f"  critiques={n[CRITIQUE]}  majeurs={n[MAJEUR]}  mineurs={n[MINEUR]}")
     if not constats:
         out.append("  Aucun écart détecté.")
@@ -178,6 +538,10 @@ def main(argv=None):
                    help="code de sortie 1 aussi sur constat majeur")
     p.add_argument("--quiet", action="store_true",
                    help="n'imprime rien, renvoie seulement le code de sortie")
+    p.add_argument("--langue", choices=["fr", "en", "auto"], default=None,
+                   help="langue d'analyse. Sans l'option : le pragme "
+                        "lint-style:langue du document, sinon fr. "
+                        "auto lance la détection heuristique")
     a = p.parse_args(argv)
     try:
         if a.fichier == "-":
@@ -190,16 +554,18 @@ def main(argv=None):
     except OSError as e:
         print(f"Erreur de lecture : {e}", file=sys.stderr)
         return 2
-    constats = lint_text(texte, chemin)
+    langue = resoudre_langue(texte, a.langue)
+    constats = lint_text(texte, chemin, langue)
     if not a.quiet:
         if a.format == "json":
             print(json.dumps({
                 "fichier": chemin,
+                "langue": langue,
                 "compte": compter(constats),
                 "constats": constats,
             }, ensure_ascii=False, indent=2))
         else:
-            print(rapport_texte(constats, chemin))
+            print(rapport_texte(constats, chemin, langue))
     return code_sortie(constats, a.strict)
 
 

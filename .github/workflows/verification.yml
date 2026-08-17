@@ -1,0 +1,139 @@
+name: verification
+
+# Deux chemins que le harnais d'evaluation ne peut pas eprouver seul, parce
+# qu'ils dependent d'outils absents des machines de developpement.
+#
+# conversion-svg : images.py convertir implemente une cascade de backends
+#   optionnels, aucun n'etant une dependance du plugin. Sur une machine sans
+#   backend, seule la degradation etait exercee. Ici un backend est installe,
+#   donc le chemin nominal est prouve.
+# jeu-dor : tools/gold.py portait neuf invariants et une porte de regression
+#   qu'aucun workflow n'appelait. La porte reste CONSULTATIVE (voir
+#   docs/CONCEPTION.md) : elle rapporte, elle ne bloque pas.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  conversion-svg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Installer un backend de conversion SVG
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq librsvg2-bin
+          rsvg-convert --version
+
+      - name: Produire une figure SVG avec figures.py
+        run: |
+          mkdir -p verif
+          cat > verif/donnees.json <<'JSON'
+          {
+            "axe_x": {"titre": "Duree", "unite": "h"},
+            "axe_y": {"titre": "Concentration", "unite": "mg/L"},
+            "depart_zero": true,
+            "series": [
+              {"nom": "Temoin", "points": [[0, 1.2], [1, 2.4], [2, 3.1], [3, 3.4]],
+               "marqueurs": true, "erreurs": [0.1, 0.2, 0.15, 0.1]},
+              {"nom": "Traite", "points": [[0, 1.1], [1, 1.6], [2, 1.9], [3, 2.0]],
+               "marqueurs": true}
+            ]
+          }
+          JSON
+          python3 scriptorium/scripts/figures.py courbe \
+            --data verif/donnees.json --title "Courbe de controle" \
+            --out verif/figure.svg
+
+      - name: Convertir le SVG en PNG
+        run: |
+          # Sans pipe : le code de sortie de images.py doit faire echouer
+          # l'etape (3 = aucun backend, 1 = echec de conversion).
+          python3 scriptorium/scripts/images.py convertir verif/figure.svg \
+            --out verif/figure.png --largeur-px 1200 --format json \
+            > verif/rapport.json
+          cat verif/rapport.json
+
+      - name: Verifier le PNG produit
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json, os, sys
+
+          spec = importlib.util.spec_from_file_location(
+              "images", "scriptorium/scripts/images.py")
+          images = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(images)
+
+          with open("verif/rapport.json", encoding="utf-8") as f:
+              rap = json.load(f)
+          with open("verif/figure.png", "rb") as f:
+              octets = f.read()
+          larg, haut, fmt = images.dimensions(octets)
+          dispo = rap.get("backends_disponibles") or []
+
+          controles = [
+              ("un backend est present : le chemin nominal est exerce, pas la degradation",
+               bool(dispo)),
+              ("rsvg-convert vient en tete de l'ordre de preference",
+               dispo[:1] == ["rsvg-convert"]),
+              ("le backend reellement employe est rsvg-convert",
+               rap.get("backend") == "rsvg-convert"),
+              ("le statut ferme rendu est 'converti'", rap.get("statut") == "converti"),
+              ("aucun backend n'a echoue en chemin", rap.get("notes") == []),
+              ("le fichier porte la signature PNG",
+               octets[:8] == b"\x89PNG\r\n\x1a\n"),
+              ("le format relu par images.dimensions est png", fmt == "png"),
+              ("la largeur demandee est respectee", larg == 1200),
+              ("la hauteur est non nulle et le ratio conserve",
+               isinstance(haut, int) and 0 < haut < larg),
+              ("les dimensions annoncees par le rapport sont celles du fichier",
+               (rap.get("largeur"), rap.get("hauteur")) == (larg, haut)),
+              ("le PNG est une image pleine, pas un en-tete seul", len(octets) > 3000),
+          ]
+
+          rates = 0
+          for nom, ok in controles:
+              print("  [%s] %s" % ("OK" if ok else "ECHEC", nom))
+              rates += 0 if ok else 1
+          print("\nPNG %sx%s, %d octets, backend %s."
+                % (larg, haut, len(octets), rap.get("backend")))
+          print("%d/%d controles passes." % (len(controles) - rates, len(controles)))
+          sys.exit(1 if rates else 0)
+          PY
+
+  jeu-dor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Verifier la sante du jeu d'or (invariants I1 a I9)
+        run: python3 tools/gold.py verifier
+
+      - name: Rejouer le jeu d'or
+        run: python3 tools/gold.py mesurer --out "${RUNNER_TEMP}/gold-courant.json"
+
+      - name: Comparer a la reference versionnee (consultatif)
+        run: |
+          # Sans --bloquant : la porte rapporte, elle ne bloque pas. Son mode
+          # bloquant attend un historique de rapports publies, voir
+          # docs/CONCEPTION.md, "Jeu d'or versionne et porte directionnelle".
+          python3 tools/gold.py comparer \
+            evals/gold/rapport-reference.json \
+            "${RUNNER_TEMP}/gold-courant.json" > "${RUNNER_TEMP}/comparaison.txt"
+          cat "${RUNNER_TEMP}/comparaison.txt"
+          # Une porte consultative que personne ne lit ne sert a rien : le
+          # rapport est repris dans le resume de l'execution.
+          {
+            echo "### Jeu d'or : comparaison a la reference (consultatif)"
+            echo ""
+            echo '```'
+            cat "${RUNNER_TEMP}/comparaison.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

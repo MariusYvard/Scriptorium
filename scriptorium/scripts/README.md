@@ -1,19 +1,31 @@
 # Scripts déterministes de Scriptorium
 
-Vingt-six outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
+Vingt-sept outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
 Sur Windows, remplacer `python3` par `python` si nécessaire.
 
 ## lint-style.py
 
-Détecte les écarts au style maison sans jugement de modèle : tiret cadratin, typographie courbe, lexique promotionnel banni, paramètres de suivi dans les URL, virgule d'Oxford, métadiscours, pronom « on », quantificateurs vagues, verbes tics, caractères invisibles.
+Détecte les écarts au style maison sans jugement de modèle : tiret cadratin, typographie courbe, lexique promotionnel banni, paramètres de suivi dans les URL, virgule d'Oxford, métadiscours, pronom « on », quantificateurs vagues, verbes tics, caractères invisibles. Français par défaut, anglais avec `--langue en` (voir le mode de langue plus bas).
 
 ```
-python3 lint-style.py FICHIER [--format text|json] [--strict] [--quiet]
+python3 lint-style.py FICHIER [--format text|json] [--strict] [--quiet] [--langue fr|en|auto]
 cat doc.md | python3 lint-style.py -
 ```
 
 Code de sortie 1 si un constat critique est présent (ou majeur avec `--strict`). Pragmas dans le document : une ligne contenant `lint-style:ignore` est sautée, un fichier contenant `lint-style:ignore-file` dans ses cinq premières lignes est ignoré.
+
+### Mode de langue
+
+Le linter analyse en français ou en anglais. La langue se détermine par un ordre de priorité fixe : l'option `--langue fr|en` prime sur tout ; sinon le pragme `lint-style:langue=en` placé dans les cinq premières lignes du document, seul canal disponible pour le hook, qui ne passe aucune option fichier par fichier ; sinon le français. `--langue auto` lance une détection heuristique (comptage de mots outils exclusifs à chaque langue, verdict rendu au-dessus de douze mots reconnus et de 60 % de part pour le gagnant, défaut français en dessous). La détection n'est pas le comportement par défaut : le linter est appelé sans argument par le hook et par `scorecard.py`, et une bascule automatique changerait en silence le verdict d'un document déjà validé. Le mode français est identique à celui d'avant l'ajout de l'anglais, constat par constat.
+
+Les règles se répartissent en trois familles, déclarées par le dictionnaire `FAMILLE`. Les communes valent dans les deux langues, avec le même motif : typographie courbe, caractères invisibles, paramètres de suivi dans les URL. Les françaises sortent de l'analyse anglaise : virgule d'Oxford, pronom « on », lexique promotionnel français, tournures faibles, quantificateurs vagues, tiret cadratin. Le métadiscours est banni des deux côtés, sous un motif propre à chaque langue. La virgule sérielle est le cas décisif : recommandée en anglais par Chicago, l'APA et la MLA, la signaler serait un faux positif à chaque énumération, donc `virgule-oxford` ne se déclenche jamais en mode anglais.
+
+Onze règles de ligne sont propres à l'anglais. `lexique-promo` (critique) transpose le lexique d'éloge banni. `lexique-ia-en` (majeur) relève le vocabulaire dont la surreprésentation dans les textes assistés a été mesurée sur quinze millions de résumés PubMed, plus `landscape` au sens figuré repéré par cooccurrence. `significance-non-statistique` (majeur) signale `significant` hors contexte statistique explicite, et se tait quand la ligne porte une valeur de p, la mention `statistically`, un intervalle de confiance ou un nom de test. `hedge-empile` (majeur) attrape les modalisateurs superposés du type `may potentially suggest`. `metadiscours`, `nominalisation`, `verbe-tic` et `lexique-faible` couvrent les périphrases et les verbes tics. Trois règles visent le francophone : `espace-avant-ponctuation` (majeur) pour l'espace avant `: ; ! ?`, correcte en français et fautive en anglais, `indenombrable-en` (majeur) pour `informations` ou `researches`, `faux-ami` (mineur) pour `actually`, `eventually`, `control that`, `allow to` et leurs voisins.
+
+Trois règles anglaises de plus se lisent à l'échelle du document plutôt que de la ligne. `orthographe-melangee` (majeur) signale la présence simultanée de formes exclusivement britanniques et exclusivement américaines, sans recommander l'une des deux variantes. Le suffixe `-ize` n'entre pas dans le calcul : l'orthographe d'Oxford l'emploie en anglais britannique, donc il ne prouve rien ; et aucun motif général en `-ise` n'est utilisé, ce qui met hors d'atteinte les verbes toujours en `-ise` (exercise, comprise, revise, surprise). `tiret-cadratin-densite` (mineur) remplace l'interdiction du tiret cadratin, ponctuation légitime en anglais : le constat n'apparaît qu'à partir de trois occurrences et d'une densité supérieure à trois pour mille mots, seuils de convention maison réglables. `passif-excessif` (mineur) mesure la part de phrases passives et se tait sous la moitié, la section Methods admettant le passif (APA 7, section 4.13).
+
+La règle de temps (présent pour un fait établi et pour ce que montre une figure, passé pour ce qui a été fait dans l'étude) reste hors du code : un linter voit le temps sans voir ce que la proposition énonce. Elle est documentée dans `skills/produire/references/style-anglais.md`, qui porte aussi les listes complètes et leurs sources.
 
 Six règles couvrent les caractères invisibles, ce qui ne s'affiche pas à l'écran mais voyage avec le fichier. `caractere-invisible` (majeur) relève la largeur nulle (U+200B, U+2060, U+FEFF) et le trait d'union conditionnel (U+00AD). `zone-privee` (majeur) relève la zone à usage privé (U+E000 à U+F8FF), dont le rendu dépend de la police installée. `controle-bidi` (critique) relève les marques d'écriture bidirectionnelle (U+202A à U+202E, U+2066 à U+2069), qui font lire un texte autrement qu'il n'est écrit. `caractere-tag` (critique) relève les caractères de tag (U+E0000 à U+E007F), invisibles et porteurs de données. `espace-exotique` (mineur) relève les espaces typographiques hors espace ordinaire et insécable (U+2000 à U+200A, U+2028, U+2029, U+205F, U+3000). Ces caractères survivent au copier-coller, cassent la recherche plein texte, l'appariement d'une citation à son ancre et la lecture d'un diff ; certaines revues rejettent un fichier qui en porte.
 
@@ -291,6 +303,27 @@ Sur `autorisation requise` ou `licence inconnue`, le script nomme l'alternative 
 Le registre est un JSON déclaratif de même forme que `assets/registre-logos.exemple.json` : une entrée par figure empruntée, avec sa source, son DOI, sa licence, son verdict, l'état de la demande d'autorisation (`non demandee`, `demandee`, `obtenue`, `refusee`) et la mention des modifications. La validation refuse un identifiant dupliqué, une source absente, un verdict hors liste fermée, un verdict que la licence déclarée contredit, un recadrage sous licence ND, une autorisation refusée. Le verdict du registre se ferme sur quatre valeurs : registre invalide, autorisations a obtenir, licences a etablir, credits complets. Consultatif par défaut, `--strict` renvoie 1 hors de `credits complets`.
 
 Le script rapporte ce que la licence déclare, il ne prononce pas la légalité d'un usage : le contrat d'une revue ou la politique d'un employeur peuvent en décider autrement. Familles de licences, procédure d'autorisation auprès d'un éditeur et forme du registre dans `skills/produire/references/droits-figures.md`.
+
+## check-disponibilite.py
+
+Contrôle de la déclaration de disponibilité des données et du code, sur le manuscrit source, avant soumission. Les revues la réclament, les financeurs publics en font une obligation contractuelle, et une déclaration qui promet un accès inexistant est une affirmation fausse dans un article, du même ordre qu'un chiffre erroné.
+
+```
+python3 check-disponibilite.py FICHIER.md [--format text|json] [--strict]
+cat manuscrit.md | python3 check-disponibilite.py -
+```
+
+Le script repère la section de disponibilité par son titre (intitulés français et anglais courants), y détecte le régime déclaré dans une liste fermée de six valeurs (`depot-ouvert`, `sur-demande`, `embargo`, `restriction-legale`, `donnees-de-tiers`, `aucune-donnee`), puis contrôle que chaque régime porte la preuve qu'il exige : identifiant pérenne quand l'ouverture est annoncée, date de levée quand un embargo est annoncé, licence nommée quand du code est annoncé, détenteur quand les données viennent d'un tiers, contact avec critères et durée quand l'accès est promis sur demande. Un exemple de déclaration cité dans un bloc de code n'est pas compté comme la déclaration du document.
+
+Un identifiant pérenne est un DOI, un handle, un ARK, un SWHID ou un numéro d'accession, jamais une adresse web ordinaire : annoncer des données ouvertes en pointant une page de laboratoire est l'incohérence que ce contrôle sert à rendre visible. De même, un lien vers un dépôt de développement sans version figée ne vaut pas archivage, un dépôt pouvant être renommé, rendu privé, réécrit ou supprimé.
+
+Chaque constat porte une confiance graduée, sur la même échelle que check-fuites.py : `confirme` (la section contredit ce qu'elle annonce, ou l'élément exigé est absent de bout en bout), `probable` (l'élément existe sous une forme qui ne suffit pas, licence évoquée sans être nommée par exemple), `informatif` (un état présent sans faute à corriger, comme la combinaison légitime de deux régimes), `douteux` (faux positif probable, rapporté pour ne rien taire). Une mention "sur demande" à côté d'un dépôt ouvert déjà identifié se dégrade ainsi en `douteux` : elle porte le plus souvent sur un élément secondaire.
+
+Le verdict se ferme sur cinq valeurs : `declaration absente`, `declaration incoherente`, `regime non identifie`, `declaration a completer`, `declaration conforme`. `regime non identifie` ne se confond jamais avec `declaration absente`, comme `licence inconnue` ne se confond pas avec `autorisation requise` dans check-droits.py : une section qui existe sans dire sous quel régime elle place le matériel n'est pas une section manquante. Consultatif par défaut, `--strict` renvoie 1 hors de `declaration conforme`.
+
+Le rapport se termine par ce que le contrôle ne regarde pas : aucun identifiant n'est résolu, aucun dépôt n'est ouvert, aucune autorisation n'est vérifiée, la politique de la revue cible n'est pas lue, et une déclaration exacte placée hors d'une section titrée échappe à la détection. Régimes, formulations types en français et en anglais, dépôts, principes FAIR et obligations des financements européens dans `skills/produire/references/disponibilite.md`.
+
+Module importable : `reperer_section`, `detecter_regimes`, `identifiants_perennes`, `analyser`, `rapport_texte`.
 
 ## emprunts.py
 

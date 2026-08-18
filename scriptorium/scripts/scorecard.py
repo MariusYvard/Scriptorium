@@ -37,13 +37,24 @@ Ajouts de ce lot (recolte openscience, scholar-evaluation/calculate_scores.py) :
   revues reste sous +3 points sans regression (voir chemins-defaillance.md,
   scenario D6).
 
+Langue de notation : la langue se tranche UNE fois, dans evaluer, et descend
+telle quelle dans chaque mesure qui en depend (linter de style, lisibilite,
+integrite numerique, tracabilite). L'ordre de priorite est celui de
+lint-style.py : --langue explicite, puis auto, puis le pragme du document
+(lint-style:langue=en), puis le francais. Le pragme est donc honore par la
+notation entiere sans qu'aucune option soit passee, et le comportement
+francais par defaut ne bouge pas. Sans cette traversee, un texte anglais se
+notait avec les regles francaises : la preposition « on » y declenchait la
+regle pronom-on a chaque occurrence et effondrait l'axe Style.
+
 Usage :
     python3 scorecard.py FICHIER [--format text|json] [--plancher N]
                          [--poids POIDS.json] [--seuil-type TYPE]
+                         [--langue fr|en|auto]
     python3 scorecard.py --trajectoire RAPPORT_A.json RAPPORT_B.json [--format text|json]
 
-Module importable : evaluer(texte, plancher=8, poids=None, seuil_type=None)
--> dict, trajectoire(a, b) -> dict.
+Module importable : evaluer(texte, plancher=8, poids=None, seuil_type=None,
+langue=None) -> dict, trajectoire(a, b) -> dict.
 """
 import argparse
 import importlib.util
@@ -253,14 +264,19 @@ def _decision_editoriale(axes, total, plancher):
     }
 
 
-def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None):
+def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
+            langue=None):
+    # Une seule resolution, partagee par toutes les mesures qui dependent de
+    # la langue. La faire deux fois exposerait au cas ou deux scripts ne
+    # trancheraient pas pareil sur le meme texte.
+    langue = lint.resoudre_langue(texte, langue)
     axes = {}
 
-    c = lint.lint_text(texte)
+    c = lint.lint_text(texte, None, langue)
     crit = sum(1 for x in c if x["severite"] == "critique")
     maj = sum(1 for x in c if x["severite"] == "majeur")
     mino = sum(1 for x in c if x["severite"] == "mineur")
-    nsig = len(aifp.analyser(texte)["signaux"])
+    nsig = len(aifp.analyser(texte, langue=langue)["signaux"])
     axes["Style"] = _axe(20, [(crit, 7, 20, "ecart critique de style"),
                               (maj, 3, 9, "ecart majeur"),
                               (mino, 1, 4, "ecart mineur"),
@@ -271,16 +287,17 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None):
                                 (len(v["doublons"]), 4, 8, "source en double"),
                                 (len(v["dois_invalides"]), 3, 6, "DOI douteux")])
 
-    t = trac.analyser(texte)
+    t = trac.analyser(texte, langue)
     axes["Tracabilite"] = _axe(20, [
         (len(t["citations_pendantes"]), 5, 10, "citation pendante"),
         (len(t["references_orphelines"]), 2, 6, "reference orpheline"),
         (len(t["figures_appelees_non_definies"]) + len(t["tableaux_appeles_non_definis"]), 3, 6, "appel sans definition"),
         (len(t["figures_definies_non_appelees"]) + len(t["tableaux_definis_non_appeles"]), 2, 4, "objet jamais appele"),
-        (len(coh.analyser(texte)["paragraphes_dupliques"]), 4, 8, "paragraphe duplique")])
+        (len(coh.analyser(texte, langue=langue)["paragraphes_dupliques"]), 4, 8,
+         "paragraphe duplique")])
 
     te = term.analyser(texte)
-    nu = nums.analyser(texte)
+    nu = nums.analyser(texte, langue)
     axes["Terminologie et nombres"] = _axe(20, [
         (len(te["sigles_non_definis"]), 4, 8, "sigle non defini"),
         (len(te["sigles_avant_definition"]), 2, 4, "sigle avant definition"),
@@ -289,16 +306,26 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None):
         (len(nu["partitions_incoherentes"]), 3, 6, "partition incoherente"),
         (1 if nu["separateur_decimal_mixte"] else 0, 2, 2, "separateur decimal mixte")])
 
-    m = read.mesurer(texte)
+    m = read.mesurer(texte, langue)
     non_evalues = {}
+    non_mesurees = {}
     if m["mots"] >= MOTS_MINIMUM_LISIBILITE:
         reg = [
             (1 if m["longueur_phrase_ecart_type"] < 5 else 0, 5, 5, "rythme monotone"),
             (1 if m["longueur_phrase_moyenne"] > 28 else 0, 4, 4, "phrases trop longues"),
             (1 if (m["indice_lix"] > 56 or m["indice_lix"] < 30) else 0, 5, 5, "LIX hors bande"),
-            (1 if m["taux_passif_approx_pct"] > 25 else 0, 4, 4, "trop de passif"),
-            (1 if m["densite_lexicale"] < 0.35 else 0, 3, 3, "densite lexicale faible"),
         ]
+        # Le taux de passif peut ne pas avoir ete mesure (langue non couverte,
+        # aucune phrase mesurable). La regle sort alors du calcul et l'absence
+        # de mesure est nommee dans l'axe : sans cette declaration, l'axe
+        # gagnerait quatre points gratuits sans que rien ne le dise.
+        if m["taux_passif_approx_pct"] is None:
+            non_mesurees["Lisibilite"] = list(m.get("mesures_non_faites") or [])
+        else:
+            reg.append((1 if m["taux_passif_approx_pct"] > 25 else 0, 4, 4,
+                        "trop de passif"))
+        reg.append((1 if m["densite_lexicale"] < 0.35 else 0, 3, 3,
+                    "densite lexicale faible"))
         axes["Lisibilite"] = _axe(20, reg)
     else:
         # Sous ce seuil, l'ecart-type de longueur de phrase et l'indice LIX ne
@@ -328,9 +355,12 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None):
         if k in non_evalues:
             entree["non_evalue"] = True
             entree["motif"] = non_evalues[k]
+        if non_mesurees.get(k):
+            entree["mesures_non_faites"] = non_mesurees[k]
         axes_out[k] = entree
 
     resultat = {
+        "langue": langue,
         "axes": axes_out,
         "total": total,
         "verdict": verdict,
@@ -412,7 +442,7 @@ def rapport_texte(r):
         st = r["seuil_type"]
         tag = "atteint" if st["atteint"] else "non atteint"
         entete += f" | seuil {st['type']} {st['seuil']}/100 : {tag}"
-    out = [entete, ""]
+    out = [entete, f"  langue notee : {r.get('langue')}", ""]
     for nom, a in r["axes"].items():
         if a.get("non_evalue"):
             out.append(f"  {nom:26} non evalue, hors calcul")
@@ -421,6 +451,8 @@ def rapport_texte(r):
         out.append(f"  {nom:26} {a['score']:>2}/20  {_barre_ascii(a['score'])}")
         for d in a["deductions"]:
             out.append(f"      {d}")
+        for nf in a.get("mesures_non_faites", []):
+            out.append(f"      mesure non faite : {nf['mesure']} ({nf['motif']})")
     out.append("")
 
     ff = r["forces_faiblesses"]
@@ -488,6 +520,10 @@ def main(argv=None):
     ap.add_argument("--seuil-type", choices=sorted(SEUILS_TYPE), default=None,
                      help="teinte le verdict avec le seuil du type de document ("
                           + ", ".join(f"{k} {v}" for k, v in SEUILS_TYPE.items()) + ")")
+    ap.add_argument("--langue", choices=["fr", "en", "auto"], default=None,
+                     help="langue de notation, meme option que lint-style.py. "
+                          "Sans l'option : le pragme lint-style:langue du "
+                          "document, sinon fr. auto lance la detection")
     ap.add_argument("--trajectoire", nargs=2, metavar=("RAPPORT_A", "RAPPORT_B"),
                      help="compare deux rapports JSON (sorties de --format json)")
     a = ap.parse_args(argv)
@@ -516,7 +552,8 @@ def main(argv=None):
                   file=sys.stderr)
 
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
-    r = evaluer(texte, plancher=a.plancher, poids=poids_brut, seuil_type=a.seuil_type)
+    r = evaluer(texte, plancher=a.plancher, poids=poids_brut,
+                seuil_type=a.seuil_type, langue=a.langue)
     print(json.dumps(r, ensure_ascii=False, indent=2) if a.format == "json" else rapport_texte(r))
     return 0
 

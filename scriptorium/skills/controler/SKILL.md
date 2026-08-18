@@ -3,7 +3,7 @@ name: controler
 description: >
   Éprouve, contrôle et corrige un écrit avant publication. Six sous-commandes. revue : revue adversariale et contrôle qualité (carte preuve-affirmation, sévérité, verdict, lettre de décision) "révise mon texte", "ce texte est-il prêt", "critique mon écrit". contredire : contradiction la plus forte d'une thèse, modèle de Toulmin, discipline de concession, points de rupture "joue l'avocat du diable", "conteste ma thèse", "où est la faille". consensus : vote de trois agents sur contrat de notation préenregistré, comparaison par paires, ancré sur le scorecard, profils de discipline "revue par consensus", "double validation". humaniser : détecter et corriger l'empreinte d'un texte généré "ça sonne IA", "enlève les tics d'écriture". audit : noter un PDF, un Word ou un deck existant (scorecard, contrôles, originalité), vérifier la conformité à un gabarit imposé, contrôler ce que le fichier trahit de son auteur avant envoi et la déclaration de disponibilité des données avant soumission "audite ce document", "note ce rapport", "est-ce que ça respecte le modèle imposé", "qu'est-ce que ce fichier dit de moi". relecteurs : réponse point par point, registre d'engagements, re-revue avec trajectoire de score. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.12.0"
+  version: "0.13.0"
 ---
 
 # Contrôler (réviser, contredire, valider, humaniser, auditer)
@@ -29,7 +29,7 @@ Avant toute lecture de fond, lancer les scripts sur le texte. Ils attrapent méc
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/audit-doc.py FICHIER
 ```
 
-Détail axe par axe : `lint-style.py`, `readability.py`, `verify-sources.py`, `traceability.py`, `terminology.py`, `numbers.py`, `scorecard.py` (plancher par axe, poids optionnels, seuil par type de document, trajectoire entre deux revues), `ai-fingerprint.py`, `coherence.py`, `check-temporel.py` (défaillances chronologiques), `check-presentation.py` (deck PDF), `gabarit.py comparer` (conformité à un gabarit imposé), `check-fuites.py` (ce qu'un livrable trahit de son auteur avant envoi), `check-disponibilite.py` (déclaration de disponibilité des données et du code avant soumission), `tables.py audit`, `plan-check.py`. Traiter les constats critiques avant la revue de fond.
+Détail axe par axe : `lint-style.py`, `readability.py`, `verify-sources.py`, `traceability.py`, `terminology.py`, `numbers.py`, `scorecard.py` (plancher par axe, poids optionnels, seuil par type de document, trajectoire entre deux revues, langue résolue une seule fois et descendue dans chaque mesure qui en dépend), `ai-fingerprint.py`, `coherence.py`, `check-temporel.py` (défaillances chronologiques), `check-presentation.py` (deck PDF), `gabarit.py comparer` (conformité à un gabarit imposé), `check-fuites.py` (ce qu'un livrable trahit de son auteur avant envoi), `check-disponibilite.py` (déclaration de disponibilité des données et du code avant soumission), `tables.py audit`, `plan-check.py`. Traiter les constats critiques avant la revue de fond. Sur un document en anglais, `scorecard.py --langue en` note l'ensemble avec les règles anglaises (voir `produire/references/langue.md`), un appel sans cette option retombant sur le pragme du document puis sur le français.
 
 ## Références transverses
 

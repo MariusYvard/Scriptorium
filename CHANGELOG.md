@@ -11,6 +11,28 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ---
 
+## [0.13.0] - 2026-08-17
+
+Anglais scientifique dans la notation entière, pas seulement dans le linter. Trois lots referment la dette laissée par le mode de langue de la version 0.12.0.
+
+### Added
+- Langue traversant la notation : `scorecard.evaluer` accepte `langue` (option `--langue fr|en|auto` en ligne de commande), résout la langue une seule fois par délégation à `lint-style.py` et la redescend dans le linter, la traçabilité, les nombres, la lisibilité, l'empreinte IA et la cohérence. Un pragme `lint-style:langue=en` posé dans le document est ainsi honoré par la notation entière, sans option supplémentaire. Deux clés ajoutées au rapport, `langue` et `mesures_non_faites` (portée par l'axe Lisibilité quand le taux de passif n'est pas mesurable) ; aucune clé existante ne change de forme.
+- Nouvelle référence skills/produire/references/langue.md : comment la langue se déclare (option, pragme, détection), ce qui change script par script et ce qui reste délibérément monolingue (rapports et verdicts des scripts, vingt-six playbooks de genre, quatre-vingt-dix références).
+- Evals : 523 cas (457 auparavant). Trois nouveaux modules (evals/cas/bilingue-mesures.py, bilingue-raccord.py, bilingue-sorties.py) couvrent les mesures corrigées, le raccordement de la langue à travers scorecard.py et les sorties multilingues des livrables.
+
+### Changed
+- Surface : `produire` (style, figure, sourcer) et `controler` (contrôles déterministes) citent l'option `--langue` des scripts concernés et renvoient vers `references/langue.md` ; `atelier` (cadrer) fixe la langue du document au brief, avec le genre et le plan, avant la première ligne, cohérent avec `references/style-anglais.md`.
+- readability.py, numbers.py, traceability.py, ai-fingerprint.py, check-temporel.py, coherence.py, citations.py et figures.py gagnent chacun une option `--langue` (`fr|en` pour citations.py et figures.py, `fr|en|auto` pour les six autres), détaillée dans `scripts/README.md`.
+
+### Fixed
+- Mesures faussées en anglais : avant ce lot, seul `lint-style.py` portait un mode de langue, les autres scripts restant injoignables depuis la notation ou rendant un résultat faux plutôt qu'une absence de mesure. Mesuré sur un texte anglais dont chaque phrase est au passif : le linter en mode français relevait dix-huit fois la règle du pronom « on », qui frappait en réalité la préposition anglaise homographe, pendant que readability.py annonçait zéro pour cent de passif faute de motif anglais. Parade : readability.py réutilise le motif de passif anglais de lint-style.py et déclare la mesure non faite (`None`) quand elle ne s'applique pas, plutôt que de rendre zéro.
+- numbers.py signalait un séparateur décimal mixte sur un nombre anglais bien formé comme 1,234,567.89 : les groupes de milliers anglais bien formés sont désormais retirés avant l'examen.
+- traceability.py ne reconnaissait ni `Table` ni `Appendix` en anglais : les deux rejoignent `Figure`, commun aux deux langues, sans changer les clés de sortie que scorecard.py consomme.
+- citations.py reliait le dernier auteur par « et » en anglais dans les formats APA et Chicago, alors qu'APA 7 (section 9.8) emploie l'esperluette et que Chicago emploie « and » : les deux formats rendent désormais la forme de leur norme ; les replis de champ manquant deviennent Anonymous, Untitled et n.d.
+- figures.py, ai-fingerprint.py, check-temporel.py et coherence.py produisaient leurs étiquettes ou ne lisaient leurs motifs qu'en français. Le diagramme PRISMA en anglais reprend les libellés des gabarits officiels de la déclaration PRISMA 2020 plutôt qu'une traduction : trois bandes de phase (Identification, Screening, Included), la bande Eligibility de la version 2009 ayant disparu.
+
+---
+
 ## [0.12.0] - 2026-08-17
 
 Anglais scientifique dans le linter, trois dettes de vérification fermées par une compilation réelle en conteneur TeX Live, un défaut de repli de police que cette compilation a mis au jour, déclaration de disponibilité des données et du code.

@@ -3,7 +3,7 @@ name: livrer
 description: >
   Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées, gabarit imposé rempli plutôt que régénéré, logos placés selon leur registre, contrôle de fuites sur le fichier final avant envoi "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document", "remplis le modèle imposé". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.12.0"
+  version: "0.13.0"
 ---
 
 # Livrer (mettre en forme, décliner)

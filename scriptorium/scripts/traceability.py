@@ -21,11 +21,20 @@ module. Un tag bien forme est un signal honnete de l'auteur, jamais une
 penalite : seules les variantes de casse mal formees comptent comme un
 probleme, puisqu'elles echappent silencieusement au reperage par grep.
 
-Usage : python3 traceability.py FICHIER [--format text|json]
-Module importable : analyser(texte) -> dict.
+Les objets se nomment differemment selon la LANGUE du manuscrit. Le modele de
+donnees, lui, ne bouge pas : les cles de sortie gardent les noms francais
+(figures, tableaux, equations, annexes), consommes par scorecard.py, seule la
+forme cherchee dans le texte change. En anglais un tableau s'ecrit "Table" et
+une annexe "Appendix" ; "Figure" s'ecrit de meme dans les deux langues, et les
+equations le sont deja par construction (EQ_CAPTION et EQ_MENTION acceptent
+"equation" comme "équation").
+
+Usage : python3 traceability.py FICHIER [--format text|json] [--langue fr|en|auto]
+Module importable : analyser(texte, langue=None) -> dict.
 """
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -42,6 +51,19 @@ TAG_PREUVE_LARGE = re.compile(r'\[PREUVE FAIBLE\]', re.I)
 CAPT_MODELE = r'(?im)^\s{0,3}(?:!\[[^\]]*\]\([^\)]*\)\s*)?%s\s+(\d{1,3})\s*[:\.—–-]'
 # Appel d'un objet : toute autre mention du nom du type suivi d'un numero.
 MENTION_MODELE = r'(?i)\b%s\s+(\d{1,3})'
+
+LANGUES = ("fr", "en")
+
+# Forme cherchee dans le texte pour chaque type d'objet, par langue. Les CLES
+# restent les noms francais du modele de donnees : elles nomment les cles de
+# sortie que scorecard.py consomme, les renommer casserait la notation en
+# silence. "table" n'est actif qu'en anglais a dessein : dans un texte
+# francais, "la table 3" designerait un meuble bien plus souvent qu'un
+# tableau, et l'ajouter fabriquerait un faux positif francais.
+MOT_OBJET = {
+    "fr": {"figure": "figure", "tableau": "tableau"},
+    "en": {"figure": "figure", "tableau": "table"},
+}
 
 # --- Equations ---------------------------------------------------------------
 # Trois notations de numero d'equation coexistent dans les sources traitees par
@@ -69,8 +91,46 @@ EQ_MENTION = re.compile(r'(?i)\b[ée]quations?\s+\(?(\d{1,3})\)?')
 # "l'annexe a ete jointe" passerait pour une annexe nommee A.
 ANNEXE_CAPTION = re.compile(r'(?m)^\s{0,3}[Aa]nnexes?\s+(\d{1,3}|[A-Z])\s*[:\.—–-]')
 ANNEXE_MENTION = re.compile(r'\b[Aa]nnexes?\s+(\d{1,3}|[A-Z])\b')
+# Meme contrainte de capitale en anglais, et pour la meme raison : sans elle,
+# "the appendix a reader consults" passerait pour une annexe nommee A.
+ANNEXE_CAPTION_EN = re.compile(
+    r'(?m)^\s{0,3}[Aa]ppendi(?:x|ces)\s+(\d{1,3}|[A-Z])\s*[:\.—–-]')
+ANNEXE_MENTION_EN = re.compile(r'\b[Aa]ppendi(?:x|ces)\s+(\d{1,3}|[A-Z])\b')
+
+ANNEXE_MOTIFS = {
+    "fr": (ANNEXE_CAPTION, ANNEXE_MENTION),
+    "en": (ANNEXE_CAPTION_EN, ANNEXE_MENTION_EN),
+}
 
 OBJETS = ("figure", "tableau", "equation", "annexe")
+
+_LINT = None
+
+
+def _lint():
+    """Charge lint-style.py a la demande, une seule fois. Le nom du fichier
+    porte un tiret, il n'est pas importable tel quel. La resolution de langue
+    y est definie et documentee : elle est lue ici, jamais recopiee."""
+    global _LINT
+    if _LINT is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "lint-style.py")
+        spec = importlib.util.spec_from_file_location("lint_style", chemin)
+        _LINT = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LINT)
+    return _LINT
+
+
+def resoudre_langue(texte, langue=None):
+    """Tranche la langue d'analyse, par delegation a lint-style.py : option
+    explicite, puis auto, puis pragme du document, puis francais. Un code
+    hors fr, en et auto n'est pas honore, la resolution ordinaire s'applique
+    et la langue retenue est rendue dans la cle "langue" du resultat."""
+    if langue is not None and langue not in LANGUES and langue != "auto":
+        langue = None
+    return _lint().resoudre_langue(texte, langue)
+
 
 LIBELLES_OBJET = {"figure": "figures", "tableau": "tableaux",
                   "equation": "equations", "annexe": "annexes"}
@@ -121,9 +181,16 @@ def _compte(paires):
     return d
 
 
-def captions_numerotees(corps, kind):
+def _mot(kind, langue):
+    """Forme cherchee dans le texte pour ce type d'objet et cette langue. Une
+    langue non couverte retombe sur le francais, jamais sur rien."""
+    return MOT_OBJET.get(langue, MOT_OBJET["fr"]).get(kind, kind)
+
+
+def captions_numerotees(corps, kind, langue="fr"):
     """Numeros portes par les legendes de ce type d'objet, avec leur compte."""
-    return _compte(int(x) for x in re.compile(CAPT_MODELE % kind).findall(corps))
+    motif = CAPT_MODELE % _mot(kind, langue)
+    return _compte(int(x) for x in re.compile(motif).findall(corps))
 
 
 def _appels(captions, mentions):
@@ -134,9 +201,10 @@ def _appels(captions, mentions):
     return sorted(definis - appeles), sorted(appeles - definis)
 
 
-def compter(corps, kind):
-    captions = captions_numerotees(corps, kind)
-    mentions = _compte(int(x) for x in re.compile(MENTION_MODELE % kind).findall(corps))
+def compter(corps, kind, langue="fr"):
+    captions = captions_numerotees(corps, kind, langue)
+    motif = MENTION_MODELE % _mot(kind, langue)
+    mentions = _compte(int(x) for x in re.compile(motif).findall(corps))
     return _appels(captions, mentions)
 
 
@@ -169,18 +237,19 @@ def _annexe_numero(brut):
     return ord(brut.upper()) - 64, "alphabetique"
 
 
-def annexes(texte):
+def annexes(texte, langue="fr"):
     """Legendes et appels d'annexes, lus sur le texte entier : une annexe se
     place apres la bibliographie, donc hors du corps decoupe par
     separer_biblio. Rend (captions, definies_non_appelees,
     appelees_non_definies, notation)."""
+    caption_re, mention_re = ANNEXE_MOTIFS.get(langue, ANNEXE_MOTIFS["fr"])
     captions, notations = {}, set()
-    for brut in ANNEXE_CAPTION.findall(texte):
+    for brut in caption_re.findall(texte):
         rang, notation = _annexe_numero(brut)
         captions[rang] = captions.get(rang, 0) + 1
         notations.add(notation)
     mentions = {}
-    for brut in ANNEXE_MENTION.findall(texte):
+    for brut in mention_re.findall(texte):
         rang, _ = _annexe_numero(brut)
         mentions[rang] = mentions.get(rang, 0) + 1
     if len(notations) > 1:
@@ -273,23 +342,25 @@ def tags_lacune(texte):
     }
 
 
-def analyser(texte):
+def analyser(texte, langue=None):
+    langue = resoudre_langue(texte, langue)
     corps, biblio = separer_biblio(texte)
     definies = refs_numerotees(biblio)
     citees = cites_numerotees(corps)
     pendantes = sorted(citees - definies)
     orphelines = sorted(definies - citees) if definies else []
-    fig_nc, fig_nd = compter(corps, 'figure')
-    tab_nc, tab_nd = compter(corps, 'tableau')
+    fig_nc, fig_nd = compter(corps, 'figure', langue)
+    tab_nc, tab_nd = compter(corps, 'tableau', langue)
     eq_capt, eq_nc, eq_nd = equations(corps)
-    anx_capt, anx_nc, anx_nd, anx_notation = annexes(texte)
+    anx_capt, anx_nc, anx_nd, anx_notation = annexes(texte, langue)
     sequences = {
-        "figure": verifier_sequence(captions_numerotees(corps, 'figure')),
-        "tableau": verifier_sequence(captions_numerotees(corps, 'tableau')),
+        "figure": verifier_sequence(captions_numerotees(corps, 'figure', langue)),
+        "tableau": verifier_sequence(captions_numerotees(corps, 'tableau', langue)),
         "equation": verifier_sequence(eq_capt),
         "annexe": verifier_sequence(anx_capt, anx_notation),
     }
     resultat = {
+        "langue": langue,
         "biblio_presente": bool(biblio),
         "references_definies": sorted(definies),
         "citations_pendantes": pendantes,
@@ -353,14 +424,18 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Verificateur de tracabilite.")
     ap.add_argument("fichier")
     ap.add_argument("--format", choices=["text", "json"], default="text")
+    ap.add_argument("--langue", choices=["fr", "en", "auto"], default=None,
+                     help="langue des noms d'objets cherches. Sans l'option : "
+                          "le pragme lint-style:langue du document, sinon fr")
     a = ap.parse_args(argv)
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
-    d = analyser(texte)
+    d = analyser(texte, a.langue)
     p = problemes(d)
     if a.format == "json":
         print(json.dumps({"analyse": d, "problemes": p}, ensure_ascii=False, indent=2))
     else:
         print("Tracabilite")
+        print(f"  langue analysee : {d['langue']}")
         print(f"  biblio presente : {d['biblio_presente']} | references definies : {len(d['references_definies'])}")
         print(f"  tags [LACUNE MATERIELLE] : {d['tags_lacune_materielle']} | "
               f"tags [PREUVE FAIBLE] : {d['tags_preuve_faible']}")

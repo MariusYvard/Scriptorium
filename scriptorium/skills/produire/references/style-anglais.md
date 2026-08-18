@@ -1,12 +1,12 @@
 # Style maison en anglais
 
-Transposition du style maison pour un document rédigé en anglais. Le fond des directives strictes ne bouge pas : registre encyclopédique, fait précis ou rien, entrée directe en matière, sources vérifiées. Ce qui bouge est la liste des règles de forme, dont certaines sont calibrées sur le français et deviennent fausses en anglais. Contrôle mécanique correspondant : `scripts/lint-style.py --langue en`.
+Transposition du style maison pour un document rédigé en anglais. Le fond des directives strictes ne bouge pas : registre encyclopédique, fait précis ou rien, entrée directe en matière, sources vérifiées. Ce qui bouge est la liste des règles de forme, dont certaines sont calibrées sur le français et deviennent fausses en anglais. Contrôle mécanique correspondant : `scripts/lint-style.py --langue en`, propagé par `scripts/scorecard.py --langue en` à toute la notation. Portée exacte du bilinguisme, script par script : `references/langue.md`.
 
 ## Fixer la langue du document
 
 La langue se fixe au cadrage, avec le genre et le plan, avant la première ligne. Elle ne change plus ensuite. Un document dont la langue change en cours de route accumule les deux jeux de règles sans en satisfaire aucun.
 
-Trois façons de la déclarer au linter, par priorité décroissante. L'option `--langue fr|en` passée à l'appel prime sur tout. Le pragme `lint-style:langue=en` placé dans les cinq premières lignes du fichier vient ensuite : c'est le seul canal utilisable par le hook, qui ne passe aucune option fichier par fichier. Sans rien, le français. La détection heuristique existe (`--langue auto`, comptage de mots outils exclusifs à chaque langue) sans être le comportement par défaut, parce que le linter est appelé sans argument par le hook et par `scorecard.py` : une bascule automatique changerait en silence le verdict d'un document déjà validé.
+Trois façons de la déclarer au linter, par priorité décroissante. L'option `--langue fr|en` passée à l'appel prime sur tout. Le pragme `lint-style:langue=en` placé dans les cinq premières lignes du fichier vient ensuite : c'est le seul canal utilisable par le hook, qui ne passe aucune option fichier par fichier. Sans rien, le français. La détection heuristique existe (`--langue auto`, comptage de mots outils exclusifs à chaque langue) sans être le comportement par défaut, parce que le linter est appelé sans argument par le hook et par `scorecard.py` : une bascule automatique changerait en silence le verdict d'un document déjà validé. Les autres scripts du plugin qui dépendent de la langue (readability.py, numbers.py, traceability.py, citations.py, figures.py, ai-fingerprint.py, check-temporel.py, coherence.py) suivent le même ordre de priorité, soit par délégation directe à la résolution du linter, soit par transmission depuis `scorecard.py` : voir `references/langue.md`.
 
 ## Ce qui ne change pas
 

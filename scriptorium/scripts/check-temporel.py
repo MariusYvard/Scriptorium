@@ -14,10 +14,26 @@ Principe : mesure avant politique. Le script ne bloque jamais par défaut,
 il liste des constats à vérifier par un humain. --strict fait passer le
 code de sortie à 1 dès qu'un constat existe, quelle que soit sa sévérité.
 
+Portee de langue, verifiee constat par constat plutot que supposee. Quatre
+des cinq detections lisent des mots et dependent donc de la langue : la
+date future se reconnait a un marqueur de temps passe (verbes francais),
+l'inversion causale a un connecteur causal (« grace a », « a permis »), le
+langage a peremption a un deictique (« a ce jour », « le plus recent »), et
+la chaine de dates a un marqueur de version publiee. Chacune a son jeu de
+motifs par langue. Deux briques restent communes et le sont declarees ici :
+la version citee avant sa sortie ne lit que le glossaire fourni et des
+annees a quatre chiffres, et le reperage de la section bibliographie
+delegue a traceability.py, dont le motif de titre couvre deja les deux
+langues (References, Bibliographie, Bibliography). Le motif de mois, lui,
+sert a taire le langage a peremption dans une phrase deja datee : il est
+propre a chaque langue, faute de quoi « the latest, as of March 2024 »
+leverait un constat en anglais alors que la phrase porte sa date.
+
 Usage :
     python3 check-temporel.py FICHIER [--format text|json] [--strict]
     python3 check-temporel.py FICHIER --versions glossaire.json
     python3 check-temporel.py FICHIER --date-reference 2026-07-08
+    python3 check-temporel.py FICHIER --langue en
     cat doc.md | python3 check-temporel.py -
 
 Format du glossaire de versions (JSON, optionnel), nom vers date ISO :
@@ -28,7 +44,8 @@ Codes de sortie :
     1  --strict et au moins un constat
     2  erreur d'usage (fichier ou glossaire illisible, date invalide)
 
-Le module est importable : analyser(texte) -> dict avec clé "constats".
+Le module est importable : analyser(texte, langue=None) -> dict avec clé
+"constats".
 
 Limite assumée : la détection du marqueur de temps verbal passé et de la
 causalité repose sur des listes de motifs curées, pas sur une analyse
@@ -82,6 +99,90 @@ PREPRINT_MARK_RE = re.compile(r"\b(preprint|arxiv|pr[ée]publication|working pap
 PUBLIE_MARK_RE = re.compile(r"\b(in proc\.|actes de|version revue|version publi[ée]e|"
                              r"journal|revue|conf[ée]rence)\b", re.I)
 
+# --- Motifs anglais ---------------------------------------------------------
+#
+# Transposition mesure par mesure des quatre motifs qui lisent des mots. Le
+# marqueur de preprint ci-dessus est deja commun aux deux langues (preprint,
+# arxiv, working paper) et n'est pas redouble ; seul le marqueur de version
+# publiee l'est, ses formes francaises ne reconnaissant pas « proceedings »
+# ni « in press », et « conf[ée]rence » ne reconnaissant pas « conference ».
+MOIS_EN = ("january|february|march|april|may|june|july|august|september|"
+           "october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|"
+           "oct|nov|dec")
+DATE_MOIS_EN_RE = re.compile(
+    rf'\b(\d{{1,2}}\s+)?({MOIS_EN})\.?\s+(\d{{1,2}},?\s+)?((19|20)\d{{2}})\b', re.I)
+
+MARQUEUR_PASSE_EN_RE = re.compile(
+    r"\b(took place|was held|were held|was published|were published|"
+    r"was announced|was launched|was released|was completed|was signed|"
+    r"has shown|have shown|has been|have been|had been|was|were|had|"
+    r"occurred|ended|began|started|reported|demonstrated|revealed)\b", re.I)
+
+CONNECTEURS_CAUSAUX_EN = {
+    "thanks to": "apres", "following": "apres", "as a result of": "apres",
+    "because of": "apres", "owing to": "apres", "due to": "apres",
+    "in the wake of": "apres",
+    "led to": "avant", "enabled": "avant", "made possible": "avant",
+    "resulted in": "avant", "paved the way for": "avant",
+}
+CONNECTEUR_EN_RE = re.compile(
+    "|".join(re.escape(c) for c in
+             sorted(CONNECTEURS_CAUSAUX_EN, key=len, reverse=True)), re.I)
+
+PEREMPTION_EN_RE = re.compile(
+    r"\b(the (?:most recent|latest|newest)|to date|currently|at present|"
+    r"at the time of writing|recently|in recent years|nowadays|"
+    r"(?:so|thus) far|up to now|until now|state[- ]of[- ]the[- ]art)\b", re.I)
+
+PUBLIE_MARK_EN_RE = re.compile(
+    r"\b(in proc\.|proceedings|published version|revised version|"
+    r"in press|journal|conference|symposium)\b", re.I)
+
+
+LANGUES = ("fr", "en")
+
+_LINT = None
+
+
+def _lint():
+    """Charge lint-style.py par son chemin, une seule fois.
+
+    Le nom du fichier porte un tiret, il n'est pas importable tel quel. La
+    resolution de langue y est definie et documentee : elle est lue ici,
+    jamais recopiee, sinon deux scripts pourraient trancher differemment la
+    langue du meme document.
+    """
+    global _LINT
+    if _LINT is None:
+        spec = importlib.util.spec_from_file_location(
+            "lint_style_ct", os.path.join(ICI, "lint-style.py"))
+        _LINT = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LINT)
+    return _LINT
+
+
+def resoudre_langue(texte, langue=None):
+    """Tranche la langue d'analyse, par delegation a lint-style.py.
+
+    Meme ordre de priorite que le linter : option explicite, puis auto, puis
+    pragme du document, puis francais. Un code hors fr, en et auto est rendu
+    tel quel ; les motifs retombent alors sur le francais.
+    """
+    if langue is not None and langue not in LANGUES and langue != "auto":
+        return langue
+    return _lint().resoudre_langue(texte, langue)
+
+
+def _jeu(langue):
+    """Jeu de motifs de la langue. Hors anglais, le jeu francais, defaut."""
+    if langue == "en":
+        return {"passe": MARQUEUR_PASSE_EN_RE, "date_mois": DATE_MOIS_EN_RE,
+                "causaux": CONNECTEURS_CAUSAUX_EN, "causal": CONNECTEUR_EN_RE,
+                "peremption": PEREMPTION_EN_RE, "publie": PUBLIE_MARK_EN_RE}
+    return {"passe": MARQUEUR_PASSE_RE, "date_mois": DATE_MOIS_RE,
+            "causaux": CONNECTEURS_CAUSAUX, "causal": CONNECTEUR_RE,
+            "peremption": PEREMPTION_RE, "publie": PUBLIE_MARK_RE}
+
 
 def _ligne_de(texte, offset):
     return texte.count("\n", 0, offset) + 1
@@ -115,14 +216,14 @@ def _annee_apres_position(segment, position):
     return None
 
 
-def _detecter_futur_au_passe(texte, date_reference):
+def _detecter_futur_au_passe(texte, date_reference, jeu):
     constats = []
     for m in SENT_RE.finditer(texte):
         phrase = m.group(0)
         annees = [int(a.group(0)) for a in ANNEE_RE.finditer(phrase)]
         if not annees or max(annees) <= date_reference.year:
             continue
-        if not MARQUEUR_PASSE_RE.search(phrase):
+        if not jeu["passe"].search(phrase):
             continue
         constats.append({
             "type": "futur-au-passe",
@@ -163,14 +264,14 @@ def _detecter_versions_anterieures(texte, versions):
     return constats
 
 
-def _detecter_inversions_causales(texte):
+def _detecter_inversions_causales(texte, jeu):
     constats = []
     for m in SENT_RE.finditer(texte):
         phrase = m.group(0)
-        cm = CONNECTEUR_RE.search(phrase)
+        cm = jeu["causal"].search(phrase)
         if not cm:
             continue
-        sens = CONNECTEURS_CAUSAUX.get(cm.group(0).lower())
+        sens = jeu["causaux"].get(cm.group(0).lower())
         if sens is None:
             continue
         avant, apres = phrase[:cm.start()], phrase[cm.end():]
@@ -193,13 +294,13 @@ def _detecter_inversions_causales(texte):
     return constats
 
 
-def _detecter_langage_peremption(texte):
+def _detecter_langage_peremption(texte, jeu):
     constats = []
     for m in SENT_RE.finditer(texte):
         phrase = m.group(0)
-        if ANNEE_RE.search(phrase) or DATE_MOIS_RE.search(phrase):
+        if ANNEE_RE.search(phrase) or jeu["date_mois"].search(phrase):
             continue
-        for pm in PEREMPTION_RE.finditer(phrase):
+        for pm in jeu["peremption"].finditer(phrase):
             constats.append({
                 "type": "langage-peremption",
                 "severite": SIGNAL,
@@ -210,7 +311,7 @@ def _detecter_langage_peremption(texte):
     return constats
 
 
-def _detecter_chaines_incoherentes(texte):
+def _detecter_chaines_incoherentes(texte, jeu):
     """Cherche, ligne par ligne dans la section bibliographie, un marqueur de
     preprint et un marqueur de version publiee tous deux presents, chacun
     associe a la premiere annee qui le suit dans la ligne (ordre de lecture)."""
@@ -223,7 +324,7 @@ def _detecter_chaines_incoherentes(texte):
     for brute in biblio.splitlines(keepends=True):
         ligne = brute.rstrip("\n")
         pm = PREPRINT_MARK_RE.search(ligne)
-        um = PUBLIE_MARK_RE.search(ligne)
+        um = jeu["publie"].search(ligne)
         if pm and um:
             annee_preprint = _annee_apres_position(ligne, pm.end())
             annee_publie = _annee_apres_position(ligne, um.end())
@@ -241,17 +342,19 @@ def _detecter_chaines_incoherentes(texte):
     return constats
 
 
-def analyser(texte, date_reference=None, versions=None):
+def analyser(texte, date_reference=None, versions=None, langue=None):
     if date_reference is None:
         date_reference = datetime.date.today()
+    langue = resoudre_langue(texte, langue)
+    jeu = _jeu(langue)
     constats = []
-    constats += _detecter_futur_au_passe(texte, date_reference)
+    constats += _detecter_futur_au_passe(texte, date_reference, jeu)
     constats += _detecter_versions_anterieures(texte, versions)
-    constats += _detecter_inversions_causales(texte)
-    constats += _detecter_langage_peremption(texte)
-    constats += _detecter_chaines_incoherentes(texte)
+    constats += _detecter_inversions_causales(texte, jeu)
+    constats += _detecter_langage_peremption(texte, jeu)
+    constats += _detecter_chaines_incoherentes(texte, jeu)
     constats.sort(key=lambda c: (c["ligne"], c["type"]))
-    return {"constats": constats}
+    return {"constats": constats, "langue": langue}
 
 
 def compter(constats):
@@ -286,6 +389,10 @@ def main(argv=None):
                    help="code de sortie 1 si au moins un constat (jamais bloquant sans ce drapeau)")
     p.add_argument("--versions", help="glossaire JSON optionnel {nom_version: date_ISO}")
     p.add_argument("--date-reference", help="date de référence AAAA-MM-JJ (défaut : aujourd'hui)")
+    p.add_argument("--langue", choices=["fr", "en", "auto"], default=None,
+                   help="langue d'analyse. Sans l'option : le pragme "
+                        "lint-style:langue du document, sinon fr. "
+                        "auto lance la détection heuristique")
     a = p.parse_args(argv)
     try:
         texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
@@ -308,7 +415,8 @@ def main(argv=None):
             print(f"Date de référence invalide : {e}", file=sys.stderr)
             return 2
     chemin = None if a.fichier == "-" else a.fichier
-    d = analyser(texte, date_reference=date_reference, versions=versions)
+    d = analyser(texte, date_reference=date_reference, versions=versions,
+                 langue=a.langue)
     if a.format == "json":
         print(json.dumps({"fichier": chemin, "compte": compter(d["constats"]), **d},
                           ensure_ascii=False, indent=2))

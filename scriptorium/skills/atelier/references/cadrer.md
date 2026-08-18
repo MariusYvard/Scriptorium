@@ -11,6 +11,7 @@ Paramètres à fixer :
 - Problème déclencheur et contexte (pourquoi cet écrit, maintenant).
 - Public destinataire et son niveau d'expertise (un comité de direction, un jury, des pairs, un client).
 - Décision que l'écrit doit éclairer (la question "ce document sert à décider quoi ?" recadre tout le reste).
+- Langue du document (français ou anglais). Fixée ici, elle ne change plus et gouverne le style maison ainsi que les scripts déterministes de notation (voir `produire/references/langue.md`).
 - Contraintes de volume, de format et de délai.
 - Sources déjà disponibles et sources à produire.
 

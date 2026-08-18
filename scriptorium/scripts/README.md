@@ -43,11 +43,13 @@ python3 verify-sources.py FICHIER [--format text|json] [--check-links] [--reseau
 
 ## readability.py
 
-Métriques de lisibilité françaises : longueur de phrase moyenne et écart-type, part de phrases longues et courtes, longueur de paragraphe, densité lexicale, approximation du taux de passif, indice LIX. Transforme la règle « varier le rythme » en mesure.
+Métriques de lisibilité : longueur de phrase moyenne et écart-type, part de phrases longues et courtes, longueur de paragraphe, densité lexicale, approximation du taux de passif, indice LIX. Transforme la règle « varier le rythme » en mesure. Français par défaut, anglais avec `--langue en`, même ordre de priorité que `lint-style.py`.
 
 ```
-python3 readability.py FICHIER [--format text|json]
+python3 readability.py FICHIER [--format text|json] [--langue fr|en|auto]
 ```
+
+Seul le taux de passif dépend réellement de la langue (motif français ou motif anglais de `lint-style.py`, lu et non recopié) ; hors de ces deux langues, ou sans phrase mesurable, la mesure se déclare non faite (`mesures_non_faites`) plutôt que de rendre zéro. L'indice LIX reste agnostique à la langue par construction, mais la bande 30-56 qu'applique `scorecard.py` reste calibrée sur le français faute de calibrage anglais mesuré. Détail dans `skills/produire/references/langue.md`.
 
 ## theme.py
 
@@ -64,9 +66,11 @@ python3 theme.py charte.json [--format text|json|css|latex]
 Génère des figures en SVG (sans dépendance) et porte un regard critique déterministe sur la figure avant insertion. Deux familles : les figures stratégiques rangent des éléments dans des cases, les figures de données portent des axes gradués dont chacun reçoit un titre et son unité.
 
 ```
-python3 figures.py TYPE --out fichier.svg [--data data.json|-] [--title "Titre"]
+python3 figures.py TYPE --out fichier.svg [--data data.json|-] [--title "Titre"] [--langue fr|en]
 python3 figures.py TYPE --data - --audit < data.json
 ```
+
+`--langue fr|en` (défaut fr) fixe la langue des étiquettes écrites dans le code : cases du SWOT, du PESTEL, de la BCG et de l'Ansoff, activités de la chaîne de valeur, phases et boîtes du diagramme PRISMA. Les clés des données JSON et les libellés fournis par l'appelant ne sont jamais traduits, et le regard critique de `--audit` reste en français dans les deux langues. Les libellés anglais de PRISMA viennent des gabarits officiels de la déclaration PRISMA 2020 : trois bandes de phase seulement (Identification, Screening, Included), la bande Eligibility de 2009 a disparu.
 
 TYPE stratégiques : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`. TYPE de données : `courbe`, `nuage`, `histogramme`, `boite`, `flux`, `prisma`. L'option `--audit` liste les défauts structurels (cases vides, surcharge, déséquilibre, valeurs hors bornes, points non étiquetés, axe sans titre ou sans unité, échelle d'histogramme tronquée, quartiles hors ordre, comptes PRISMA qui ne bouclent pas) sans écrire de fichier.
 
@@ -100,8 +104,10 @@ Motifs de légende retenus, sur le Markdown source :
 
 Clés ajoutées à la sortie de `analyser()` : `equations_definies_non_appelees`, `equations_appelees_non_definies`, `annexes_definies_non_appelees`, `annexes_appelees_non_definies`, `sequences` (par type d'objet : `numeros`, `doublons`, `manquants`, `commence_a`, `commence_a_un`, `notation`) et `numerotation_anomalies` (liste de constats nommés `numero_duplique`, `numero_manquant`, `ne_commence_pas_a_un`, `notation_mixte`). Les clés antérieures sont inchangées, `scorecard.py` continue de les lire.
 
+Français par défaut, anglais avec `--langue en` : reconnaît `Table` et `Appendix` en plus de `Figure`, commun aux deux langues. Les clés de sortie restent françaises (figures, tableaux, equations, annexes), seule la forme cherchée dans le texte change.
+
 ```
-python3 traceability.py FICHIER [--format text|json]
+python3 traceability.py FICHIER [--format text|json] [--langue fr|en|auto]
 ```
 
 ## terminology.py
@@ -114,21 +120,25 @@ python3 terminology.py FICHIER [--format text|json]
 
 ## numbers.py
 
-Signale les pourcentages supérieurs à 100, les partitions de pourcentages qui ne somment pas à cent, et un séparateur décimal mixte.
+Signale les pourcentages supérieurs à 100, les partitions de pourcentages qui ne somment pas à cent, un séparateur décimal mixte et un espacement du signe pourcent contraire à la convention de la langue. Français par défaut, anglais avec `--langue en`.
 
 ```
-python3 numbers.py FICHIER [--format text|json]
+python3 numbers.py FICHIER [--format text|json] [--langue fr|en|auto]
 ```
+
+Le séparateur décimal mixte ignore d'abord les groupes de milliers anglais bien formés (`1,234,567.89`) avant de chercher un mélange réel, sans quoi tout grand nombre anglais serait signalé à tort. L'espacement du signe pourcent se contrôle contre la convention de la langue : collé au nombre en anglais (APA 7, Chicago), précédé d'une espace en français (Imprimerie nationale, BIPM).
 
 ## citations.py
 
 Lit du BibTeX, formate en APA 7, Vancouver, Chicago (auteur-date), MLA ou IEEE, déduplique par DOI, bascule une bibliographie d'un format à l'autre. Chaque entrée peut porter une ancre (champ `note` ou `annote` : citation exacte de 25 mots au plus, ou localisation précise type `p. 12`, `section 3.2`) ; le rapport d'ancrage liste les entrées sans ancre exploitable. La récupération d'une référence depuis un DOI (Crossref) est réseau et optionnelle.
 
 ```
-python3 citations.py FICHIER.bib --to apa|vancouver|chicago|mla|ieee [--dedupe] [--exiger-ancres] [--valider] [--trier cle|annee|auteur]
+python3 citations.py FICHIER.bib --to apa|vancouver|chicago|mla|ieee [--dedupe] [--exiger-ancres] [--valider] [--trier cle|annee|auteur] [--langue fr|en]
 python3 citations.py FICHIER.bib --bascule apa ieee
 python3 citations.py --doi 10.xxxx/yyyy | --pmid N | --arxiv ID
 ```
+
+`--langue fr|en` (défaut fr) fixe la langue de la bibliographie, uniquement par cette option : un fichier `.bib` est une suite de champs, pas de la prose, sans échantillon fiable pour une détection heuristique ni pour un pragme. En anglais, APA relie le dernier auteur par l'esperluette (section 9.8) et Chicago par « and » plutôt que par « et » ; les replis de champ manquant deviennent Anonymous, Untitled et n.d.
 
 `--exiger-ancres` renvoie un code de sortie 1 si une entrée n'a pas d'ancre. `--valider` rapporte les champs obligatoires manquants par type d'entrée, `--pmid` et `--arxiv` résolvent une référence en BibTeX (réseau, NCBI E-utilities et export.arxiv.org).
 
@@ -136,10 +146,10 @@ Ancrage à trois couches (`references/integrite-sources.md`). La couche 1, exist
 
 ## check-temporel.py
 
-Détecte cinq défaillances chronologiques qui survivent à une relecture humaine : date future présentée comme passée, version citée avant sa date connue (glossaire `--versions` optionnel), inversion causale (la cause datée après son effet dans la même phrase), langage à péremption (« le plus récent », « à ce jour », à ancrer par une date), chaîne de dates incohérente dans une référence. Consultatif par défaut, bloquant avec `--strict`.
+Détecte cinq défaillances chronologiques qui survivent à une relecture humaine : date future présentée comme passée, version citée avant sa date connue (glossaire `--versions` optionnel), inversion causale (la cause datée après son effet dans la même phrase), langage à péremption (« le plus récent », « à ce jour », à ancrer par une date), chaîne de dates incohérente dans une référence. Consultatif par défaut, bloquant avec `--strict`. Français par défaut, anglais avec `--langue en` : quatre détections sur cinq lisent des motifs de langue (marqueur de temps passé, connecteur causal, langage à péremption, marqueur de version publiée), le glossaire de versions et le marqueur de preprint restant communs.
 
 ```
-python3 check-temporel.py FICHIER [--date-reference AAAA-MM-JJ] [--versions versions.json] [--format text|json] [--strict]
+python3 check-temporel.py FICHIER [--date-reference AAAA-MM-JJ] [--versions versions.json] [--format text|json] [--strict] [--langue fr|en|auto]
 ```
 
 ## diff-versions.py
@@ -155,27 +165,33 @@ python3 diff-versions.py ANCIEN.md NOUVEAU.md [--format text|json]
 Agrège les sorties des scripts en une note de 0 à 100 sur cinq axes (style, sources, traçabilité, terminologie et nombres, lisibilité), pénalités fixes, calcul montré, verdict. Un plancher par axe plafonne la décision éditoriale : un axe effondré bloque malgré un bon total. La décision se rend sur quatre valeurs (accepter, revision mineure, revision majeure, refus). Le mode trajectoire compare deux rapports JSON (revue puis re-revue) : delta par axe, régression signalée sous -3.
 
 ```
-python3 scorecard.py FICHIER [--format text|json] [--plancher N] [--poids POIDS.json] [--seuil-type brouillon|rapport|publication]
+python3 scorecard.py FICHIER [--format text|json] [--plancher N] [--poids POIDS.json] [--seuil-type brouillon|rapport|publication] [--langue fr|en|auto]
 python3 scorecard.py --trajectoire AVANT.json APRES.json
 ```
 
 Le rapport texte porte une barre ASCII par axe et nomme le meilleur et le pire axe. Les poids externes sont renormalisés à somme 1. La trajectoire signale l'arrêt anticipé quand le gain total reste sous +3 sans régression.
 
+`--langue` résout la langue une seule fois (même ordre de priorité que `lint-style.py`) et la redescend telle quelle dans le linter, la traçabilité, les nombres, la lisibilité, l'empreinte IA et la cohérence : un pragme `lint-style:langue=en` posé dans le document est ainsi honoré par la notation entière sans option supplémentaire. Deux clés s'ajoutent au rapport, `langue` et `mesures_non_faites` (sur l'axe Lisibilité quand le taux de passif n'est pas mesurable) ; les clés antérieures ne changent pas. Détail dans `skills/produire/references/langue.md`.
+
 ## ai-fingerprint.py
 
-Mesure les marqueurs d'empreinte IA : variabilité de longueur de phrase, ouvertures répétitives, cadence ternaire, connecteurs suremployés, bigrammes répétés, amplification contrastive.
+Mesure les marqueurs d'empreinte IA : variabilité de longueur de phrase, ouvertures répétitives, cadence ternaire, connecteurs suremployés, bigrammes répétés, amplification contrastive. Français par défaut, anglais avec `--langue en`.
 
 ```
-python3 ai-fingerprint.py FICHIER [--format text|json]
+python3 ai-fingerprint.py FICHIER [--format text|json] [--langue fr|en|auto]
 ```
+
+Quatre signaux sur six lisent des motifs de langue (connecteurs, cadence ternaire, amplification contrastive, mots outils qui filtrent les bigrammes) ; l'écart-type de longueur de phrase et la répétition d'ouverture ne lisent aucun mot et ne changent pas. Le vocabulaire en excès mesuré sur les textes assistés par modèle (delve, intricate, meticulous...) reste porté par la règle `lexique-ia-en` de `lint-style.py`, pour ne pas le compter deux fois dans l'axe Style du scorecard.
 
 ## coherence.py
 
-Repère les paragraphes quasi dupliqués (auto-plagiat), les phrases répétées, et liste les promesses du texte à vérifier.
+Repère les paragraphes quasi dupliqués (auto-plagiat), les phrases répétées, et liste les promesses du texte à vérifier. Français par défaut, anglais avec `--langue en`.
 
 ```
-python3 coherence.py FICHIER [--format text|json]
+python3 coherence.py FICHIER [--format text|json] [--langue fr|en|auto]
 ```
+
+Seule la liste des promesses dépend de la langue (tournures d'annonce propres à chaque langue) ; le rapprochement de paragraphes et la répétition de phrases travaillent sur les mots du texte, quels qu'ils soient.
 
 ## tables.py
 

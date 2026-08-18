@@ -10,13 +10,22 @@ charte.json) : couleurs, polices, filet d'accent, fond, filigrane, rayon des
 angles. Un audit (--audit) porte un regard critique sur la figure, charte
 comprise (contraste).
 
+Les etiquettes ecrites dans le code suivent --langue fr|en (defaut fr) :
+cases du SWOT, du PESTEL, de la BCG et de l'Ansoff, activites de la chaine
+de valeur, phases et boites du schema PRISMA. Le rendu francais ne change
+pas. Les cles des donnees JSON et les libelles fournis par l'appelant ne
+sont jamais traduits. Le regard critique de --audit reste en francais :
+c'est un diagnostic pour l'auteur, pas une piece du livrable.
+
 Usage :
     python3 figures.py TYPE --out f.svg [--data data.json|-] [--title "T"] [--theme charte.json]
+    python3 figures.py TYPE --out f.svg --data - --langue en < data.json
     python3 figures.py TYPE --data - --audit --theme charte.json < data.json
 
 TYPE strategiques (a cases) : swot | bcg | ansoff | pestel | chaine-valeur | tam-sam-som
 TYPE de donnees (a axes) : courbe | nuage | histogramme | boite | flux | prisma
-Module importable : construire(type, data, titre, theme) ; auditer(type, data, theme).
+Module importable : construire(type, data, titre, theme, langue) ;
+auditer(type, data, theme).
 """
 import argparse
 import json
@@ -78,6 +87,164 @@ def appliquer_theme(t):
     FONDS = t["palette"]
     POLICE, POLICE_TITRE = t["police"], t["police_titre"]
     GRAISSE_TITRE, RAYON, LOGO = t["graisse_titre"], t["rayon"], t.get("logo_texte")
+
+
+# ---------------------------------------------------------------------------
+# Langue des etiquettes
+#
+# Une figure est un livrable, pas un diagnostic : ses etiquettes partent dans
+# le document et doivent en parler la langue. Six figures strategiques et le
+# schema PRISMA portent des etiquettes ecrites dans le code ; les figures de
+# donnees prennent les leurs dans les donnees fournies et ne sont pas
+# concernees.
+#
+# La langue se demande, elle ne se detecte pas. Les autres scripts du plugin
+# resolvent la langue en lisant le texte analyse (option, puis pragme du
+# document, puis francais) ; ici il n'y a pas de texte a lire, seulement des
+# donnees chiffrees et des libelles. L'option --langue est donc le seul
+# canal, et le francais reste le defaut. Les CLES des donnees ne bougent pas
+# d'une langue a l'autre (forces, faiblesses, politique, identifiees) : ce
+# sont l'interface du script, les traduire casserait tout appelant.
+#
+# Le francais est repris mot pour mot de l'etat anterieur : un rendu francais
+# existant ne change pas d'un caractere.
+LANGUES = ("fr", "en")
+LANGUE_DEFAUT = "fr"
+LANGUE = LANGUE_DEFAUT
+
+LIBELLES = {
+    "fr": {
+        "swot": {
+            "titre": "Matrice SWOT",
+            "cases": ("Forces", "Faiblesses", "Opportunites", "Menaces"),
+        },
+        "ansoff": {
+            "titre": "Matrice d'Ansoff",
+            "cases": ("Penetration de marche", "Extension de produit",
+                      "Extension de marche", "Diversification"),
+            "defauts": ("Marche actuel, produit actuel",
+                        "Marche actuel, produit nouveau",
+                        "Marche nouveau, produit actuel",
+                        "Marche nouveau, produit nouveau"),
+            "axes": ("Produit actuel", "Produit nouveau", "Marche"),
+        },
+        "pestel": {
+            "titre": "Analyse PESTEL",
+            "cases": ("Politique", "Economique", "Social", "Technologique",
+                      "Environnemental", "Legal"),
+        },
+        "bcg": {
+            "titre": "Matrice BCG",
+            "cases": ("Vedettes", "Dilemmes", "Vaches a lait", "Poids morts"),
+            "axe_y": "Taux de croissance",
+            "axe_x": "Part de marche relative (forte a gauche)",
+        },
+        "chaine-valeur": {
+            "titre": "Chaine de valeur (Porter)",
+            "soutien": "Activites de soutien",
+            "principales": "Activites principales",
+            "marge": "Marge",
+            "defaut_soutien": ["Infrastructure", "Ressources humaines",
+                               "Recherche et developpement", "Achats"],
+            "defaut_principales": ["Logistique entrante", "Production",
+                                   "Logistique sortante", "Commercialisation",
+                                   "Services"],
+        },
+        "tam-sam-som": {"titre": "TAM, SAM, SOM"},
+        "prisma": {
+            "titre": "Selection des etudes (PRISMA)",
+            "phases": ("Identification", "Criblage", "Eligibilite",
+                       "Inclusion"),
+            "identifiees": "References identifiees",
+            "doublons": "Doublons retires",
+            "examinees": "References examinees (titre et resume)",
+            "ecartees_titre": "References ecartees",
+            "evaluees": "Articles evalues en texte integral",
+            "ecartees_texte": "Articles ecartes",
+            "incluses": "Etudes incluses dans la synthese",
+        },
+    },
+    "en": {
+        "swot": {
+            "titre": "SWOT matrix",
+            "cases": ("Strengths", "Weaknesses", "Opportunities", "Threats"),
+        },
+        "ansoff": {
+            "titre": "Ansoff matrix",
+            "cases": ("Market penetration", "Product development",
+                      "Market development", "Diversification"),
+            "defauts": ("Existing market, existing product",
+                        "Existing market, new product",
+                        "New market, existing product",
+                        "New market, new product"),
+            "axes": ("Existing product", "New product", "Market"),
+        },
+        "pestel": {
+            "titre": "PESTEL analysis",
+            "cases": ("Political", "Economic", "Social", "Technological",
+                      "Environmental", "Legal"),
+        },
+        "bcg": {
+            "titre": "BCG matrix",
+            "cases": ("Stars", "Question marks", "Cash cows", "Dogs"),
+            "axe_y": "Market growth rate",
+            "axe_x": "Relative market share (high on the left)",
+        },
+        "chaine-valeur": {
+            "titre": "Value chain (Porter)",
+            "soutien": "Support activities",
+            "principales": "Primary activities",
+            "marge": "Margin",
+            "defaut_soutien": ["Firm infrastructure",
+                               "Human resource management",
+                               "Technology development", "Procurement"],
+            "defaut_principales": ["Inbound logistics", "Operations",
+                                   "Outbound logistics",
+                                   "Marketing and sales", "Service"],
+        },
+        "tam-sam-som": {"titre": "TAM, SAM, SOM"},
+        # Libelles de la declaration PRISMA 2020, releves dans les gabarits
+        # officiels du site prisma-statement.org (fichiers Word du diagramme
+        # de flux pour revue systematique nouvelle, CC BY 4.0 ; source citee
+        # dans le gabarit : Page MJ et al., BMJ 2021;372:n71).
+        #
+        # PRISMA 2020 ne porte que TROIS bandes de phase, pas quatre :
+        # Identification, Screening, Included. La bande Eligibility de
+        # PRISMA 2009 a disparu, et « Reports assessed for eligibility »
+        # est passe sous Screening. La bande est donc repetee ici, et flux()
+        # fusionne deux bandes voisines de meme nom en une seule.
+        "prisma": {
+            "titre": "Study selection (PRISMA)",
+            "phases": ("Identification", "Screening", "Screening",
+                       "Included"),
+            "identifiees": "Records identified",
+            "doublons": "Records removed before screening",
+            "examinees": "Records screened",
+            "ecartees_titre": "Records excluded",
+            "evaluees": "Reports assessed for eligibility",
+            "ecartees_texte": "Reports excluded",
+            "incluses": "Studies included in review",
+        },
+    },
+}
+
+
+def appliquer_langue(langue=None):
+    """Fixe la langue des etiquettes ecrites dans le code.
+
+    Meme forme que appliquer_theme : un etat de module pose avant le rendu,
+    plutot qu'un argument traverse par les douze constructeurs, dont cinq
+    n'ont aucune etiquette a traduire. Une valeur inconnue retombe sur le
+    francais plutot que de lever : une figure se rend, elle ne s'interrompt
+    pas sur un code de langue.
+    """
+    global LANGUE
+    LANGUE = langue if langue in LANGUES else LANGUE_DEFAUT
+
+
+def _lib(figure):
+    """Etiquettes de la figure dans la langue courante."""
+    return LIBELLES.get(LANGUE, LIBELLES[LANGUE_DEFAUT])[figure]
 
 
 def _txt(x, y, s, taille=14, gras=False, ancre="start", couleur=None, police=None):
@@ -146,54 +313,63 @@ def quadrants(cells, titre, axes=None):
     return NL.join(s)
 
 
-def swot(data, titre="Matrice SWOT"):
+def swot(data, titre=None):
+    lib = _lib("swot")
+    cases = lib["cases"]
     return quadrants([
-        ("Forces", data.get("forces", []), FONDS[0]),
-        ("Faiblesses", data.get("faiblesses", []), FONDS[1]),
-        ("Opportunites", data.get("opportunites", []), FONDS[2]),
-        ("Menaces", data.get("menaces", []), FONDS[3]),
-    ], titre)
+        (cases[0], data.get("forces", []), FONDS[0]),
+        (cases[1], data.get("faiblesses", []), FONDS[1]),
+        (cases[2], data.get("opportunites", []), FONDS[2]),
+        (cases[3], data.get("menaces", []), FONDS[3]),
+    ], titre or lib["titre"])
 
 
-def ansoff(data, titre="Matrice d'Ansoff"):
+def ansoff(data, titre=None):
+    lib = _lib("ansoff")
+    cases, defs = lib["cases"], lib["defauts"]
     return quadrants([
-        ("Penetration de marche", data.get("penetration", ["Marche actuel, produit actuel"]), FONDS[0]),
-        ("Extension de produit", data.get("extension_produit", ["Marche actuel, produit nouveau"]), FONDS[1]),
-        ("Extension de marche", data.get("extension_marche", ["Marche nouveau, produit actuel"]), FONDS[2]),
-        ("Diversification", data.get("diversification", ["Marche nouveau, produit nouveau"]), FONDS[3]),
-    ], titre, axes=("Produit actuel", "Produit nouveau", "Marche"))
+        (cases[0], data.get("penetration", [defs[0]]), FONDS[0]),
+        (cases[1], data.get("extension_produit", [defs[1]]), FONDS[1]),
+        (cases[2], data.get("extension_marche", [defs[2]]), FONDS[2]),
+        (cases[3], data.get("diversification", [defs[3]]), FONDS[3]),
+    ], titre or lib["titre"], axes=lib["axes"])
 
 
-def pestel(data, titre="Analyse PESTEL"):
-    libelles = [("Politique", "politique"), ("Economique", "economique"),
-                ("Social", "social"), ("Technologique", "technologique"),
-                ("Environnemental", "environnemental"), ("Legal", "legal")]
+def pestel(data, titre=None):
+    lib = _lib("pestel")
+    titre = titre or lib["titre"]
+    libelles = list(zip(lib["cases"],
+                        ("politique", "economique", "social", "technologique",
+                         "environnemental", "legal")))
     x0, y0 = 40, 60
     cw, ch = (W - 80) / 3, (H - 100) / 2
     s = [_cadre(), _titre(titre)]
-    for i, (lib, cle) in enumerate(libelles):
+    for i, (etiquette, cle) in enumerate(libelles):
         cx = x0 + (i % 3) * cw
         cy = y0 + (i // 3) * ch
         s.append(f'<rect x="{cx+5}" y="{cy+5}" width="{cw-10}" height="{ch-10}" rx="{RAYON}" fill="{FONDS[i % 4]}" stroke="{TRAIT}"/>')
-        s.append(_txt(cx + 16, cy + 28, lib, 14, gras=True))
+        s.append(_txt(cx + 16, cy + 28, etiquette, 14, gras=True))
         s.append(_lignes(cx + 16, cy + 50, data.get(cle, []), largeur_car=30, maxi=5))
     s.append("</svg>")
     return NL.join(s)
 
 
-def bcg(data, titre="Matrice BCG"):
+def bcg(data, titre=None):
+    lib = _lib("bcg")
+    titre = titre or lib["titre"]
+    cases = lib["cases"]
     x0, y0, gx, gy = 90, 70, W - 60, H - 70
     mx, my = (x0 + gx) / 2, (y0 + gy) / 2
     s = [_cadre(), _titre(titre)]
-    labels = [("Vedettes", x0, y0, mx, my), ("Dilemmes", mx, y0, gx, my),
-              ("Vaches a lait", x0, my, mx, gy), ("Poids morts", mx, my, gx, gy)]
+    labels = [(cases[0], x0, y0, mx, my), (cases[1], mx, y0, gx, my),
+              (cases[2], x0, my, mx, gy), (cases[3], mx, my, gx, gy)]
     for i, (lab, ax, ay, bx, by) in enumerate(labels):
         s.append(f'<rect x="{ax}" y="{ay}" width="{bx-ax}" height="{by-ay}" fill="{FONDS[i % 4]}" stroke="{TRAIT}" stroke-width="1"/>')
         s.append(_txt((ax + bx) / 2, ay + 22, lab, 13, gras=True, ancre="middle", couleur=TRAIT))
     s.append(f'<line x1="{x0}" y1="{y0}" x2="{x0}" y2="{gy}" stroke="{ENCRE}" stroke-width="1.5"/>')
     s.append(f'<line x1="{x0}" y1="{gy}" x2="{gx}" y2="{gy}" stroke="{ENCRE}" stroke-width="1.5"/>')
-    s.append(f'<text x="62" y="{my}" font-family="{POLICE}" font-size="12" fill="{ENCRE}" text-anchor="middle" transform="rotate(-90 62 {my})">Taux de croissance</text>')
-    s.append(_txt((x0 + gx) / 2, gy + 30, "Part de marche relative (forte a gauche)", 12, ancre="middle"))
+    s.append(f'<text x="62" y="{my}" font-family="{POLICE}" font-size="12" fill="{ENCRE}" text-anchor="middle" transform="rotate(-90 62 {my})">{escape(lib["axe_y"])}</text>')
+    s.append(_txt((x0 + gx) / 2, gy + 30, lib["axe_x"], 12, ancre="middle"))
     for it in data.get("items", []):
         cr = max(0, min(100, float(it.get("croissance", 50))))
         pa = max(0, min(100, float(it.get("part", 50))))
@@ -206,20 +382,22 @@ def bcg(data, titre="Matrice BCG"):
     return NL.join(s)
 
 
-def chaine_valeur(data, titre="Chaine de valeur (Porter)"):
-    soutien = data.get("soutien", ["Infrastructure", "Ressources humaines", "Recherche et developpement", "Achats"])
-    principales = data.get("principales", ["Logistique entrante", "Production", "Logistique sortante", "Commercialisation", "Services"])
+def chaine_valeur(data, titre=None):
+    lib = _lib("chaine-valeur")
+    titre = titre or lib["titre"]
+    soutien = data.get("soutien", lib["defaut_soutien"])
+    principales = data.get("principales", lib["defaut_principales"])
     hh = 380
     x0, larg, hs = 40, W - 130, 28
     s = [_cadre(hh), _titre(titre)]
-    s.append(_txt(x0, 62, "Activites de soutien", 12, gras=True, couleur=TRAIT))
+    s.append(_txt(x0, 62, lib["soutien"], 12, gras=True, couleur=TRAIT))
     ytop = 72
     for i, a in enumerate(soutien):
         cy = ytop + i * (hs + 6)
         s.append(f'<rect x="{x0}" y="{cy}" width="{larg}" height="{hs}" rx="5" fill="{FONDS[1]}" stroke="{TRAIT}"/>')
         s.append(_txt(x0 + 14, cy + 19, a, 13))
     yend = ytop + len(soutien) * (hs + 6)
-    s.append(_txt(x0, yend + 18, "Activites principales", 12, gras=True, couleur=TRAIT))
+    s.append(_txt(x0, yend + 18, lib["principales"], 12, gras=True, couleur=TRAIT))
     yprim = yend + 28
     hp = hh - yprim - 26
     cw = larg / len(principales)
@@ -230,12 +408,12 @@ def chaine_valeur(data, titre="Chaine de valeur (Porter)"):
     ax = x0 + larg + 6
     amid = (ytop + yprim + hp) / 2
     s.append(f'<path d="M{ax} {ytop} L{ax+44} {amid:.0f} L{ax} {yprim+hp:.0f} Z" fill="{ACCENT}" fill-opacity="0.5" stroke="{TRAIT}"/>')
-    s.append(f'<text x="{ax+15}" y="{amid:.0f}" font-family="{POLICE}" font-size="12" fill="{ENCRE}" text-anchor="middle" font-weight="700" transform="rotate(90 {ax+15} {amid:.0f})">Marge</text>')
+    s.append(f'<text x="{ax+15}" y="{amid:.0f}" font-family="{POLICE}" font-size="12" fill="{ENCRE}" text-anchor="middle" font-weight="700" transform="rotate(90 {ax+15} {amid:.0f})">{escape(lib["marge"])}</text>')
     s.append("</svg>")
     return NL.join(s)
 
 
-def tam_sam_som(data, titre="TAM, SAM, SOM"):
+def tam_sam_som(data, titre=None):
     """Trois cercles imbriques (TAM englobe SAM englobe SOM), etude de marche.
 
     Portions adaptees du projet openscience (Synthetic Sciences, InkVell Inc.), Apache-2.0,
@@ -244,6 +422,7 @@ def tam_sam_som(data, titre="TAM, SAM, SOM"):
 
     Donnees attendues : {"tam": {"libelle": "...", "valeur": "..."}, "sam": {...}, "som": {...}}.
     """
+    titre = titre or _lib("tam-sam-som")["titre"]
     cx, cy = W / 2, 350
     rayons = {"tam": 250, "sam": 172, "som": 95}
     fonds = {"tam": FONDS[0], "sam": FONDS[1 % len(FONDS)], "som": FONDS[2 % len(FONDS)]}
@@ -844,6 +1023,20 @@ def _hauteur_boite(tetes, sous):
     return 16 + 18 * len(tetes) + 15 * len(sous) + 8
 
 
+def _hauteur_bande(plans, depart):
+    """Hauteur d'une bande de phase, du haut du niveau `depart` au bas du
+    dernier niveau consecutif qui porte le meme titre. Un titre unique rend
+    exactement la hauteur du niveau, sans changer le rendu existant."""
+    titre = plans[depart][0].get("titre")
+    ytop = plans[depart][4]
+    bas = ytop + plans[depart][5]
+    suivant = depart + 1
+    while suivant < len(plans) and plans[suivant][0].get("titre") == titre:
+        bas = plans[suivant][4] + plans[suivant][5]
+        suivant += 1
+    return bas - ytop
+
+
 def _rendre_boite(x, y, larg, tetes, sous, fond):
     haut = _hauteur_boite(tetes, sous)
     frag = [f'<rect x="{x}" y="{y:.1f}" width="{larg}" height="{haut}" '
@@ -896,13 +1089,23 @@ def flux(data, titre="Diagramme de flux"):
 
     frag = [_cadre(hauteur), _titre(titre)]
     centres = []
-    for niv, boites, larg, rendus, ytop, haut_niv in plans:
-        if niv.get("titre"):
+    for rang_niv, (niv, boites, larg, rendus, ytop, haut_niv) in enumerate(plans):
+        # Une bande de phase par titre, pas par niveau : deux niveaux voisins
+        # qui portent le meme titre n'en dessinent qu'une, couvrant les deux.
+        # Le schema PRISMA 2020 en a besoin, sa phase Screening couvrant a la
+        # fois les references criblees et les rapports evalues (PRISMA 2009
+        # separait Screening et Eligibility). Quand les titres different tous,
+        # comme dans le rendu francais, la hauteur retombe sur celle du niveau
+        # et la sortie ne change pas d'un caractere.
+        if niv.get("titre") and (rang_niv == 0
+                                 or plans[rang_niv - 1][0].get("titre")
+                                 != niv.get("titre")):
+            haut_bande = _hauteur_bande(plans, rang_niv)
             frag.append(f'<rect x="{FX_TITRE}" y="{ytop:.1f}" '
-                        f'width="{FX_TITRE_L}" height="{haut_niv:.1f}" '
+                        f'width="{FX_TITRE_L}" height="{haut_bande:.1f}" '
                         f'rx="{RAYON}" fill="{FONDS[1 % len(FONDS)]}" '
                         f'stroke="{TRAIT}" stroke-width="0.8"/>')
-            ym = ytop + haut_niv / 2
+            ym = ytop + haut_bande / 2
             frag.append(f'<text x="{FX_TITRE+FX_TITRE_L/2:.0f}" y="{ym:.0f}" '
                         f'font-family="{POLICE_TITRE}" font-size="12" '
                         f'fill="{ENCRE}" text-anchor="middle" '
@@ -976,8 +1179,14 @@ def _prisma_comptes(data):
             "incluses": _cpt(data.get("incluses"))}
 
 
-def prisma(data, titre="Selection des etudes (PRISMA)"):
+def prisma(data, titre=None):
     """Diagramme PRISMA de selection des etudes, bati sur le moteur de flux.
+
+    En anglais, les etiquettes sont celles de la declaration PRISMA 2020,
+    relevees dans ses gabarits officiels (voir LIBELLES) : le schema d'une
+    revue systematique publiee en anglais est lu par des relecteurs qui
+    attendent ces libelles exacts, pas une traduction. Les noms de sources
+    et les motifs d'exclusion viennent des donnees et restent tels quels.
 
     Donnees : {"identifiees": {"Bases de donnees": 420, "Autres sources": 15},
                "doublons": 60, "examinees": 375,
@@ -989,39 +1198,41 @@ def prisma(data, titre="Selection des etudes (PRISMA)"):
     identifiees moins doublons egale examinees, et ainsi de suite jusqu'aux
     incluses ; l'audit le verifie.
     """
+    lib = _lib("prisma")
+    phases = lib["phases"]
     c = _prisma_comptes(data)
     sous_src = [f"{nom} : {n if n is not None else '?'}"
                 for nom, n in c["sources"]]
     som_t = sum(n for _, n in c["ecartees_titre"] if n is not None)
     som_x = sum(n for _, n in c["ecartees_texte"] if n is not None)
     niveaux = [
-        {"titre": "Identification",
-         "boites": [{"libelle": "References identifiees",
+        {"titre": phases[0],
+         "boites": [{"libelle": lib["identifiees"],
                      "effectif": c["identifiees"], "sous": sous_src,
-                     "exclusions": [{"libelle": "Doublons retires",
+                     "exclusions": [{"libelle": lib["doublons"],
                                      "effectif": c["doublons"]}]
                      if c["doublons"] is not None else []}]},
-        {"titre": "Criblage",
-         "boites": [{"libelle": "References examinees (titre et resume)",
+        {"titre": phases[1],
+         "boites": [{"libelle": lib["examinees"],
                      "effectif": c["examinees"],
-                     "exclusions": [{"libelle": "References ecartees",
+                     "exclusions": [{"libelle": lib["ecartees_titre"],
                                      "effectif": som_t,
                                      "sous": [{"libelle": m, "n": n}
                                               for m, n in c["ecartees_titre"]]}]
                      if c["ecartees_titre"] else []}]},
-        {"titre": "Eligibilite",
-         "boites": [{"libelle": "Articles evalues en texte integral",
+        {"titre": phases[2],
+         "boites": [{"libelle": lib["evaluees"],
                      "effectif": c["evaluees"],
-                     "exclusions": [{"libelle": "Articles ecartes",
+                     "exclusions": [{"libelle": lib["ecartees_texte"],
                                      "effectif": som_x,
                                      "sous": [{"libelle": m, "n": n}
                                               for m, n in c["ecartees_texte"]]}]
                      if c["ecartees_texte"] else []}]},
-        {"titre": "Inclusion",
-         "boites": [{"libelle": "Etudes incluses dans la synthese",
+        {"titre": phases[3],
+         "boites": [{"libelle": lib["incluses"],
                      "effectif": c["incluses"]}]},
     ]
-    return flux({"niveaux": niveaux}, titre)
+    return flux({"niveaux": niveaux}, titre or lib["titre"])
 
 
 # --- Audit structurel des figures de donnees -------------------------------
@@ -1328,8 +1539,9 @@ def auditer(type_fig, data, theme=None):
     return avert
 
 
-def construire(type_fig, data, titre=None, theme=None):
+def construire(type_fig, data, titre=None, theme=None, langue=None):
     appliquer_theme(charger_theme(theme))
+    appliquer_langue(langue)
     fn = CONSTRUCTEURS[type_fig]
     return fn(data, titre) if titre else fn(data)
 
@@ -1342,6 +1554,11 @@ def main(argv=None):
     p.add_argument("--title", help="titre de la figure")
     p.add_argument("--theme", help="charte graphique JSON")
     p.add_argument("--audit", action="store_true", help="regard critique deterministe")
+    p.add_argument("--langue", choices=["fr", "en"], default="fr",
+                   help="langue des etiquettes ecrites dans le code (SWOT, "
+                        "PESTEL, BCG, Ansoff, chaine de valeur, PRISMA). "
+                        "Defaut : fr. Les libelles venus des donnees et les "
+                        "cles JSON ne changent pas")
     a = p.parse_args(argv)
     data = {}
     if a.data == "-":
@@ -1356,7 +1573,7 @@ def main(argv=None):
         for av in auditer(a.type, data, a.theme):
             print(f"  - {av}")
     if a.out:
-        svg = construire(a.type, data, a.title, a.theme)
+        svg = construire(a.type, data, a.title, a.theme, a.langue)
         with open(a.out, "w", encoding="utf-8") as f:
             f.write(svg)
         print(f"Figure ecrite : {a.out} ({len(svg)} octets)")

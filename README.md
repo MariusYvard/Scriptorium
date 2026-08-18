@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/genres-26%20sourc%C3%A9s-215876" alt="26 genres sourcés">
   <img src="https://img.shields.io/badge/publics-14-215876" alt="14 publics">
   <img src="https://img.shields.io/badge/scripts%20d%C3%A9terministes-27-BF9B6F" alt="27 scripts déterministes">
-  <img src="https://img.shields.io/badge/%C3%A9valuations-457%2F457-D97F30" alt="457 évaluations">
+  <img src="https://img.shields.io/badge/%C3%A9valuations-523%2F523-D97F30" alt="523 évaluations">
 </p>
 
 <p align="center"><b>Décrivez la cible. Scriptorium cadre, source, rédige, révise et met en forme un document rigoureux, sous le contrôle de garde-fous déterministes.</b></p>
@@ -219,9 +219,11 @@ La méthode et le style maison ne changent pas, seuls le genre et les exemples s
 
 Le style par défaut applique des directives strictes : registre encyclopédique et neutre, zéro tiret cadratin, pas de virgule d'Oxford, guillemets droits, lexique promotionnel banni, faits précis ou rien, sources vérifiées sans paramètres de suivi. Il vit dans [`scriptorium/skills/produire/references/directives-strictes.md`](scriptorium/skills/produire/references/directives-strictes.md) et le linter applique les mêmes règles. La compétence `produire` (style) peut aussi calibrer un style personnel sur des échantillons fournis, toujours subordonné au style maison et aux conventions de la discipline.
 
+Un document peut aussi se rédiger et se noter en anglais scientifique (`--langue en` ou le pragme `lint-style:langue=en` posé dans le document). Dix scripts déterministes basculent alors leurs mesures dans les règles anglaises, jusqu'à la notation entière via `scorecard.py --langue en`. Le français reste le défaut et les rapports imprimés par les scripts restent en français quelle que soit la langue analysée : détail dans [`scriptorium/skills/produire/references/langue.md`](scriptorium/skills/produire/references/langue.md).
+
 ## Qualité, évaluations, releases
 
-Le harnais (`evals/run-evals.py`, 457 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
+Le harnais (`evals/run-evals.py`, 523 cas) relie des fixtures piégées à des attentes exactes : règles du linter, verdicts des scripts, et cohérence du plugin lui-même (chaque référence citée par un routeur existe, chaque playbook porte sa section Sources, aucun chemin périmé). La publication est automatisée : un tag `vX.Y.Z` vérifie les versions, rejoue les evals, construit le `.plugin` et crée la Release. Voir [`docs/RELEASE.md`](docs/RELEASE.md), [`docs/CONCEPTION.md`](docs/CONCEPTION.md) et le [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Contribuer
 

@@ -72,8 +72,15 @@ Usage :
     python3 citations.py --arxiv 1706.03762       (reseau, vers BibTeX)
     python3 citations.py FICHIER.bib --exiger-ancres
     python3 citations.py FICHIER.bib --auditer-fidelite DOCUMENT.md
-Module importable : parser_bibtex(texte) ; format_apa(e) ; format_vancouver(e) ;
-format_chicago(e) ; format_mla(e) ; format_ieee(e) ; FORMATS (dict nom -> fonction) ;
+
+Langue de la bibliographie (--langue fr|en, defaut fr) : chaque fonction de
+formatage prend un second argument optionnel. En anglais, APA relie le dernier
+auteur par l'esperluette et Chicago par "and" ; les replis de champ manquant
+deviennent Anonymous, Untitled et n.d. Le defaut francais est inchange.
+
+Module importable : parser_bibtex(texte) ; format_apa(e, langue) ;
+format_vancouver(e, langue) ; format_chicago(e, langue) ; format_mla(e, langue) ;
+format_ieee(e, langue) ; FORMATS (dict nom -> fonction) ;
 dedupe(entrees) ; ancre_de(entree) ; qualifier_ancre(valeur) ;
 rapport_qualification(entrees) ; extraire_couples(document_md, entrees) ;
 auditer_fidelite(document_md, entrees) ; valider_entree(e) ;
@@ -122,6 +129,36 @@ CHAMPS_BIBTEX_ORDRE = ["author", "editor", "title", "journal", "booktitle",
                        "year", "volume", "number", "pages", "publisher",
                        "school", "institution", "doi", "url", "note"]
 
+# --- Langue de la bibliographie ---------------------------------------------
+# Deux normes etaient francisees a tort. APA 7 (section 9.8) relie le dernier
+# auteur par l'esperluette, pas par "et" ; Chicago (17e ed., auteur-date) le
+# relie par "and". MLA et IEEE ecrivaient deja "and" et ne changent pas. Les
+# replis de champ manquant etaient francais dans les cinq formats, y compris
+# "s.d." la ou les normes anglaises ecrivent "n.d.".
+#
+# La langue est une option explicite, jamais devinee : un fichier .bib est une
+# suite de champs, pas de la prose, et la detection heuristique de
+# lint-style.py n'y aurait aucun echantillon fiable a mesurer. Le defaut reste
+# le francais, le comportement d'origine.
+LANGUE_BIBLIO_DEFAUT = "fr"
+LANGUES_BIBLIO = ("fr", "en")
+
+REPLIS = {
+    "fr": {"auteur": "Anonyme", "titre": "Sans titre", "annee": "s.d."},
+    "en": {"auteur": "Anonymous", "titre": "Untitled", "annee": "n.d."},
+}
+
+LIAISON_APA = {"fr": " et ", "en": ", & "}
+LIAISON_CHICAGO = {"fr": ", et ", "en": ", and "}
+
+
+def _replis(langue):
+    return REPLIS.get(langue, REPLIS[LANGUE_BIBLIO_DEFAUT])
+
+
+def _liaison(table, langue):
+    return table.get(langue, table[LANGUE_BIBLIO_DEFAUT])
+
 
 def parser_bibtex(texte):
     entrees = []
@@ -163,20 +200,23 @@ def _auteurs(brut):
     return out
 
 
-def format_apa(e):
+def format_apa(e, langue=LANGUE_BIBLIO_DEFAUT):
+    """APA 7. En anglais le dernier auteur est relie par l'esperluette
+    (section 9.8) ; en francais, comportement d'origine avec « et »."""
+    rep = _replis(langue)
     aut = _auteurs(e.get("author", ""))
     if aut:
         noms = [f"{n}, {i}" for n, i, _p in aut]
         if len(noms) == 1:
             sa = noms[0]
         elif len(noms) <= 7:
-            sa = ", ".join(noms[:-1]) + " et " + noms[-1]
+            sa = ", ".join(noms[:-1]) + _liaison(LIAISON_APA, langue) + noms[-1]
         else:
             sa = ", ".join(noms[:6]) + " ... " + noms[-1]
     else:
-        sa = "Anonyme"
-    an = e.get("year", "s.d.")
-    titre = e.get("title", "Sans titre")
+        sa = rep["auteur"]
+    an = e.get("year", rep["annee"])
+    titre = e.get("title", rep["titre"])
     s = f"{sa} ({an}). {titre}."
     if e.get("journal"):
         s += f" {e['journal']}"
@@ -194,18 +234,21 @@ def format_apa(e):
     return s
 
 
-def format_vancouver(e):
+def format_vancouver(e, langue=LANGUE_BIBLIO_DEFAUT):
+    """Vancouver (ICMJE). La liaison d'auteurs est latine ("et al") dans les
+    deux langues ; seuls les replis de champ manquant dependent de la langue."""
+    rep = _replis(langue)
     aut = _auteurs(e.get("author", ""))
     noms = [f"{n} {i.replace('.', '')}" for n, i, _p in aut]
     if len(noms) > 6:
         sa = ", ".join(noms[:6]) + ", et al"
     else:
-        sa = ", ".join(noms) if noms else "Anonyme"
-    titre = e.get("title", "Sans titre")
+        sa = ", ".join(noms) if noms else rep["auteur"]
+    titre = e.get("title", rep["titre"])
     s = f"{sa}. {titre}."
     if e.get("journal"):
         s += f" {e['journal']}."
-        s += f" {e.get('year', 's.d.')}"
+        s += f" {e.get('year', rep['annee'])}"
         if e.get("volume"):
             s += f";{e['volume']}"
             if e.get("number"):
@@ -220,14 +263,16 @@ def format_vancouver(e):
     return s
 
 
-def format_chicago(e):
+def format_chicago(e, langue=LANGUE_BIBLIO_DEFAUT):
     """Chicago (auteur-date, 17e/18e ed., chicagomanualofstyle.org) : Nom,
     Prenom. Annee. "Titre." Revue Volume(Numero) : pages. Auteur seul inverse
     (Nom, Prenom), auteurs suivants a l'endroit (Prenom Nom), plus de sept
     auteurs abrege en 'et al.' apres le septieme. Limite : seul le style
     auteur-date est couvert, pas le style notes-bibliographie (references
     numerotees en note de bas de page) qui est l'autre moitie de la norme
-    Chicago."""
+    Chicago. En anglais le dernier auteur est relie par "and", pas par
+    "et" : c'est la forme de la norme, non une traduction."""
+    rep = _replis(langue)
     aut = _auteurs(e.get("author", ""))
     if aut:
         parties = []
@@ -237,13 +282,14 @@ def format_chicago(e):
         if len(parties) > 7:
             sa = ", ".join(parties[:7]) + ", et al."
         elif len(parties) > 1:
-            sa = ", ".join(parties[:-1]) + ", et " + parties[-1]
+            sa = (", ".join(parties[:-1]) + _liaison(LIAISON_CHICAGO, langue)
+                  + parties[-1])
         else:
             sa = parties[0]
     else:
-        sa = "Anonyme"
-    an = e.get("year", "s.d.")
-    titre = e.get("title", "Sans titre")
+        sa = rep["auteur"]
+    an = e.get("year", rep["annee"])
+    titre = e.get("title", rep["titre"])
     s = f"{sa}. {an}. "
     if e.get("journal"):
         s += f'"{titre}." {e["journal"]}'
@@ -263,14 +309,17 @@ def format_chicago(e):
     return s
 
 
-def format_mla(e):
+def format_mla(e, langue=LANGUE_BIBLIO_DEFAUT):
     """MLA (9e ed., auteur-page, style.mla.org) : Nom, Prenom. "Titre." Revue,
     vol. X, no Y, Annee, pp. pages. Deux auteurs relies par 'and', trois
     auteurs ou plus abreges directement apres le premier en 'et al.' (regle
     MLA 9 simplifiee, qui ne distingue pas 3 et 30 auteurs). Limite : ne
     produit pas la citation dans le texte (auteur-page), le numero de page
     de la citation precise n'existe pas dans un champ BibTeX standard ;
-    conteneurs imbriques (article republie dans un recueil) non couverts."""
+    conteneurs imbriques (article republie dans un recueil) non couverts.
+    La liaison 'and' etait deja correcte : seuls les replis de champ manquant
+    dependent de la langue."""
+    rep = _replis(langue)
     aut = _auteurs(e.get("author", ""))
     if aut:
         n0, i0, p0 = aut[0]
@@ -284,9 +333,9 @@ def format_mla(e):
         else:
             sa = f"{n0}, {prenom0}, et al."
     else:
-        sa = "Anonyme."
-    titre = e.get("title", "Sans titre")
-    an = e.get("year", "s.d.")
+        sa = rep["auteur"] + "."
+    titre = e.get("title", rep["titre"])
+    an = e.get("year", rep["annee"])
     s = f'{sa} "{titre}."'
     if e.get("journal"):
         s += f" {e['journal']}"
@@ -305,7 +354,7 @@ def format_mla(e):
     return s
 
 
-def format_ieee(e):
+def format_ieee(e, langue=LANGUE_BIBLIO_DEFAUT):
     """IEEE (numerique, ieeeauthorcenter.ieee.org) : I. Nom, "Titre," Revue,
     vol. X, no. Y, pp. pages, Annee. Auteurs en initiales-prenom (I. Nom),
     plus de six auteurs abrege en 'et al.' apres le sixieme (repli
@@ -314,7 +363,9 @@ def format_ieee(e):
     coherente avec format_apa/format_vancouver qui ne s'auto-numerotent pas
     non plus. Limite : n'abrege pas les noms de revue selon la liste
     d'abreviations IEEE, ne couvre pas les actes de conference ni les
-    normes."""
+    normes. La liaison 'and' etait deja correcte : seuls les replis de champ
+    manquant dependent de la langue."""
+    rep = _replis(langue)
     aut = _auteurs(e.get("author", ""))
     if aut:
         noms = [f"{i} {n}" if i else n for n, i, _p in aut]
@@ -325,8 +376,8 @@ def format_ieee(e):
         else:
             sa = noms[0]
     else:
-        sa = "Anonyme"
-    titre = e.get("title", "Sans titre")
+        sa = rep["auteur"]
+    titre = e.get("title", rep["titre"])
     s = f'{sa}, "{titre},"'
     if e.get("journal"):
         s += f" {e['journal']}"
@@ -336,9 +387,9 @@ def format_ieee(e):
             s += f", no. {e['number']}"
         if e.get("pages"):
             s += f", pp. {e['pages'].replace('--', '-')}"
-        s += f", {e.get('year', 's.d.')}."
+        s += f", {e.get('year', rep['annee'])}."
     elif e.get("publisher"):
-        s += f" {e['publisher']}, {e.get('year', 's.d.')}."
+        s += f" {e['publisher']}, {e.get('year', rep['annee'])}."
     if e.get("doi"):
         s += f" doi: {e['doi']}."
     return s
@@ -775,6 +826,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Moteur de citations BibTeX.")
     ap.add_argument("fichier", nargs="?", help="fichier .bib, ou - pour stdin")
     ap.add_argument("--to", choices=list(FORMATS), default="apa")
+    ap.add_argument("--langue", choices=list(LANGUES_BIBLIO),
+                     default=LANGUE_BIBLIO_DEFAUT,
+                     help="langue de la bibliographie. en applique la forme "
+                          "des normes anglaises (esperluette APA, and de "
+                          "Chicago, replis Anonymous, Untitled, n.d.) ; "
+                          "fr conserve le comportement d'origine")
     ap.add_argument("--dedupe", action="store_true")
     ap.add_argument("--doi", help="recupere une entree depuis Crossref (reseau)")
     ap.add_argument("--pmid", help="recupere une entree depuis PubMed E-utilities, vers BibTeX (reseau)")
@@ -809,7 +866,8 @@ def main(argv=None):
         return 0
     if a.doi:
         e = fetch_doi(a.doi)
-        print(format_apa(e) if a.to == "apa" else format_vancouver(e))
+        print(format_apa(e, a.langue) if a.to == "apa"
+              else format_vancouver(e, a.langue))
         return 0
 
     texte = sys.stdin.read() if a.fichier in (None, "-") else open(a.fichier, encoding="utf-8").read()
@@ -850,8 +908,8 @@ def main(argv=None):
 
     if a.bascule:
         ancien, nouveau = a.bascule
-        refs_ancien = [FORMATS[ancien](e) for e in entrees]
-        refs_nouveau = [FORMATS[nouveau](e) for e in entrees]
+        refs_ancien = [FORMATS[ancien](e, a.langue) for e in entrees]
+        refs_nouveau = [FORMATS[nouveau](e, a.langue) for e in entrees]
         if a.format == "json":
             sortie = {
                 "format_ancien": ancien, "format_nouveau": nouveau,
@@ -880,7 +938,7 @@ def main(argv=None):
         probleme = probleme or bool(validation is not None and validation["incompletes"])
         return 1 if probleme else 0
 
-    refs = [FORMATS[a.to](e) for e in entrees]
+    refs = [FORMATS[a.to](e, a.langue) for e in entrees]
     if a.format == "json":
         sortie = {"references": refs, "doublons": doublons, "ancrage": ancrage}
         if validation is not None:

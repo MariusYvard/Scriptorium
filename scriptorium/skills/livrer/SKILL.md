@@ -1,9 +1,9 @@
 ---
 name: livrer
 description: >
-  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées, gabarit imposé rempli plutôt que régénéré, logos placés selon leur registre, contrôle de fuites sur le fichier final avant envoi "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document", "remplis le modèle imposé". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract". Sert le chercheur, l'ingénieur et l'analyste géopolitique.
+  Met en forme le livrable final et le décline par canal. Deux sous-commandes. document : mise en forme aboutie en Word, PDF, HTML ou LaTeX selon les conventions du genre (page de garde, sommaire, texte justifié, bibliographie formatée, annexes, résumé), CSS et préambule LaTeX dérivés de la charte graphique, exigences de la destination vérifiées, gabarit imposé rempli plutôt que régénéré, logos placés selon leur registre, contrôle de fuites sur le fichier final avant envoi "mets en forme", "génère le Word", "produis le PDF", "exporte en HTML", "compile en LaTeX", "finalise le document", "remplis le modèle imposé", "format this for submission", "generate the Word file", "produce the PDF", "export to HTML", "compile the LaTeX", "fill in the required template", "camera-ready version". decliner : tirer d'un document validé plusieurs formats à faits et charte constants (présentation, poster, résumé d'une page, résumé bilingue FR/EN, abstract, post professionnel, communiqué) "décline ce rapport", "version courte", "résumé exécutif", "fais-en un deck", "un abstract", "turn this into a deck", "one-page summary", "executive summary", "make a poster", "write an abstract". Déclencheurs français et anglais. La langue du livrable suit celle du document validé, sauf déclinaison explicitement demandée dans une autre langue. Sert le chercheur, l'ingénieur et l'analyste géopolitique.
 metadata:
-  version: "0.13.0"
+  version: "0.14.0"
 ---
 
 # Livrer (mettre en forme, décliner)
@@ -42,6 +42,12 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/check-fuites.py livrable.docx --auteur "Pr
 ```
 
 Le script inspecte et ne nettoie pas ; traiter les constats confirmés avant l'envoi. Détail dans `references/document.md`.
+
+## Langue du livrable
+
+Le livrable hérite de la langue du document validé, jamais de la langue de la conversation : un rapport français demandé en anglais reste un rapport français. Reporter le pragme `lint-style:langue=` du source dans le fichier généré quand le format le permet, puis passer la même valeur aux scripts appelés à la finalisation (`scorecard.py`, `citations.py`, `figures.py`, `readability.py`).
+
+L'action decliner porte la seule exception prévue. Une déclinaison peut viser une autre langue que le source (résumé bilingue FR/EN, abstract anglais d'un rapport français) : c'est alors une demande explicite, elle produit un livrable distinct et ne change ni la langue ni les faits du document validé. Une déclinaison dans une autre langue est une réécriture à faits constants, pas une traduction automatique : les chiffres, les noms propres et les citations restent identiques au source (voir `produire/references/langue.md`).
 
 ## Charte et style
 

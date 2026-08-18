@@ -19,18 +19,28 @@ cascade, sans qu'aucun devienne une dependance obligatoire.
 Ce module porte le calcul de resolution effective pour tout le plugin :
 logos.py le reprend ici plutot que d'en tenir une seconde copie.
 
+Le manifeste d'extraction et le catalogue ECRITS sur le disque restent
+francais : ce sont des donnees, relues plus tard par un autre outil ou une
+autre session, et un fichier dont les notes changeraient de langue selon la
+commande qui l'a produit ne se comparerait plus a lui-meme. Seule leur
+restitution a l'ecran suit --langue-affichage, et les notes affichees sont
+composees a partir des memes mesures que celles ecrites.
+
 Usage :
     python3 images.py extract SOURCE --out DIR [--min-bytes N]
     python3 images.py manifest DIR
     python3 images.py catalogue DIR [--out FICHIER] [--largeur-cm N]
                       [--usage impression|ecran] [--format text|json]
+                      [--langue-affichage fr|en]
     python3 images.py convertir FIGURE.svg --out FIGURE.png [--largeur-px N]
-                      [--format text|json]
+                      [--format text|json] [--langue-affichage fr|en]
 
 Importable : extract(source, outdir, min_bytes), extraire_office(path, outdir),
 dimensions(data) -> (largeur, hauteur, format), construire(items, outdir, min_bytes),
 resolution_effective(pixels, largeur_cm), seuil_dpi(usage),
-cataloguer(dossier, largeur_cm, usage), convertir(source, sortie, largeur_px),
+cataloguer(dossier, largeur_cm, usage),
+catalogue_texte(cat, langue_affichage=None),
+convertir(source, sortie, largeur_px, langue_affichage=None),
 backends_svg_disponibles().
 """
 import argparse
@@ -44,6 +54,23 @@ import struct
 import subprocess
 import sys
 import zipfile
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 OFFICE = (".docx", ".pptx", ".xlsx", ".docm", ".pptm", ".xlsm", ".odt", ".odp", ".ods")
 RASTER = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".tif", ".tiff"}
@@ -288,8 +315,27 @@ def extract(source, outdir, min_bytes=1024):
     return manifest
 
 
+def _notes_catalogue(faibles, seuil, largeur_cm, illustrations, la):
+    """Notes du catalogue, source unique pour le fichier ecrit et pour
+    l'ecran.
+
+    Le fichier les recoit en francais (la="fr"), l'ecran dans la langue
+    demandee : une seule fonction, donc le francais du fichier et celui du
+    rapport ne peuvent pas diverger."""
+    lib = _lib()
+    notes = []
+    if faibles:
+        notes.append(lib.t("images.n.sous_seuil", la, n=len(faibles),
+                           seuil=seuil, largeur=largeur_cm))
+    if any("vecteur-a-convertir" in i["flags"] for i in illustrations):
+        notes.append(lib.t("images.n.vecteur", la))
+    if any(i["verdict"] == "dimensions illisibles" for i in illustrations):
+        notes.append(lib.t("images.n.illisible", la))
+    return notes
+
+
 def cataloguer(dossier, largeur_cm=LARGEUR_INSERTION_CM, usage="impression",
-               out=None, recursif=False):
+               out=None, recursif=False, langue_affichage=None):
     """Catalogue un dossier d'illustrations deja produites.
 
     Meme mecanique que l'extraction (dimensions lues dans l'en-tete, empreinte
@@ -297,9 +343,18 @@ def cataloguer(dossier, largeur_cm=LARGEUR_INSERTION_CM, usage="impression",
     dispositif, captures d'ecran, schemas faits ailleurs. Chaque entree recoit
     en plus la resolution effective a LARGEUR_CM et un verdict ferme pris dans
     VERDICTS. Ecrit le catalogue en JSON et le retourne.
+
+    Le catalogue ecrit est en FRANCAIS quoi qu'il arrive, verdicts, motifs
+    d'exclusion et notes compris : c'est un fichier de donnees, relu plus tard
+    par une autre commande. langue_affichage ne sert qu'au message d'arret
+    quand le dossier n'existe pas, la seule chaine de cette fonction qui parte
+    a l'ecran plutot que sur le disque.
     """
     if not os.path.isdir(dossier):
-        raise SystemExit("dossier introuvable : %s" % dossier)
+        lib = _lib()
+        raise SystemExit(lib.t("images.err_dossier",
+                               lib.resoudre_affichage(langue_affichage),
+                               dossier=dossier))
     seuil = seuil_dpi(usage)
     chemins = []
     if recursif:
@@ -362,20 +417,7 @@ def cataloguer(dossier, largeur_cm=LARGEUR_INSERTION_CM, usage="impression",
         illustrations.append(rec)
     uniques = [i for i in illustrations if "doublon_de" not in i]
     faibles = [i for i in illustrations if i["verdict"] == "sous le seuil"]
-    notes = []
-    if faibles:
-        notes.append(
-            "%d illustration(s) sous %d dpi a %.1f cm : reduire la largeur "
-            "d'insertion (colonne largeur_cm_max), retrouver le fichier "
-            "d'origine, ou refaire la prise de vue ou la capture."
-            % (len(faibles), seuil, largeur_cm))
-    if any("vecteur-a-convertir" in i["flags"] for i in illustrations):
-        notes.append("Illustrations vectorielles presentes : la voie Word "
-                     "passe par images.py convertir.")
-    if any(i["verdict"] == "dimensions illisibles" for i in illustrations):
-        notes.append("Dimensions illisibles sur au moins un fichier : format "
-                     "non couvert par la lecture d'en-tete, mesurer autrement "
-                     "plutot que supposer.")
+    notes = _notes_catalogue(faibles, seuil, largeur_cm, illustrations, "fr")
     catalogue = {
         "dossier": os.path.abspath(dossier), "usage": usage,
         "largeur_cm": largeur_cm, "seuil_dpi": seuil,
@@ -391,30 +433,54 @@ def cataloguer(dossier, largeur_cm=LARGEUR_INSERTION_CM, usage="impression",
     return catalogue
 
 
-def catalogue_texte(cat):
-    """Liste des figures lisible : une ligne par illustration, puis les notes."""
-    lignes = ["Catalogue : %s" % cat["dossier"],
-              "Largeur d'insertion prevue : %.1f cm, usage %s, seuil %d dpi"
-              % (cat["largeur_cm"], cat["usage"], cat["seuil_dpi"]),
-              "%d illustration(s) unique(s), %d doublon(s), %d sous le seuil"
-              % (cat["count"], cat["doublons"], cat["sous_le_seuil"]), ""]
+def catalogue_texte(cat, langue_affichage=None):
+    """Liste des figures lisible : une ligne par illustration, puis les notes.
+
+    Le verdict, l'usage et le motif d'exclusion sont des valeurs machine : le
+    catalogue les porte en francais, ils sont traduits ici a l'affichage
+    seulement. Les notes sont RECOMPOSEES a partir des mesures du catalogue
+    plutot que recopiees de sa cle notes, sans quoi un catalogue francais
+    relu en anglais rendrait un rapport moitie traduit."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    faibles = [i for i in cat["illustrations"]
+               if i["verdict"] == "sous le seuil"]
+    lignes = [lib.t("images.cat.titre", la, dossier=cat["dossier"]),
+              lib.t("images.cat.largeur", la, largeur=cat["largeur_cm"],
+                    usage=lib.valeur("images.usage", cat["usage"], la),
+                    seuil=cat["seuil_dpi"]),
+              lib.t("images.cat.comptes", la, uniques=cat["count"],
+                    doublons=cat["doublons"], faibles=cat["sous_le_seuil"]),
+              ""]
     lignes.append("  %-3s %-28s %-8s %-12s %-7s %s"
-                  % ("n", "fichier", "format", "dimensions", "dpi", "verdict"))
+                  % (lib.t("images.cat.col_n", la),
+                     lib.t("images.cat.col_fichier", la),
+                     lib.t("images.cat.col_format", la),
+                     lib.t("images.cat.col_dimensions", la),
+                     lib.t("images.cat.col_dpi", la),
+                     lib.t("images.cat.col_verdict", la)))
     for i in cat["illustrations"]:
         dims = ("%sx%s" % (i["largeur"], i["hauteur"])) if i["largeur"] else "-"
         dpi = str(i["dpi_effectif"]) if i["dpi_effectif"] else "-"
-        suffixe = (" (doublon de %s)" % i["doublon_de"]) if i.get("doublon_de") else ""
+        suffixe = (lib.t("images.cat.doublon_de", la,
+                         fichier=i["doublon_de"])
+                   if i.get("doublon_de") else "")
         lignes.append("  %-3d %-28s %-8s %-12s %-7s %s%s"
                       % (i["index"], i["fichier"][:28], i["format"][:8], dims,
-                         dpi, i["verdict"], suffixe))
+                         dpi, lib.valeur("images.verdict", i["verdict"], la),
+                         suffixe))
     if cat["ignores"]:
         lignes.append("")
         for g in cat["ignores"]:
-            lignes.append("  ignore : %s (%s)" % (g["fichier"], g["raison"]))
-    if cat["notes"]:
+            lignes.append("  " + lib.t(
+                "images.cat.ignore", la, fichier=g["fichier"],
+                raison=lib.valeur("images.raison_ignore", g["raison"], la)))
+    notes = _notes_catalogue(faibles, cat["seuil_dpi"], cat["largeur_cm"],
+                             cat["illustrations"], la)
+    if notes:
         lignes.append("")
-        for n in cat["notes"]:
-            lignes.append("  note : %s" % n)
+        for n in notes:
+            lignes.append("  " + lib.t("images.cat.note", la, note=n))
     return "\n".join(lignes)
 
 
@@ -428,11 +494,8 @@ def catalogue_texte(cat):
 
 BACKENDS_SVG = ("rsvg-convert", "inkscape", "cairosvg", "magick", "convert")
 
-INSTALLATION_SVG = (
-    "Installer l'un de ces backends : librsvg (commande rsvg-convert, "
-    "paquet librsvg2-bin sous Debian, librsvg sous Homebrew), Inkscape "
-    "(inkscape.org), le module Python cairosvg (pip install cairosvg), ou "
-    "ImageMagick (imagemagick.org, commande magick).")
+# La marche a suivre pour installer un backend vit dans libelles.py, sous la
+# cle images.conv.installation : elle est lue par un humain, dans sa langue.
 
 
 def _est_imagemagick(cmd):
@@ -483,36 +546,43 @@ def _lancer(cmd, args, sortie):
     return os.path.isfile(sortie) and os.path.getsize(sortie) > 0
 
 
-def convertir(source, sortie, largeur_px=None):
+def convertir(source, sortie, largeur_px=None, langue_affichage=None):
     """Convertit un SVG en PNG par le premier backend disponible.
 
     Retourne un rapport dict : source, sortie, backend, statut, notes. Le
     statut est ferme : converti, source-absente, source-non-svg,
-    aucun-backend, echec-backend. Aucun backend n'est une dependance du
-    plugin, l'absence de tous se declare plutot que de se traduire en erreur
-    de fichier.
+    aucun-backend, echec-backend. C'est une valeur machine, elle reste la
+    chaine francaise dans les deux langues. Aucun backend n'est une
+    dependance du plugin, l'absence de tous se declare plutot que de se
+    traduire en erreur de fichier.
+
+    Sans langue_affichage, les notes sont les chaines francaises d'origine a
+    l'octet pres : ce sont elles que serialise --format json. Ce rapport
+    n'est jamais ecrit sur le disque, il peut donc suivre la langue demandee
+    sans qu'aucune donnee relue plus tard n'en depende.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     rapport = {"source": source, "sortie": sortie, "backend": None,
                "statut": None, "notes": [],
                "backends_disponibles": backends_svg_disponibles()}
     if not os.path.isfile(source):
         rapport["statut"] = "source-absente"
-        rapport["notes"].append("Fichier source introuvable : %s" % source)
+        rapport["notes"].append(lib.t("images.conv.source_absente", la,
+                                      source=source))
         return rapport
     if _ext(source) != ".svg":
         rapport["statut"] = "source-non-svg"
-        rapport["notes"].append(
-            "Source attendue en .svg, recue en %s." % (_ext(source) or "sans extension"))
+        rapport["notes"].append(lib.t(
+            "images.conv.source_non_svg", la,
+            ext=_ext(source) or lib.t("images.conv.sans_extension", la)))
         return rapport
     if not rapport["backends_disponibles"]:
         rapport["statut"] = "aucun-backend"
-        rapport["notes"].append(
-            "Aucun backend de conversion SVG present (essayes dans l'ordre : "
-            "%s). Le fichier source n'est pas en cause." % ", ".join(BACKENDS_SVG))
-        rapport["notes"].append(INSTALLATION_SVG)
-        rapport["notes"].append(
-            "Sans backend, garder le SVG pour les voies HTML, LaTeX et PDF, "
-            "qui l'affichent, et signaler la figure manquante dans la voie Word.")
+        rapport["notes"].append(lib.t("images.conv.aucun_backend_note", la,
+                                      backends=", ".join(BACKENDS_SVG)))
+        rapport["notes"].append(lib.t("images.conv.installation", la))
+        rapport["notes"].append(lib.t("images.conv.repli", la))
         return rapport
     dossier = os.path.dirname(os.path.abspath(sortie))
     if dossier:
@@ -547,11 +617,10 @@ def convertir(source, sortie, largeur_px=None):
             larg, haut, _f = dimensions(open(sortie, "rb").read())
             rapport["largeur"], rapport["hauteur"] = larg, haut
             return rapport
-        rapport["notes"].append("Backend %s essaye sans succes." % backend)
+        rapport["notes"].append(lib.t("images.conv.backend_echec", la,
+                                      backend=backend))
     rapport["statut"] = "echec-backend"
-    rapport["notes"].append(
-        "Tous les backends presents ont echoue : le SVG lui-meme est en cause "
-        "(syntaxe, police absente, reference externe).")
+    rapport["notes"].append(lib.t("images.conv.echec_tous", la))
     return rapport
 
 
@@ -564,7 +633,17 @@ def main(argv=None):
     pe.add_argument("--min-bytes", type=int, default=1024)
     pm = sub.add_parser("manifest")
     pm.add_argument("dir")
-    pc = sub.add_parser("catalogue")
+    # Option commune aux deux sous-commandes qui rendent un rapport texte :
+    # posee sur un parent, elle s'ecrit apres la sous-commande comme dans les
+    # dix-sept scripts deja cables.
+    commun = argparse.ArgumentParser(add_help=False)
+    commun.add_argument("--langue-affichage", choices=("fr", "en"),
+                        default=None,
+                        help="langue des libelles du rapport texte (defaut "
+                             "fr : un dossier d'images ne porte pas de "
+                             "pragme de langue). Le catalogue ecrit sur le "
+                             "disque et la sortie JSON restent francais")
+    pc = sub.add_parser("catalogue", parents=[commun])
     pc.add_argument("dir")
     pc.add_argument("--out")
     pc.add_argument("--largeur-cm", type=float, default=LARGEUR_INSERTION_CM,
@@ -575,23 +654,32 @@ def main(argv=None):
     pc.add_argument("--format", choices=("text", "json"), default="text")
     pc.add_argument("--strict", action="store_true",
                     help="code de sortie 1 si une illustration est sous le seuil")
-    pv = sub.add_parser("convertir")
+    pv = sub.add_parser("convertir", parents=[commun])
     pv.add_argument("source")
     pv.add_argument("--out", required=True)
     pv.add_argument("--largeur-px", type=int, dest="largeur_px")
     pv.add_argument("--format", choices=("text", "json"), default="text")
     a = p.parse_args(argv)
+    lib = _lib()
+    la = lib.resoudre_affichage(getattr(a, "langue_affichage", None))
     if a.cmd == "catalogue":
-        cat = cataloguer(a.dir, a.largeur_cm, a.usage, a.out, a.recursif)
+        cat = cataloguer(a.dir, a.largeur_cm, a.usage, a.out, a.recursif, la)
+        # Le JSON ne se traduit pas : c'est le catalogue ecrit sur le disque.
         print(json.dumps(cat, ensure_ascii=False, indent=2)
-              if a.format == "json" else catalogue_texte(cat))
+              if a.format == "json" else catalogue_texte(cat, la))
         return 1 if (a.strict and cat["sous_le_seuil"]) else 0
     if a.cmd == "convertir":
-        rap = convertir(a.source, a.out, a.largeur_px)
         if a.format == "json":
+            # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+            rap = convertir(a.source, a.out, a.largeur_px)
             print(json.dumps(rap, ensure_ascii=False, indent=2))
         else:
-            print("%s : %s" % (rap["statut"], rap["backend"] or "aucun backend"))
+            rap = convertir(a.source, a.out, a.largeur_px, la)
+            print(lib.t("images.conv.ligne", la,
+                        statut=lib.valeur("images.statut_conversion",
+                                          rap["statut"], la),
+                        backend=rap["backend"]
+                        or lib.t("images.conv.aucun_backend", la)))
             for n in rap["notes"]:
                 print("  %s" % n)
         if rap["statut"] == "converti":
@@ -604,7 +692,7 @@ def main(argv=None):
         return 0
     mp = os.path.join(a.dir, "manifest.json")
     if not os.path.isfile(mp):
-        print("Pas de manifest.json dans ce dossier.", file=sys.stderr)
+        print(lib.t("images.pas_de_manifest", la), file=sys.stderr)
         return 2
     print(open(mp, encoding="utf-8").read())
     return 0

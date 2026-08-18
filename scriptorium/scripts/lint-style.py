@@ -30,10 +30,18 @@ Pragmas dans le document analysé :
     un fichier dont les 5 premieres lignes contiennent « lint-style:langue=en »
     est analyse en anglais sans qu'aucune option soit passee.
 
+Langue d'ANALYSE et langue d'AFFICHAGE sont deux choses. La premiere choisit
+le jeu de regles applique au texte (--langue), la seconde choisit la langue
+des libelles imprimes (--langue-affichage), et prend par defaut la valeur de
+la premiere. Les valeurs machine ne bougent dans aucune des deux : le nom de
+regle et la severite restent francais partout, y compris en sortie JSON, qui
+reste celle d'origine a l'octet pres.
+
 Le module est importable : lint_text(texte, langue=None) -> liste de constats.
 """
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -42,6 +50,26 @@ ORDRE = {CRITIQUE: 0, MAJEUR: 1, MINEUR: 2}
 
 LANGUES = ("fr", "en")
 LANGUE_DEFAUT = "fr"
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py a la demande, une seule fois. Le module vit a cote
+    de ce fichier et se lit par chemin plutot que par nom : les scripts du
+    plugin sont eux-memes charges depuis des repertoires arbitraires, aucun
+    sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 # Mots outils sans ambiguite entre les deux langues. Sont ecartes ceux qui
 # existent dans les deux (a, on, or, as, note, son, but, pour un titre anglais
@@ -391,12 +419,18 @@ def _premiere_ligne(utiles, mots_cibles):
     return utiles[0][0] if utiles else 1
 
 
-def regles_document_en(utiles):
+def regles_document_en(utiles, langue_affichage=LANGUE_DEFAUT):
     """Constats anglais qui ne se lisent qu'a l'echelle du document entier.
 
     utiles est la liste des couples (numero de ligne, ligne) reellement
     analysees, blocs de code et lignes ignorees deja retires.
+
+    Ces trois messages portent des nombres mesures : ils se composent ici, dans
+    la langue d'affichage demandee, plutot que de se traduire apres coup. Sans
+    langue_affichage, le francais d'origine est rendu a l'octet pres.
     """
+    lib = _lib()
+    la = langue_affichage
     constats = []
     texte = "\n".join(ligne for _, ligne in utiles)
     mots = [m.group(0).lower() for m in _MOT.finditer(texte)]
@@ -409,10 +443,9 @@ def regles_document_en(utiles):
         constats.append(_constat(
             _premiere_ligne(utiles, ORTHOGRAPHE_US), 1, MAJEUR,
             "orthographe-melangee",
-            "Orthographes britannique et américaine mêlées dans le même "
-            "document. Choisir une variante et la tenir partout.",
-            "britannique : " + ", ".join(gb[:3])
-            + " / américain : " + ", ".join(us[:3]),
+            lib.t("lint.msg.orthographe_melangee", la),
+            lib.t("lint.extrait.orthographe_melangee", la,
+                  gb=", ".join(gb[:3]), us=", ".join(us[:3])),
             us[0]))
 
     n_cadratin = texte.count("—")
@@ -421,12 +454,9 @@ def regles_document_en(utiles):
         constats.append(_constat(
             _premiere_ligne(utiles, frozenset()), 1, MINEUR,
             "tiret-cadratin-densite",
-            "Tiret cadratin employé %d fois pour %d mots. La ponctuation est "
-            "légitime en anglais, sa densité est un marqueur d'écriture "
-            "assistée : en garder deux ou trois par document."
-            % (n_cadratin, len(mots)),
-            "densité mesurée : %.1f pour mille mots"
-            % (n_cadratin * 1000.0 / len(mots)),
+            lib.t("lint.msg.tiret_densite", la, n=n_cadratin, mots=len(mots)),
+            lib.t("lint.extrait.tiret_densite", la,
+                  densite="%.1f" % (n_cadratin * 1000.0 / len(mots))),
             "—"))
 
     phrases = [p for p in _FIN_DE_PHRASE.split(texte) if len(p.split()) >= 4]
@@ -437,25 +467,32 @@ def regles_document_en(utiles):
             constats.append(_constat(
                 _premiere_ligne(utiles, frozenset()), 1, MINEUR,
                 "passif-excessif",
-                "Voix passive sur %d phrases sur %d. La section Methods "
-                "l'admet (APA 7, section 4.13), le reste du texte gagne au "
-                "sujet explicite." % (n_passives, len(phrases)),
-                "part mesurée : %d %%" % round(part * 100),
+                lib.t("lint.msg.passif", la, n=n_passives,
+                      total=len(phrases)),
+                lib.t("lint.extrait.passif", la, pct=round(part * 100)),
                 "passive"))
     return constats
 
 
-def lint_text(texte, chemin=None, langue=None):
+def lint_text(texte, chemin=None, langue=None, langue_affichage=None):
     """Analyse un texte et retourne la liste des constats.
 
     Chaque constat est un dict : ligne, colonne, severite, regle, message, extrait.
     langue vaut fr, en, auto ou None. None conserve le comportement d'origine :
     le pragme du document s'il en porte un, sinon le francais.
+
+    langue_affichage ne touche que deux champs de confort, message et extrait.
+    Les champs sur lesquels du code branche (regle, severite, ligne, colonne,
+    trouve) ne bougent pas. Sans langue_affichage, la sortie est celle
+    d'origine a l'octet pres : c'est ce que serialise le mode --format json,
+    qui ne passe jamais cette option.
     """
     lignes = texte.splitlines()
     if any(MARQUEUR_FICHIER in l for l in lignes[:5]):
         return []
     langue = resoudre_langue(texte, langue)
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage, LANGUE_DEFAUT)
     regles = regles_pour(langue)
     constats = []
     utiles = []
@@ -484,12 +521,12 @@ def lint_text(texte, chemin=None, langue=None):
                     "colonne": m.start() + 1,
                     "severite": severite,
                     "regle": regle,
-                    "message": message,
+                    "message": lib.valeur("lint.message", message, la),
                     "extrait": extrait,
                     "trouve": m.group(0),
                 })
     if langue == "en":
-        constats.extend(regles_document_en(utiles))
+        constats.extend(regles_document_en(utiles, la))
     constats.sort(key=lambda c: (ORDRE[c["severite"]], c["ligne"], c["colonne"]))
     return constats
 
@@ -501,23 +538,32 @@ def compter(constats):
     return n
 
 
-def rapport_texte(constats, chemin, langue=LANGUE_DEFAUT):
+def rapport_texte(constats, chemin, langue=LANGUE_DEFAUT,
+                  langue_affichage=None):
+    """Rapport lisible. langue est la langue ANALYSEE, rapportee telle quelle
+    dans le rapport ; langue_affichage est celle des libelles, francaise par
+    defaut."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage, LANGUE_DEFAUT)
     n = compter(constats)
     out = []
     titre = chemin or "(stdin)"
-    out.append(f"Linter de style maison : {titre}")
-    out.append(f"  langue analysée : {langue}")
-    out.append(f"  critiques={n[CRITIQUE]}  majeurs={n[MAJEUR]}  mineurs={n[MINEUR]}")
+    out.append(lib.t("lint.titre", la, titre=titre))
+    out.append("  " + lib.t("lint.langue_analysee", la, langue=langue))
+    out.append("  " + lib.t("lint.comptes", la, critiques=n[CRITIQUE],
+                            majeurs=n[MAJEUR], mineurs=n[MINEUR]))
     if not constats:
-        out.append("  Aucun écart détecté.")
+        out.append("  " + lib.t("lint.aucun_ecart", la))
         return "\n".join(out)
     sev_courante = None
     for c in constats:
         if c["severite"] != sev_courante:
             sev_courante = c["severite"]
-            out.append(f"\n[{sev_courante.upper()}]")
-        out.append(f"  L{c['ligne']}:{c['colonne']} ({c['regle']}) "
-                   f"« {c['trouve']} » -> {c['message']}")
+            out.append("\n[%s]" % lib.valeur("lint.severite", sev_courante,
+                                             la).upper())
+        out.append("  " + lib.t("lint.constat", la, ligne=c["ligne"],
+                                colonne=c["colonne"], regle=c["regle"],
+                                trouve=c["trouve"], message=c["message"]))
     return "\n".join(out)
 
 
@@ -542,7 +588,12 @@ def main(argv=None):
                    help="langue d'analyse. Sans l'option : le pragme "
                         "lint-style:langue du document, sinon fr. "
                         "auto lance la détection heuristique")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des libellés du rapport texte. Sans "
+                        "l'option : la langue d'analyse retenue. La sortie "
+                        "JSON reste française quoi qu'il arrive")
     a = p.parse_args(argv)
+    lib = _lib()
     try:
         if a.fichier == "-":
             texte = sys.stdin.read()
@@ -552,10 +603,18 @@ def main(argv=None):
                 texte = f.read()
             chemin = a.fichier
     except OSError as e:
-        print(f"Erreur de lecture : {e}", file=sys.stderr)
+        print(lib.t("lint.erreur_lecture",
+                    lib.resoudre_affichage(a.langue_affichage), erreur=e),
+              file=sys.stderr)
         return 2
     langue = resoudre_langue(texte, a.langue)
-    constats = lint_text(texte, chemin, langue)
+    # Le JSON n'est jamais traduit : c'est la sortie que lisent le jeu d'or,
+    # les evals et tout outil tiers. Seul le rapport texte change de langue.
+    if a.format == "json":
+        constats = lint_text(texte, chemin, langue)
+    else:
+        la = lib.resoudre_affichage(a.langue_affichage, langue)
+        constats = lint_text(texte, chemin, langue, la)
     if not a.quiet:
         if a.format == "json":
             print(json.dumps({
@@ -565,7 +624,7 @@ def main(argv=None):
                 "constats": constats,
             }, ensure_ascii=False, indent=2))
         else:
-            print(rapport_texte(constats, chemin, langue))
+            print(rapport_texte(constats, chemin, langue, la))
     return code_sortie(constats, a.strict)
 
 

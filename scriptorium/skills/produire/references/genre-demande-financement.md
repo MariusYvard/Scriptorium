@@ -2,6 +2,10 @@
 
 Document soumis à une agence ou un bailleur pour obtenir des fonds. Finalité : convaincre un comité d'évaluation, souvent hors du domaine précis, de la valeur et de la faisabilité d'un projet. La structure épouse les critères de notation de l'appel.
 
+## Langue
+
+Ce playbook est déjà anglophone par construction : NIH comme Horizon Europe sont des formulaires en anglais. Sa structure ne bouge donc pas. Un point ne se transpose pas, le critère NSF des Broader Impacts, qui n'a pas de contrepartie sous cette forme dans Horizon Europe ni à l'ANR. Voir `genres-anglais.md`, chargé en plus de ce playbook pour une demande en anglais.
+
 ## Structure
 
 Caler le plan sur la grille d'évaluation de l'appel.

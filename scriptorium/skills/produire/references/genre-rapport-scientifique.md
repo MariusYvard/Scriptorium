@@ -4,7 +4,7 @@ Couvre le mémoire universitaire, le rapport de recherche et l'article scientifi
 
 ## Langue
 
-La langue du document se fixe au cadrage, avec le genre et le plan, et ne change plus ensuite. Un mémoire ou un article rédigé en anglais suit `produire` (style), référence `style-anglais.md` : les règles de forme calibrées sur le français y sont remplacées, non ajoutées, et le contrôle mécanique se lance avec `scripts/lint-style.py --langue en`. Deux points y pèsent plus que les autres pour ce genre : `significant` se réserve à la signification statistique, et la règle de temps ci-dessous est la convention anglaise, que le linter ne contrôle pas.
+La langue du document se fixe au cadrage, avec le genre et le plan, et ne change plus ensuite. Un mémoire ou un article rédigé en anglais suit `produire` (style), référence `style-anglais.md` : les règles de forme calibrées sur le français y sont remplacées, non ajoutées, et le contrôle mécanique se lance avec `scripts/lint-style.py --langue en`. Deux points y pèsent plus que les autres pour ce genre : `significant` se réserve à la signification statistique, et la règle de temps ci-dessous est la convention anglaise, que le linter ne contrôle pas. La structure elle-même bouge : `genres-anglais.md`, chargé en plus de ce playbook pour un document anglais, donne les trois variantes d'IMRAD selon la revue visée (ICMJE, IEEE, Nature), les temps verbaux section par section, la forme et la place de l'abstract, les mots-clés puis les longueurs comptées en mots.
 
 ## A. Mémoire universitaire et rapport de recherche
 

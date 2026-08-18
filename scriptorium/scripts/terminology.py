@@ -8,12 +8,53 @@ employe avant sa definition, et des variantes orthographiques d'un meme terme
 stable, terme defini a sa premiere occurrence".
 
 Usage : python3 terminology.py FICHIER [--format text|json]
-Module importable : analyser(texte) -> dict.
+                                       [--langue-affichage fr|en]
+Module importable : analyser(texte) -> dict ;
+problemes(d, langue_affichage=None) -> list. Sans langue_affichage, les
+constats sont les chaines francaises d'origine a l'octet pres : ce sont
+elles que serialise --format json. La mesure, elle, ne connait aucune
+langue : les sigles et les variantes de graphie se reperent de la meme
+maniere dans les deux.
 """
 import argparse
+import importlib.util
 import json
+import os
 import re
 import sys
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
+def _langue_du_texte(texte):
+    """Langue du document, par delegation a lint-style.py. Elle ne sert qu'a
+    choisir la langue d'affichage par defaut : l'analyse elle-meme ne depend
+    d'aucune langue. Si le linter n'est pas la, le francais fait office de
+    defaut plutot qu'une erreur."""
+    try:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "lint-style.py")
+        spec = importlib.util.spec_from_file_location("lint_style", chemin)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.resoudre_langue(texte)
+    except Exception:
+        return None
+
 
 ACRO = re.compile(r'\b([A-ZÉÈÀ][A-ZÉÈÀ0-9]{1,6})\b')
 # definition : "Expansion (ACRO)" ou "ACRO (expansion)"
@@ -70,14 +111,22 @@ def analyser(texte):
     }
 
 
-def problemes(d):
+def problemes(d, langue_affichage=None):
+    """Constats lisibles tires de l'analyse.
+
+    Sans langue_affichage, les chaines sont celles d'origine a l'octet pres :
+    c'est cette liste que serialise la cle problemes du mode --format json."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     p = []
     if d["sigles_non_definis"]:
-        p.append(f"Sigles employes sans definition : {d['sigles_non_definis']}")
+        p.append(lib.t("terminology.p.non_definis", la,
+                       n=d["sigles_non_definis"]))
     if d["sigles_avant_definition"]:
-        p.append(f"Sigles employes avant leur definition : {d['sigles_avant_definition']}")
+        p.append(lib.t("terminology.p.avant_definition", la,
+                       n=d["sigles_avant_definition"]))
     for v in d["variantes_orthographiques"]:
-        p.append(f"Variantes d'un meme terme (trait d'union) : {v}")
+        p.append(lib.t("terminology.p.variantes", la, formes=v))
     return p
 
 
@@ -85,20 +134,30 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Coherence terminologique.")
     ap.add_argument("fichier")
     ap.add_argument("--format", choices=["text", "json"], default="text")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                    help="langue des libelles du rapport texte. Sans "
+                         "l'option : la langue du document (pragme "
+                         "lint-style:langue), sinon fr. La sortie JSON reste "
+                         "francaise quoi qu'il arrive")
     a = ap.parse_args(argv)
+    lib = _lib()
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     d = analyser(texte)
-    p = problemes(d)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        p = problemes(d)
         print(json.dumps({"analyse": d, "problemes": p}, ensure_ascii=False, indent=2))
     else:
-        print("Terminologie")
+        la = lib.resoudre_affichage(a.langue_affichage,
+                                    _langue_du_texte(texte))
+        p = problemes(d, la)
+        print(lib.t("terminology.titre", la))
         if d["glossaire"]:
-            print("  Glossaire :")
+            print("  " + lib.t("terminology.glossaire", la))
             for k, v in d["glossaire"].items():
                 print(f"    {k} = {v}")
         if not p:
-            print("  Aucun probleme terminologique.")
+            print("  " + lib.t("terminology.aucun_probleme", la))
         for x in p:
             print(f"  - {x}")
     return 1 if (d["sigles_non_definis"] or d["sigles_avant_definition"]) else 0

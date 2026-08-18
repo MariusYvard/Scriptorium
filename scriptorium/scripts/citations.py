@@ -78,6 +78,13 @@ formatage prend un second argument optionnel. En anglais, APA relie le dernier
 auteur par l'esperluette et Chicago par "and" ; les replis de champ manquant
 deviennent Anonymous, Untitled et n.d. Le defaut francais est inchange.
 
+Langue d'affichage (--langue-affichage fr|en, defaut fr) : elle ne porte que
+sur les messages de la commande (comptes, doublons, champs manquants, audit
+de fidelite), jamais sur les references produites, qui suivent --langue, ni
+sur la sortie JSON, qui reste francaise. Un fichier .bib ne porte pas de
+pragme de langue : seule l'option change l'affichage. Les types d'ancre, les
+noms de signal et les codes de defaut restent des valeurs machine.
+
 Module importable : parser_bibtex(texte) ; format_apa(e, langue) ;
 format_vancouver(e, langue) ; format_chicago(e, langue) ; format_mla(e, langue) ;
 format_ieee(e, langue) ; FORMATS (dict nom -> fonction) ;
@@ -88,9 +95,28 @@ rapport_validation(entrees) ; trier_entrees(entrees, cle) ; fetch_doi(doi) ;
 fetch_pmid(pmid) ; fetch_arxiv(id) ; entree_vers_bibtex(e).
 """
 import argparse
+import importlib.util
 import json
+import os
 import re
 import sys
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 ENTREE = re.compile(r'@(\w+)\s*\{\s*([^,]+)\s*,(.*?)\n\s*\}', re.S)
 CHAMP = re.compile(r'(\w+)\s*=\s*(\{(?:[^{}]|\{[^{}]*\})*\}|"[^"]*"|[^,\n]+)', re.S)
@@ -812,6 +838,26 @@ def entree_vers_bibtex(e, cle=None):
     return "\n".join(lignes)
 
 
+def _afficher_validation(validation, lib, la):
+    """Bloc des champs obligatoires manquants et des types non reconnus. Il
+    etait ecrit deux fois a l'identique, une fois par branche d'affichage :
+    le sortir ici evite que les deux copies divergent. Le type BibTeX et la
+    cle d'entree sont des valeurs machine, imprimees telles quelles."""
+    if validation is None:
+        return
+    if validation["incompletes"]:
+        print("\n" + lib.t("citations.champs_manquants", la,
+                           n=len(validation["incompletes"])))
+        for d in validation["detail"]:
+            if d["manquants"]:
+                print("  " + lib.t("citations.champ_ligne", la, cle=d["cle"],
+                                   type=d["type"],
+                                   manquants=", ".join(d["manquants"])))
+    if validation["types_non_reconnus"]:
+        print("\n" + lib.t("citations.type_non_reconnu", la,
+                           types=validation["types_non_reconnus"]))
+
+
 def main(argv=None):
     # Une console Windows en page de code heritee ne sait pas encoder tout ce
     # qu'un index renvoie (titre en japonais, tiret long, guillemet courbe).
@@ -852,7 +898,14 @@ def main(argv=None):
     ap.add_argument("--bascule", nargs=2, metavar=("ANCIEN", "NOUVEAU"), choices=list(FORMATS),
                      help="reemet la meme bibliographie (memes entrees) d'un format vers un "
                           "autre, avec un compte de references avant et apres")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                     help="langue des messages de la commande (defaut fr : un "
+                          "fichier .bib ne porte pas de pragme de langue). Les "
+                          "references suivent --langue, la sortie JSON reste "
+                          "francaise")
     a = ap.parse_args(argv)
+    lib = _lib()
+    la = lib.resoudre_affichage(a.langue_affichage)
 
     if a.pmid:
         e = fetch_pmid(a.pmid, email=a.email)
@@ -879,22 +932,32 @@ def main(argv=None):
         if a.format == "json":
             print(json.dumps({"audit_fidelite": rapport}, ensure_ascii=False, indent=2))
         elif not rapport:
-            print("Audit de fidelite : aucun couple affirmation-ancre repere "
-                  "(convention : phrase suivie de [cle_bibtex]).")
+            print(lib.t("citations.audit_aucun_couple", la))
         else:
             for r in rapport:
-                print(f"[{r['cle']}] {r['affirmation']}")
-                defaut = f" ({r['ancre']['defaut']})" if r['ancre'].get('defaut') else ""
-                print(f"  ancre : {r['ancre']['type']}{defaut}")
+                print(lib.t("citations.audit_couple", la, cle=r["cle"],
+                            affirmation=r["affirmation"]))
+                defaut = (lib.t("citations.audit_defaut", la,
+                                defaut=r["ancre"]["defaut"])
+                          if r["ancre"].get("defaut") else "")
+                # Le type d'ancre, le nom de signal et le code de defaut sont
+                # des valeurs machine : ils sont imprimes tels quels, dans les
+                # deux langues, parce que ce sont eux que du code compare.
+                print("  " + lib.t("citations.audit_ancre", la,
+                                   type=r["ancre"]["type"], defaut=defaut))
                 if r["signaux"]:
                     for s in r["signaux"]:
-                        detail = f" -- {s['detail']}" if s['detail'] else ""
-                        print(f"  signal : {s['signal']}{detail}")
+                        detail = (lib.t("citations.audit_signal_detail", la,
+                                        detail=s["detail"])
+                                  if s["detail"] else "")
+                        print("  " + lib.t("citations.audit_signal", la,
+                                           signal=s["signal"], detail=detail))
                 else:
-                    print("  signal : aucun")
+                    print("  " + lib.t("citations.audit_aucun_signal", la))
                 if r["non_mesurable"]:
-                    print("  non mesurable (pas de texte source dans l'ancre) : "
-                          + ", ".join(r["non_mesurable"]))
+                    print("  " + lib.t(
+                        "citations.audit_non_mesurable", la,
+                        mesures=", ".join(r["non_mesurable"])))
                 print()
         return 0  # couche 3 consultative : n'affecte jamais le code de sortie
 
@@ -921,19 +984,15 @@ def main(argv=None):
                 sortie["validation"] = validation
             print(json.dumps(sortie, ensure_ascii=False, indent=2))
         else:
-            print(f"Bascule {ancien} -> {nouveau} "
-                  f"(compte inchange : {len(refs_ancien)} avant, {len(refs_nouveau)} apres)\n")
+            print(lib.t("citations.bascule", la, ancien=ancien,
+                        nouveau=nouveau, avant=len(refs_ancien),
+                        apres=len(refs_nouveau)) + "\n")
             for i, r in enumerate(refs_nouveau, 1):
                 print(_ligne(r, nouveau, i))
             if doublons:
-                print(f"\nDoublons ecartes : {doublons}")
-            if validation is not None and validation["incompletes"]:
-                print(f"\nChamps obligatoires manquants ({len(validation['incompletes'])} entree(s)) :")
-                for d in validation["detail"]:
-                    if d["manquants"]:
-                        print(f"  {d['cle']} ({d['type']}) : {', '.join(d['manquants'])}")
-            if validation is not None and validation["types_non_reconnus"]:
-                print(f"\nType BibTeX non reconnu (non valide) : {validation['types_non_reconnus']}")
+                print("\n" + lib.t("citations.doublons", la,
+                                   doublons=doublons))
+            _afficher_validation(validation, lib, la)
         probleme = bool(a.exiger_ancres and ancrage["sans_ancre"])
         probleme = probleme or bool(validation is not None and validation["incompletes"])
         return 1 if probleme else 0
@@ -948,16 +1007,11 @@ def main(argv=None):
         for i, r in enumerate(refs, 1):
             print(_ligne(r, a.to, i))
         if doublons:
-            print(f"\nDoublons ecartes : {doublons}")
+            print("\n" + lib.t("citations.doublons", la, doublons=doublons))
         if ancrage["sans_ancre"]:
-            print(f"\nEntrees sans ancre exploitable (signal) : {ancrage['sans_ancre']}")
-        if validation is not None and validation["incompletes"]:
-            print(f"\nChamps obligatoires manquants ({len(validation['incompletes'])} entree(s)) :")
-            for d in validation["detail"]:
-                if d["manquants"]:
-                    print(f"  {d['cle']} ({d['type']}) : {', '.join(d['manquants'])}")
-        if validation is not None and validation["types_non_reconnus"]:
-            print(f"\nType BibTeX non reconnu (non valide) : {validation['types_non_reconnus']}")
+            print("\n" + lib.t("citations.sans_ancre", la,
+                               cles=ancrage["sans_ancre"]))
+        _afficher_validation(validation, lib, la)
     probleme = bool(a.exiger_ancres and ancrage["sans_ancre"])
     probleme = probleme or bool(validation is not None and validation["incompletes"])
     return 1 if probleme else 0

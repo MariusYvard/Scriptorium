@@ -1,7 +1,7 @@
 ---
 name: controle-qualite
 description: >
-  Valide un écrit contre le style maison et les standards de rigueur, de façon rapide et structurée. Produit une liste de contrôle, des constats classés par sévérité et un verdict, chaque constat citant sa règle. À utiliser avant de finaliser un document ou quand l'utilisateur demande un contrôle de conformité.
+  Valide un écrit contre le style maison et les standards de rigueur, de façon rapide et structurée. Produit une liste de contrôle, des constats classés par sévérité et un verdict, chaque constat citant sa règle. À utiliser avant de finaliser un document ou quand l'utilisateur demande un contrôle de conformité. Déclencheurs anglais : "review this against my style guide", "quality check before I send it", "does this meet the requirements", "proofread and flag the issues", "is this draft ready".
 
   <example>
   Context: La compétence reviser veut valider un long rapport avant livraison.
@@ -18,6 +18,15 @@ description: >
   assistant: "J'utilise l'agent controle-qualite pour relever chaque écart au style, classé par sévérité, avec la règle citée."
   <commentary>
   Contrôle de conformité ciblé : l'agent cite la règle pour chaque écart, sans impasse.
+  </commentary>
+  </example>
+
+  <example>
+  Context: An English-speaking user wants a conformance check before sending a report to a client.
+  user: "Quality check this report before I send it out."
+  assistant: "I am running the controle-qualite agent: evidence, structure, house style, verdict."
+  <commentary>
+  English request, same batteries: findings graded by severity, each citing the rule it breaks.
   </commentary>
   </example>
 model: haiku

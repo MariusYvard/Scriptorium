@@ -4,7 +4,7 @@ Couvre l'article éditorial, la tribune, la vulgarisation, la note de fond et l'
 
 ## Langue
 
-La langue du document se fixe au cadrage, avec le genre et le plan, et ne change plus ensuite. Un article rédigé en anglais suit `produire` (style), référence `style-anglais.md` : les règles de forme calibrées sur le français y sont remplacées, non ajoutées, et le contrôle mécanique se lance avec `scripts/lint-style.py --langue en`. Changer de langue en cours de rédaction accumule deux jeux de règles contradictoires sans en satisfaire aucun.
+La langue du document se fixe au cadrage, avec le genre et le plan, et ne change plus ensuite. Un article rédigé en anglais suit `produire` (style), référence `style-anglais.md` : les règles de forme calibrées sur le français y sont remplacées, non ajoutées, et le contrôle mécanique se lance avec `scripts/lint-style.py --langue en`. Changer de langue en cours de rédaction accumule deux jeux de règles contradictoires sans en satisfaire aucun. Ce que la langue change à la structure attendue est dans `genres-anglais.md`, chargé en plus de ce playbook : l'anglais sépare par genre de presse (op-ed, feature, explainer, blog post) ce que le français range sous le seul mot d'article.
 
 ## Structure
 

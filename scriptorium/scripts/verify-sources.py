@@ -57,6 +57,25 @@ TRACKING = re.compile(
     r"vero_id|oly_enc_id|ref|ref_src|spm)=[^&#]*")
 PONCTU_FIN = ".,;:!?)]}»\"'"
 
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py a la demande, une seule fois. Meme raison que pour
+    lint-style.py : le module se lit par chemin, aucun sys.path n'est
+    garanti."""
+    global _LIB
+    if _LIB is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
 SEUIL_SIMILARITE = 0.70  # documenté dans references/integrite-sources.md
 FENETRE_CONTAMINATION_ANS = 2  # un preprint est "recent" dans cette fenetre
 INDEX_TIMEOUT = 8
@@ -314,14 +333,21 @@ def verifier_openalex_doi(doi, timeout=INDEX_TIMEOUT, api_key=None):
             "retracte": retracte}
 
 
-def trianguler_doi(doi, timeout=INDEX_TIMEOUT, api_key_openalex=None):
+def trianguler_doi(doi, timeout=INDEX_TIMEOUT, api_key_openalex=None,
+                   langue_affichage=None):
     """Triangule un DOI aupres de Crossref, OpenAlex et Semantic Scholar.
 
     Retourne un verdict gradue : verifie, plausible, inverifiable, fabrique.
     Voir references/integrite-sources.md section 3 pour la definition de
     chaque valeur. Un verdict "fabrique" signale un cas a trancher par un
     humain, il ne le tranche pas lui-meme.
+
+    Le verdict est une valeur machine : il reste francais dans toutes les
+    langues, main() en fait un code de sortie et les evals le comparent. Seul
+    le detail, qui est de la prose, suit la langue d'affichage.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     index = {
         "crossref": verifier_crossref_doi(doi, timeout),
         "openalex": verifier_openalex_doi(doi, timeout, api_key_openalex),
@@ -338,28 +364,34 @@ def trianguler_doi(doi, timeout=INDEX_TIMEOUT, api_key_openalex=None):
                 sim_min = min(sim_min, similarite_titre(titres[i], titres[j]))
         if sim_min >= SEUIL_SIMILARITE:
             verdict = "verifie"
-            detail = f"titres concordants entre {len(trouves)} index (similarite {sim_min:.2f})"
+            detail = lib.t("verify.d.titres_concordants", la,
+                           n=len(trouves), sim="%.2f" % sim_min)
         else:
             verdict = "inverifiable"
-            detail = f"titres discordants entre index (similarite {sim_min:.2f} < {SEUIL_SIMILARITE})"
+            detail = lib.t("verify.d.titres_discordants", la,
+                           sim="%.2f" % sim_min, seuil=SEUIL_SIMILARITE)
     elif len(trouves) == 1:
         manques_explicites = [n for n in consultes if n not in [t[0] for t in trouves]]
         if manques_explicites:
             verdict = "plausible"
-            detail = f"resolu par {trouves[0][0]} seul, non trouve par {', '.join(manques_explicites)}"
+            detail = lib.t("verify.d.resolu_seul", la, index=trouves[0][0],
+                           manques=", ".join(manques_explicites))
         else:
             verdict = "verifie"
-            detail = f"resolu par {trouves[0][0]} (seul index consulte avec succes)"
+            detail = lib.t("verify.d.resolu_unique_index", la,
+                           index=trouves[0][0])
     else:
         if len(consultes) >= 2:
             verdict = "fabrique"
-            detail = f"non trouve independamment par {len(consultes)} index ({', '.join(consultes)})"
+            detail = lib.t("verify.d.non_trouve_plusieurs", la,
+                           n=len(consultes), index=", ".join(consultes))
         elif len(consultes) == 1:
             verdict = "inverifiable"
-            detail = f"non trouve par le seul index consulte ({consultes[0]}), a verifier autrement"
+            detail = lib.t("verify.d.non_trouve_unique", la,
+                           index=consultes[0])
         else:
             verdict = "inverifiable"
-            detail = "aucun index consulte avec succes (reseau indisponible, cles absentes)"
+            detail = lib.t("verify.d.aucun_index", la)
 
     # La retractation est un fait distinct de l'existence : un article retracte
     # existe, se resout dans les index et reste "verifie". Le statut se rapporte
@@ -390,10 +422,13 @@ def trianguler_doi(doi, timeout=INDEX_TIMEOUT, api_key_openalex=None):
     }
 
 
-def detecter_contamination(texte, reseau=False, timeout=INDEX_TIMEOUT, annee_reference=None):
+def detecter_contamination(texte, reseau=False, timeout=INDEX_TIMEOUT,
+                           annee_reference=None, langue_affichage=None):
     """Signale les identifiants arXiv recents. Signal consultatif seul, jamais
     une preuve de fabrication : un preprint recent peut simplement ne pas
     encore etre repris ailleurs."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     if annee_reference is None:
         annee_reference = datetime.date.today().year
     resultats = []
@@ -411,67 +446,83 @@ def detecter_contamination(texte, reseau=False, timeout=INDEX_TIMEOUT, annee_ref
         if reseau:
             r = verifier_semantic_scholar_arxiv(identifiant, timeout)
             if not r["consulte"]:
-                entree["signal"] = "non verifie (Semantic Scholar injoignable)"
+                entree["signal"] = lib.t("verify.s.non_verifie", la)
             elif r["trouve"]:
-                entree["signal"] = "preprint recent, retrouve dans un index (signal reduit)"
+                entree["signal"] = lib.t("verify.s.retrouve", la)
             else:
-                entree["signal"] = "preprint recent absent de l'index consulte : a verifier manuellement"
+                entree["signal"] = lib.t("verify.s.absent", la)
         else:
-            entree["signal"] = "preprint recent, --reseau desactive : a verifier manuellement"
+            entree["signal"] = lib.t("verify.s.hors_reseau", la)
         resultats.append(entree)
     return resultats
 
 
-def rapport_texte(d):
-    out = ["Vérificateur de sources"]
-    out.append(f"  URL uniques={len(d['urls'])}  à nettoyer={len(d['urls_a_nettoyer'])}"
-               f"  doublons={len(d['doublons'])}  DOI={len(d['dois'])}"
-               f"  DOI invalides={len(d['dois_invalides'])}")
+def rapport_texte(d, langue_affichage=None):
+    """Rapport lisible. Les verdicts et les statuts restent des valeurs
+    machine dans d ; ils sont traduits ici pour l'affichage seulement."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    out = [lib.t("verify.titre", la)]
+    out.append("  " + lib.t(
+        "verify.comptes", la, urls=len(d["urls"]),
+        sales=len(d["urls_a_nettoyer"]), doublons=len(d["doublons"]),
+        dois=len(d["dois"]), invalides=len(d["dois_invalides"])))
     if d["urls_a_nettoyer"]:
-        out.append("\nURL avec paramètres de suivi :")
+        out.append("\n" + lib.t("verify.urls_a_nettoyer", la))
         for s in d["urls_a_nettoyer"]:
             out.append(f"  {s['brut']}\n   -> {s['propre']}")
     if d["doublons"]:
-        out.append("\nDoublons :")
+        out.append("\n" + lib.t("verify.doublons", la))
         out += [f"  {u}" for u in d["doublons"]]
     if d["dois_invalides"]:
-        out.append("\nDOI de syntaxe douteuse :")
+        out.append("\n" + lib.t("verify.dois_douteux", la))
         out += [f"  {x}" for x in d["dois_invalides"]]
     if d.get("paliers"):
-        out.append("\nPaliers de domaine (indice mécanique, sans réseau) :")
+        out.append("\n" + lib.t("verify.paliers", la))
         for p in d["paliers"]:
-            out.append(f"  [{p['palier']}] {p['url']}")
+            out.append("  [%s] %s"
+                       % (lib.valeur("verify.palier", p["palier"], la),
+                          p["url"]))
     if "liens" in d:
-        out.append("\nRésolution réseau :")
+        out.append("\n" + lib.t("verify.resolution", la))
         for r in d["liens"]:
-            etat = "OK" if r["resout"] else "ECHEC"
+            etat = lib.t("verify.lien_ok" if r["resout"]
+                         else "verify.lien_echec", la)
             out.append(f"  [{etat}] {r['statut']} {r['url']}")
     if "triangulation" in d:
-        out.append("\nTriangulation multi-index (verdict par DOI) :")
+        out.append("\n" + lib.t("verify.triangulation", la))
         for t in d["triangulation"]:
-            out.append(f"  [{t['verdict'].upper()}] {t['doi']} -> {t['detail']}")
+            out.append("  [%s] %s -> %s"
+                       % (lib.valeur("verify.verdict_doi", t["verdict"],
+                                     la).upper(), t["doi"], t["detail"]))
         retractes = [t for t in d["triangulation"]
                      if (t.get("retractation") or {}).get("statut")
                      in ("retracte", "avis de retractation")]
         if retractes:
-            out.append("\nStatut de rétractation (fait distinct de l'existence) :")
+            out.append("\n" + lib.t("verify.retractation", la))
             for t in retractes:
                 r = t["retractation"]
-                avis = f", avis {r['avis_doi']}" if r.get("avis_doi") else ""
+                avis = (lib.t("verify.retractation_avis", la,
+                              doi=r["avis_doi"]) if r.get("avis_doi") else "")
                 date = f", {r['date']}" if r.get("date") else ""
-                out.append(f"  [{r['statut'].upper()}] {t['doi']} "
-                           f"(déclaré par {', '.join(r.get('sources') or [])}"
-                           f"{avis}{date})")
+                out.append("  [%s] %s %s" % (
+                    lib.valeur("verify.statut_retractation", r["statut"],
+                               la).upper(), t["doi"],
+                    lib.t("verify.retractation_ligne", la,
+                          sources=", ".join(r.get("sources") or []),
+                          avis=avis, date=date)))
         inconnus = [t["doi"] for t in d["triangulation"]
                     if (t.get("retractation") or {}).get("statut") == "inconnu"]
         if inconnus:
-            out.append(f"\n  Statut de rétractation inconnu pour {len(inconnus)} "
-                       "DOI : aucun index consulté ne le déclare, ce qui n'est "
-                       "pas une preuve d'absence de rétractation.")
+            out.append("\n  " + lib.t("verify.retractation_inconnue", la,
+                                      n=len(inconnus)))
     if "contamination" in d and d["contamination"]:
-        out.append("\nSignaux de contamination (preprints récents) :")
+        out.append("\n" + lib.t("verify.contamination", la))
         for c in d["contamination"]:
-            out.append(f"  {c['identifiant']} (année estimée {c['annee_estimee']}) : {c['signal']}")
+            out.append("  " + lib.t(
+                "verify.contamination_ligne", la,
+                identifiant=c["identifiant"], annee=c["annee_estimee"],
+                signal=c["signal"]))
     return "\n".join(out)
 
 
@@ -500,11 +551,20 @@ def main(argv=None):
     p.add_argument("--annee-reference", type=int,
                    help="année de référence pour le signal de contamination "
                         "(défaut : année courante)")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des libellés du rapport texte. Sans "
+                        "l'option : français. La sortie JSON reste française "
+                        "quoi qu'il arrive")
     a = p.parse_args(argv)
+    lib = _lib()
+    # Le JSON ne se traduit pas : c'est la sortie que lisent les evals et tout
+    # outil tiers. Seul le rapport texte prend la langue demandee.
+    la = (lib.resoudre_affichage(a.langue_affichage)
+          if a.format != "json" else lib.LANGUE_DEFAUT)
     try:
         texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     except OSError as e:
-        print(f"Erreur de lecture : {e}", file=sys.stderr)
+        print(lib.t("verify.erreur_lecture", la, erreur=e), file=sys.stderr)
         return 2
     d = analyser(texte)
     if a.check_links:
@@ -512,13 +572,16 @@ def main(argv=None):
     if a.reseau:
         cle = a.openalex_cle or os.environ.get("OPENALEX_API_KEY")
         dois_valides = [x for x in d["dois"] if x not in d["dois_invalides"]]
-        d["triangulation"] = [trianguler_doi(doi, api_key_openalex=cle) for doi in dois_valides]
-        d["contamination"] = detecter_contamination(texte, reseau=True,
-                                                     annee_reference=a.annee_reference)
+        d["triangulation"] = [trianguler_doi(doi, api_key_openalex=cle,
+                                             langue_affichage=la)
+                              for doi in dois_valides]
+        d["contamination"] = detecter_contamination(
+            texte, reseau=True, annee_reference=a.annee_reference,
+            langue_affichage=la)
     if a.format == "json":
         print(json.dumps(d, ensure_ascii=False, indent=2))
     else:
-        print(rapport_texte(d))
+        print(rapport_texte(d, la))
     # code 1 si doublons, URL sales, DOI invalides, lien mort, ou reference fabriquee
     pb = bool(d["urls_a_nettoyer"] or d["doublons"] or d["dois_invalides"])
     if "liens" in d:

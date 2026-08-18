@@ -23,16 +23,48 @@ porte pour toute illustration du plugin. Ce module les reprend sous les memes
 noms (resolution_effective, DPI_IMPRESSION, DPI_ECRAN, POUCE_CM) sans en tenir
 une seconde copie.
 
+Le fragment de placement est un LIVRABLE : il part dans le document et ne
+depend d'aucune langue d'affichage. Seuls les erreurs, les avertissements et
+le rapport texte suivent --langue-affichage. Sans l'option ils restent en
+francais : un registre de logos est un fichier de configuration, il ne porte
+pas de langue.
+
 Usage :
   python3 logos.py valider REGISTRE.json [--format text|json] [--strict]
+                   [--langue-affichage fr|en]
   python3 logos.py placer REGISTRE.json --usage page-garde|en-tete|pied|
                    co-signature --format docx|latex|html [--sortie text|json]
+                   [--langue-affichage fr|en]
+
+Module importable : charger(source) -> dict ;
+valider(reg, langue_affichage=None) -> (erreurs, avertissements) ;
+pour_usage(reg, usage) -> list ;
+fragment(reg, usage, format_sortie, langue_affichage=None) -> (str, avis).
+Sans langue_affichage, erreurs et avertissements sont les chaines francaises
+d'origine a l'octet pres : ce sont elles que serialise --format json.
 """
 import argparse
 import importlib.util
 import json
 import os
 import sys
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 USAGES = ("page-garde", "en-tete", "pied", "co-signature")
 VECTORIELS = ("svg", "eps", "pdf", "emf", "wmf")
@@ -73,7 +105,7 @@ def _images():
     return _IMG
 
 
-def charger(source):
+def charger(source, langue_affichage=None):
     """Lit un registre depuis un chemin, un objet dejà charge ou l'entree."""
     if isinstance(source, dict):
         reg = source
@@ -84,7 +116,10 @@ def charger(source):
             racine = os.getcwd()
         else:
             if not os.path.isfile(source):
-                raise SystemExit("registre introuvable : %s" % source)
+                lib = _lib()
+                raise SystemExit(lib.t(
+                    "logos.err_registre",
+                    lib.resoudre_affichage(langue_affichage), chemin=source))
             reg = json.load(open(source, encoding="utf-8"))
             racine = os.path.dirname(os.path.abspath(source))
     reg.setdefault("logos", [])
@@ -102,37 +137,50 @@ def largeur_usage(logo, usage):
     return LARGEURS.get(usage, 3.0)
 
 
-def valider(reg):
-    """Erreurs bloquantes et avertissements consultatifs, jamais melanges."""
+def valider(reg, langue_affichage=None):
+    """Erreurs bloquantes et avertissements consultatifs, jamais melanges.
+
+    Sans langue_affichage, les deux listes sont les chaines francaises
+    d'origine a l'octet pres : ce sont elles que serialise --format json.
+    Les identifiants de logo, les noms d'usage et les extensions sont des
+    valeurs du registre, ils sont repris tels quels dans les deux langues."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     erreurs, avis = [], []
     racine = reg.get("_racine") or os.getcwd()
     logos = reg.get("logos") or []
     if not logos:
-        erreurs.append("le registre ne declare aucun logo")
+        erreurs.append(lib.t("logos.e.aucun_logo", la))
     vus = set()
     mod = None
     for i, logo in enumerate(logos):
-        etiquette = logo.get("id") or "entree %d" % (i + 1)
+        etiquette = logo.get("id") or lib.t("logos.etiquette_entree", la,
+                                            n=i + 1)
         if not logo.get("id"):
-            erreurs.append("%s : champ id manquant" % etiquette)
+            erreurs.append(lib.t("logos.e.id_manquant", la,
+                                 etiquette=etiquette))
         elif logo["id"] in vus:
-            erreurs.append("%s : identifiant en double" % logo["id"])
+            erreurs.append(lib.t("logos.e.id_double", la,
+                                 etiquette=logo["id"]))
         else:
             vus.add(logo["id"])
         fichier = logo.get("fichier")
         if not fichier:
-            erreurs.append("%s : champ fichier manquant" % etiquette)
+            erreurs.append(lib.t("logos.e.fichier_manquant", la,
+                                 etiquette=etiquette))
             continue
         chemin = fichier if os.path.isabs(fichier) \
             else os.path.join(racine, fichier)
         if not os.path.isfile(chemin):
-            erreurs.append("%s : fichier absent (%s)" % (etiquette, fichier))
+            erreurs.append(lib.t("logos.e.fichier_absent", la,
+                                 etiquette=etiquette, fichier=fichier))
             continue
         usages = logo.get("usages") or list(USAGES)
         inconnus = [u for u in usages if u not in USAGES]
         if inconnus:
-            erreurs.append("%s : usage inconnu %s"
-                           % (etiquette, ", ".join(inconnus)))
+            erreurs.append(lib.t("logos.e.usage_inconnu", la,
+                                 etiquette=etiquette,
+                                 usages=", ".join(inconnus)))
         ext = os.path.splitext(chemin)[1].lower().lstrip(".")
         if ext in VECTORIELS:
             continue
@@ -140,8 +188,7 @@ def valider(reg):
             mod = _images()
         larg_px, haut_px, _fmt = mod.dimensions(open(chemin, "rb").read())
         if not larg_px:
-            avis.append("%s : dimensions illisibles, resolution non mesuree"
-                        % etiquette)
+            avis.append(lib.t("logos.a.dimensions", la, etiquette=etiquette))
             continue
         for usage in usages:
             cible = largeur_usage(logo, usage)
@@ -149,17 +196,17 @@ def valider(reg):
             seuil = DPI_IMPRESSION if usage in ("page-garde", "co-signature") \
                 else DPI_ECRAN
             if dpi is not None and dpi < seuil:
-                avis.append(
-                    "%s en %s : %d dpi a %.1f cm, sous le seuil de %d dpi"
-                    % (etiquette, usage, round(dpi), cible, seuil))
-        avis.append("%s : format %s, un vectoriel resisterait mieux a "
-                    "l'agrandissement" % (etiquette, ext))
+                avis.append(lib.t("logos.a.sous_seuil", la,
+                                  etiquette=etiquette, usage=usage,
+                                  dpi=round(dpi), cible=cible, seuil=seuil))
+        avis.append(lib.t("logos.a.matriciel", la, etiquette=etiquette,
+                          ext=ext))
         if logo.get("ratio_verrouille") and haut_px:
             attendu = logo["ratio_verrouille"]
             reel = larg_px / float(haut_px)
             if abs(reel - float(attendu)) > 0.02:
-                erreurs.append("%s : ratio %.3f contre %.3f declare"
-                               % (etiquette, reel, float(attendu)))
+                erreurs.append(lib.t("logos.e.ratio", la, etiquette=etiquette,
+                                     reel=reel, attendu=float(attendu)))
     return erreurs, avis
 
 
@@ -180,16 +227,21 @@ def pour_usage(reg, usage):
     return [t[2] for t in retenus]
 
 
-def fragment(reg, usage, format_sortie):
-    """Fragment pret a inserer pour un usage, dans un des trois formats."""
+def fragment(reg, usage, format_sortie, langue_affichage=None):
+    """Fragment pret a inserer pour un usage, dans un des trois formats.
+
+    Le fragment lui-meme est un livrable : il ne depend d'aucune langue
+    d'affichage. Seuls les avis rendus a cote en dependent, et sans
+    langue_affichage ils restent les chaines francaises d'origine."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     logos = pour_usage(reg, usage)
     if not logos:
-        return "", ["aucun logo declare pour l'usage %s" % usage]
+        return "", [lib.t("logos.a.aucun_pour_usage", la, usage=usage)]
     avis = []
     racine = reg.get("_racine") or os.getcwd()
     if usage == "co-signature" and len(logos) < 2:
-        avis.append("co-signature demandee avec un seul logo, le rang "
-                    "protocolaire ne joue pas")
+        avis.append(lib.t("logos.a.cosignature_seul", la))
     morceaux = []
     for logo in logos:
         larg = largeur_usage(logo, usage)
@@ -197,8 +249,8 @@ def fragment(reg, usage, format_sortie):
         absolu = chemin if os.path.isabs(chemin) \
             else os.path.join(racine, chemin)
         if not os.path.isfile(absolu):
-            avis.append("%s : fichier absent, ecarte du placement plutot que "
-                        "reference a vide" % (logo.get("id") or chemin))
+            avis.append(lib.t("logos.a.ecarte", la,
+                              etiquette=logo.get("id") or chemin))
             continue
         alt = logo.get("alt") or logo.get("id") or "logo"
         respiration = float(logo.get("respiration", 0.25))
@@ -221,8 +273,7 @@ def fragment(reg, usage, format_sortie):
                  % (usage, "".join(morceaux)))
     else:
         rendu = "\n".join(morceaux)
-        avis.append("en docx, ces chemins se passent a gabarit.py remplir "
-                    "--logo, qui ecrit la relation et le manifeste")
+        avis.append(lib.t("logos.a.docx", la))
     return rendu, avis
 
 
@@ -232,13 +283,27 @@ def main(argv=None):
                     "fragment de placement pour un usage.")
     sp = p.add_subparsers(dest="action")
 
-    pv = sp.add_parser("valider", help="controler un registre de logos")
+    # Option commune aux deux sous-commandes : posee sur un parent, elle
+    # s'ecrit apres la sous-commande comme dans les dix-sept scripts deja
+    # cables, pas avant elle.
+    commun = argparse.ArgumentParser(add_help=False)
+    commun.add_argument("--langue-affichage", choices=("fr", "en"),
+                        default=None,
+                        help="langue des erreurs, des avertissements et du "
+                             "rapport texte (defaut fr : un registre de "
+                             "logos est un fichier de configuration, il ne "
+                             "porte pas de langue). Le fragment de placement "
+                             "et la sortie JSON n'en dependent pas")
+
+    pv = sp.add_parser("valider", help="controler un registre de logos",
+                       parents=[commun])
     pv.add_argument("registre")
     pv.add_argument("--format", choices=("text", "json"), default="text")
     pv.add_argument("--strict", action="store_true",
                     help="code de sortie 1 des le premier avertissement")
 
-    pp = sp.add_parser("placer", help="fragment de placement pour un usage")
+    pp = sp.add_parser("placer", help="fragment de placement pour un usage",
+                       parents=[commun])
     pp.add_argument("registre")
     pp.add_argument("--usage", choices=USAGES, required=True)
     pp.add_argument("--format", choices=("docx", "latex", "html"),
@@ -250,37 +315,46 @@ def main(argv=None):
         p.print_help()
         return 0
 
-    reg = charger(a.registre)
+    lib = _lib()
+    la = lib.resoudre_affichage(a.langue_affichage)
+    reg = charger(a.registre, la)
 
     if a.action == "valider":
-        erreurs, avis = valider(reg)
         if a.format == "json":
+            # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+            erreurs, avis = valider(reg)
             print(json.dumps({"erreurs": erreurs, "avertissements": avis,
                               "logos": len(reg.get("logos") or [])},
                              ensure_ascii=False, indent=2))
         else:
+            erreurs, avis = valider(reg, la)
             for e in erreurs:
-                print("  erreur        %s" % e)
+                print("  " + lib.t("logos.ligne_erreur", la, message=e))
             for w in avis:
-                print("  avertissement %s" % w)
+                print("  " + lib.t("logos.ligne_avertissement", la,
+                                   message=w))
             if not erreurs and not avis:
-                print("  registre conforme, %d logos"
-                      % len(reg.get("logos") or []))
-            print("\n%d erreurs, %d avertissements" % (len(erreurs), len(avis)))
+                print("  " + lib.t("logos.conforme", la,
+                                   n=len(reg.get("logos") or [])))
+            print("\n" + lib.t("logos.comptes", la, erreurs=len(erreurs),
+                               avis=len(avis)))
         if erreurs:
             return 1
         return 1 if (a.strict and avis) else 0
 
     if a.action == "placer":
-        rendu, avis = fragment(reg, a.usage, a.format)
         if a.sortie == "json":
+            # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+            rendu, avis = fragment(reg, a.usage, a.format)
             print(json.dumps({"usage": a.usage, "format": a.format,
                               "fragment": rendu, "avertissements": avis},
                              ensure_ascii=False, indent=2))
         else:
+            rendu, avis = fragment(reg, a.usage, a.format, la)
             print(rendu)
             for w in avis:
-                print("  avertissement : %s" % w, file=sys.stderr)
+                print("  " + lib.t("logos.avertissement", la, message=w),
+                      file=sys.stderr)
         return 0
     return 0
 

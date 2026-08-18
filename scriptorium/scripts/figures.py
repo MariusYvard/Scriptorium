@@ -10,22 +10,34 @@ charte.json) : couleurs, polices, filet d'accent, fond, filigrane, rayon des
 angles. Un audit (--audit) porte un regard critique sur la figure, charte
 comprise (contraste).
 
-Les etiquettes ecrites dans le code suivent --langue fr|en (defaut fr) :
-cases du SWOT, du PESTEL, de la BCG et de l'Ansoff, activites de la chaine
-de valeur, phases et boites du schema PRISMA. Le rendu francais ne change
-pas. Les cles des donnees JSON et les libelles fournis par l'appelant ne
-sont jamais traduits. Le regard critique de --audit reste en francais :
-c'est un diagnostic pour l'auteur, pas une piece du livrable.
+DEUX LANGUES DISTINCTES, et il ne faut pas les confondre.
+
+--langue est la langue de DESSIN : les etiquettes ecrites dans le code et
+tracees dans le SVG (cases du SWOT, du PESTEL, de la BCG et de l'Ansoff,
+activites de la chaine de valeur, phases et boites du schema PRISMA). Elles
+partent dans le document, elles en sont une piece. Le rendu francais ne
+change pas. Les cles des donnees JSON et les libelles fournis par l'appelant
+ne sont jamais traduits.
+
+--langue-affichage est la langue du REGARD CRITIQUE de --audit et des
+messages de la ligne de commande : ils restent au terminal, ils ne partent
+nulle part. Sans l'option, l'affichage suit la langue de dessin : un auteur
+qui demande ses etiquettes en anglais travaille en anglais, et rien d'autre
+ici ne renseigne sur sa langue (une figure n'a pas de texte a lire, seulement
+des donnees chiffrees). L'option reste disponible pour les separer, par
+exemple une figure anglaise auditee en francais.
 
 Usage :
     python3 figures.py TYPE --out f.svg [--data data.json|-] [--title "T"] [--theme charte.json]
     python3 figures.py TYPE --out f.svg --data - --langue en < data.json
     python3 figures.py TYPE --data - --audit --theme charte.json < data.json
+    python3 figures.py TYPE --data - --audit --langue-affichage en < data.json
 
 TYPE strategiques (a cases) : swot | bcg | ansoff | pestel | chaine-valeur | tam-sam-som
 TYPE de donnees (a axes) : courbe | nuage | histogramme | boite | flux | prisma
 Module importable : construire(type, data, titre, theme, langue) ;
-auditer(type, data, theme).
+auditer(type, data, theme, langue_affichage=None). Sans langue_affichage,
+les avis d'audit sont les chaines francaises d'origine a l'octet pres.
 """
 import argparse
 import json
@@ -62,7 +74,7 @@ except Exception:
             "logo_texte": None, "rayon": 8}
     def charger_theme(s=None):
         return dict(_DEF) if not isinstance(s, dict) else {**_DEF, **s}
-    def valider_theme(t):
+    def valider_theme(t, langue_affichage=None):
         return ([], [])
 
 W, H = 900, 620
@@ -243,8 +255,30 @@ def appliquer_langue(langue=None):
 
 
 def _lib(figure):
-    """Etiquettes de la figure dans la langue courante."""
+    """Etiquettes DESSINEES de la figure, dans la langue de dessin courante.
+
+    A ne pas confondre avec _libelles(), qui rend la couche d'affichage du
+    plugin : celle-ci va dans le SVG, celle-la va au terminal."""
     return LIBELLES.get(LANGUE, LIBELLES[LANGUE_DEFAUT])[figure]
+
+
+_LIBMOD = None
+
+
+def _libelles():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti. Il porte les libelles du
+    RAPPORT D'AUDIT, jamais ceux dessines dans la figure."""
+    global _LIBMOD
+    if _LIBMOD is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIBMOD = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIBMOD)
+    return _LIBMOD
 
 
 def _txt(x, y, s, taille=14, gras=False, ancre="start", couleur=None, police=None):
@@ -1240,205 +1274,212 @@ def prisma(data, titre=None):
 TYPES_DONNEES = ("courbe", "nuage", "histogramme", "boite", "flux", "prisma")
 
 
-def _audit_axe(data, cle, nom, avert, exiger_unite=True):
+def _audit_axe(data, cle, nom, avert, la, exiger_unite=True):
     """Un axe sans titre ni unite laisse le lecteur deviner la grandeur."""
+    lb = _libelles()
+    axe = lb.valeur("figures.axe", nom, la)
     bloc = data.get(cle) if isinstance(data.get(cle), dict) else {}
     if not str(bloc.get("titre", "")).strip():
-        avert.append(f"Axe des {nom} sans titre : nommer la grandeur portee.")
+        avert.append(lb.t("figures.a.axe_sans_titre", la, axe=axe))
     if exiger_unite and not str(bloc.get("unite", "")).strip():
-        avert.append(f"Axe des {nom} sans unite : preciser l'unite de mesure "
-                     f"(ou 'sans unite' quand la grandeur n'en a pas).")
+        avert.append(lb.t("figures.a.axe_sans_unite", la, axe=axe))
 
 
-def _audit_series(data, avert, exiger_ajustement=False):
+def _audit_series(data, avert, la, exiger_ajustement=False):
+    lb = _libelles()
     series = [s for s in (data.get("series") or []) if isinstance(s, dict)]
     if not series:
-        avert.append("Aucune serie de donnees : la figure serait vide.")
+        avert.append(lb.t("figures.a.aucune_serie", la))
     for i, s in enumerate(series):
         pts = _points(s)
         nom = str(s.get("nom", "")).strip()
         if not pts:
-            avert.append(f"Serie '{nom or i + 1}' vide : aucun point "
-                         f"exploitable, la retirer ou fournir ses donnees.")
+            avert.append(lb.t("figures.a.serie_vide", la,
+                              serie=nom or i + 1))
         if not nom:
-            avert.append(f"Serie {i + 1} sans nom : ses points ne sont pas "
-                         f"etiquetes, la legende ne peut pas les designer.")
+            avert.append(lb.t("figures.a.serie_sans_nom", la, i=i + 1))
         err = s.get("erreurs")
         if isinstance(err, list) and pts and len(err) != len(pts):
-            avert.append(f"Serie '{nom or i + 1}' : {len(err)} barres d'erreur "
-                         f"pour {len(pts)} points, correspondance rompue.")
+            avert.append(lb.t("figures.a.erreurs_desappariees", la,
+                              serie=nom or i + 1, barres=len(err),
+                              points=len(pts)))
         if exiger_ajustement and s.get("ajustement") and len(pts) < 3:
-            avert.append(f"Serie '{nom or i + 1}' : droite d'ajustement sur "
-                         f"moins de 3 points, ajustement sans portee.")
+            avert.append(lb.t("figures.a.ajustement_court", la,
+                              serie=nom or i + 1))
     if len(series) > MAX_SERIES:
-        avert.append(f"{len(series)} series tracees : au-dela de "
-                     f"{MAX_SERIES} la figure devient illisible, en separer.")
+        avert.append(lb.t("figures.a.trop_de_series", la, n=len(series),
+                          maxi=MAX_SERIES))
     return series
 
 
-def _audit_categories(libelles, avert, quoi="Categorie"):
+def _audit_categories(libelles, avert, la, quoi="Categorie"):
+    lb = _libelles()
+    nom_quoi = lb.valeur("figures.quoi", quoi, la)
     vus = set()
     for lib in libelles:
         lib = str(lib).strip()
         if not lib:
-            avert.append(f"{quoi} sans libelle : une barre ou une boite "
-                         f"anonyme ne se lit pas.")
+            avert.append(lb.t("figures.a.categorie_sans_libelle", la,
+                              quoi=nom_quoi))
         elif lib in vus:
-            avert.append(f"{quoi} '{lib}' en double : deux entrees de meme "
-                         f"nom se confondent a la lecture.")
+            avert.append(lb.t("figures.a.categorie_double", la,
+                              quoi=nom_quoi, libelle=lib))
         else:
             vus.add(lib)
 
 
-def _auditer_donnees(type_fig, data, avert):
+def _auditer_donnees(type_fig, data, avert, la):
     """Controles structurels propres aux figures a axes et aux flux."""
+    lb = _libelles()
     if type_fig == "courbe":
-        _audit_axe(data, "axe_x", "abscisses", avert)
-        _audit_axe(data, "axe_y", "ordonnees", avert)
-        _audit_series(data, avert)
+        _audit_axe(data, "axe_x", "abscisses", avert, la)
+        _audit_axe(data, "axe_y", "ordonnees", avert, la)
+        _audit_series(data, avert, la)
     if type_fig == "nuage":
-        _audit_axe(data, "axe_x", "abscisses", avert)
-        _audit_axe(data, "axe_y", "ordonnees", avert)
-        _audit_series(data, avert, exiger_ajustement=True)
+        _audit_axe(data, "axe_x", "abscisses", avert, la)
+        _audit_axe(data, "axe_y", "ordonnees", avert, la)
+        _audit_series(data, avert, la, exiger_ajustement=True)
     if type_fig == "histogramme":
-        _audit_axe(data, "axe_x", "abscisses", avert, exiger_unite=False)
-        _audit_axe(data, "axe_y", "ordonnees", avert)
+        _audit_axe(data, "axe_x", "abscisses", avert, la, exiger_unite=False)
+        _audit_axe(data, "axe_y", "ordonnees", avert, la)
         barres = [b for b in (data.get("barres") or []) if isinstance(b, dict)]
         if not barres:
-            avert.append("Aucune barre : l'histogramme serait vide.")
-        _audit_categories([b.get("categorie", "") for b in barres], avert)
+            avert.append(lb.t("figures.a.aucune_barre", la))
+        _audit_categories([b.get("categorie", "") for b in barres], avert, la)
         for b in barres:
             if _cpt(b.get("valeur")) is None and b.get("valeur") is not None:
-                avert.append(f"Barre '{b.get('categorie', '?')}' : valeur "
-                             f"'{b.get('valeur')}' non numerique.")
+                avert.append(lb.t("figures.a.barre_non_numerique", la,
+                                  categorie=b.get("categorie", "?"),
+                                  valeur=b.get("valeur")))
             elif b.get("valeur") is None:
-                avert.append(f"Barre '{b.get('categorie', '?')}' sans valeur.")
+                avert.append(lb.t("figures.a.barre_sans_valeur", la,
+                                  categorie=b.get("categorie", "?")))
         base = (data.get("axe_y") or {}).get("min") if isinstance(
             data.get("axe_y"), dict) else None
         if base is None:
             base = data.get("y_min")
         if base is not None and _cpt(base) not in (0, None):
-            avert.append(f"Echelle des ordonnees tronquee (base = {base}) : "
-                         f"une base non nulle exagere l'ecart entre barres, "
-                         f"c'est une faute d'honnetete. Repartir de zero.")
+            avert.append(lb.t("figures.a.base_tronquee", la, base=base))
         if len(barres) > 20:
-            avert.append(f"{len(barres)} barres : au-dela de 20 les libelles "
-                         f"se chevauchent, regrouper les classes.")
+            avert.append(lb.t("figures.a.trop_de_barres", la, n=len(barres)))
     if type_fig == "boite":
-        _audit_axe(data, "axe_x", "abscisses", avert, exiger_unite=False)
-        _audit_axe(data, "axe_y", "ordonnees", avert)
+        _audit_axe(data, "axe_x", "abscisses", avert, la, exiger_unite=False)
+        _audit_axe(data, "axe_y", "ordonnees", avert, la)
         groupes = [g for g in (data.get("groupes") or [])
                    if isinstance(g, dict)]
         if not groupes:
-            avert.append("Aucun groupe : la figure a moustaches serait vide.")
-        _audit_categories([g.get("nom", "") for g in groupes], avert,
+            avert.append(lb.t("figures.a.aucun_groupe", la))
+        _audit_categories([g.get("nom", "") for g in groupes], avert, la,
                           quoi="Groupe")
         for g in groupes:
             nom = str(g.get("nom", "?"))
             vals = g.get("valeurs")
             if isinstance(vals, list) and not vals:
-                avert.append(f"Groupe '{nom}' : liste de valeurs vide.")
+                avert.append(lb.t("figures.a.groupe_valeurs_vides", la,
+                                  nom=nom))
             st = _stats_groupe(g)
             if st is None:
-                avert.append(f"Groupe '{nom}' : ni valeurs brutes ni les cinq "
-                             f"nombres (min, q1, mediane, q3, max).")
+                avert.append(lb.t("figures.a.groupe_sans_stats", la, nom=nom))
                 continue
             ordre = [st["min"], st["q1"], st["mediane"], st["q3"], st["max"]]
             if any(ordre[i] > ordre[i + 1] for i in range(4)):
-                avert.append(
-                    f"Groupe '{nom}' : moustaches incoherentes, l'ordre "
-                    f"min <= Q1 <= mediane <= Q3 <= max n'est pas respecte "
-                    f"(min={_fmt_nb(ordre[0])}, q1={_fmt_nb(ordre[1])}, "
-                    f"mediane={_fmt_nb(ordre[2])}, q3={_fmt_nb(ordre[3])}, "
-                    f"max={_fmt_nb(ordre[4])}).")
+                avert.append(lb.t(
+                    "figures.a.moustaches_incoherentes", la, nom=nom,
+                    mini=_fmt_nb(ordre[0]), q1=_fmt_nb(ordre[1]),
+                    mediane=_fmt_nb(ordre[2]), q3=_fmt_nb(ordre[3]),
+                    maxi=_fmt_nb(ordre[4])))
             if isinstance(vals, list) and 0 < len(vals) < 5:
-                avert.append(f"Groupe '{nom}' : {len(vals)} valeurs, une boite "
-                             f"a moustaches sur si peu de points egare plus "
-                             f"qu'elle n'informe.")
+                avert.append(lb.t("figures.a.groupe_peu_de_points", la,
+                                  nom=nom, n=len(vals)))
         if len(groupes) > 12:
-            avert.append(f"{len(groupes)} groupes : au-dela de 12 les boites "
-                         f"deviennent trop etroites.")
+            avert.append(lb.t("figures.a.trop_de_groupes", la,
+                              n=len(groupes)))
     if type_fig == "flux":
         niveaux = [n for n in (data.get("niveaux") or [])
                    if isinstance(n, dict)]
         if not niveaux:
-            avert.append("Aucun niveau : le diagramme de flux serait vide.")
+            avert.append(lb.t("figures.a.aucun_niveau", la))
         for i, niv in enumerate(niveaux):
             if not str(niv.get("titre", "")).strip():
-                avert.append(f"Niveau {i + 1} sans titre d'etape.")
+                avert.append(lb.t("figures.a.niveau_sans_titre", la, i=i + 1))
             boites = [b for b in (niv.get("boites") or [])
                       if isinstance(b, dict)]
             if not boites:
-                avert.append(f"Niveau {i + 1} sans aucune boite.")
+                avert.append(lb.t("figures.a.niveau_sans_boite", la, i=i + 1))
             for b in boites:
                 lib = str(b.get("libelle", "")).strip()
                 if not lib:
-                    avert.append(f"Niveau {i + 1} : une boite sans libelle.")
+                    avert.append(lb.t("figures.a.boite_sans_libelle", la,
+                                      i=i + 1))
                 if _cpt(b.get("effectif")) is None:
-                    avert.append(f"Boite '{lib or '?'}' sans effectif : un flux "
-                                 f"sans compte ne se verifie pas.")
+                    avert.append(lb.t("figures.a.boite_sans_effectif", la,
+                                      libelle=lib or "?"))
                 for e in (b.get("exclusions") or []):
                     if isinstance(e, dict) and _cpt(e.get("effectif")) is None:
-                        avert.append(f"Exclusion de '{lib or '?'}' sans "
-                                     f"effectif.")
+                        avert.append(lb.t("figures.a.exclusion_sans_effectif",
+                                          la, libelle=lib or "?"))
     if type_fig == "prisma":
-        _auditer_prisma(data, avert)
+        _auditer_prisma(data, avert, la)
 
 
-def _auditer_prisma(data, avert):
+def _auditer_prisma(data, avert, la):
     """Le controle le plus utile : un PRISMA dont les comptes ne bouclent pas
-    est faux, quelle que soit la qualite de son rendu."""
+    est faux, quelle que soit la qualite de son rendu.
+
+    Les noms de compte cites entre apostrophes sont les cles attendues dans
+    les donnees : ils ne se traduisent pas, l'auteur doit les retrouver dans
+    son fichier."""
+    lb = _libelles()
     c = _prisma_comptes(data)
     for cle, nom in (("identifiees", "identifiees"), ("doublons", "doublons"),
                      ("examinees", "examinees"), ("evaluees", "evaluees"),
                      ("incluses", "incluses")):
         if c[cle] is None:
-            avert.append(f"Compte '{nom}' absent ou non numerique : le schema "
-                         f"PRISMA ne se boucle pas sans lui.")
-    for lot, etape in (("ecartees_titre", "criblage"),
-                       ("ecartees_texte", "texte integral")):
+            avert.append(lb.t("figures.a.compte_absent", la, compte=nom))
+    for lot, cle_etape in (("ecartees_titre", "criblage"),
+                           ("ecartees_texte", "texte integral")):
+        etape = lb.valeur("figures.etape", cle_etape, la)
         if not c[lot]:
-            avert.append(f"Aucun motif d'ecart a l'etape {etape} : chaque "
-                         f"exclusion porte son motif (PRISMA).")
+            avert.append(lb.t("figures.a.aucun_motif", la, etape=etape))
         for motif, n in c[lot]:
             if not motif.strip():
-                avert.append(f"Ecart a l'etape {etape} sans motif nomme.")
+                avert.append(lb.t("figures.a.ecart_sans_motif", la,
+                                  etape=etape))
             if n is None:
-                avert.append(f"Ecart '{motif or '?'}' ({etape}) sans effectif.")
+                avert.append(lb.t("figures.a.ecart_sans_effectif", la,
+                                  motif=motif or "?", etape=etape))
     if (c["identifiees"] is not None and c["doublons"] is not None
             and c["examinees"] is not None):
         attendu = c["identifiees"] - c["doublons"]
         if attendu != c["examinees"]:
-            avert.append(
-                f"Comptes non boucles a l'identification : identifiees "
-                f"({c['identifiees']}) moins doublons ({c['doublons']}) fait "
-                f"{attendu}, or examinees vaut {c['examinees']}.")
+            avert.append(lb.t("figures.a.identification_non_bouclee", la,
+                              identifiees=c["identifiees"],
+                              doublons=c["doublons"], attendu=attendu,
+                              examinees=c["examinees"]))
     som_t = sum(n for _, n in c["ecartees_titre"] if n is not None)
     if c["examinees"] is not None and c["evaluees"] is not None and c["ecartees_titre"]:
         ecart = c["examinees"] - c["evaluees"]
         if som_t != ecart:
-            avert.append(
-                f"Comptes non boucles au criblage : la somme des motifs "
-                f"d'ecart ({som_t}) ne fait pas la difference entre examinees "
-                f"({c['examinees']}) et evaluees ({c['evaluees']}), soit "
-                f"{ecart}.")
+            avert.append(lb.t("figures.a.criblage_non_boucle", la,
+                              somme=som_t, examinees=c["examinees"],
+                              evaluees=c["evaluees"], ecart=ecart))
     som_x = sum(n for _, n in c["ecartees_texte"] if n is not None)
     if c["evaluees"] is not None and c["incluses"] is not None and c["ecartees_texte"]:
         ecart = c["evaluees"] - c["incluses"]
         if som_x != ecart:
-            avert.append(
-                f"Comptes non boucles en texte integral : la somme des motifs "
-                f"d'ecart ({som_x}) ne fait pas la difference entre evaluees "
-                f"({c['evaluees']}) et incluses ({c['incluses']}), soit "
-                f"{ecart}.")
+            avert.append(lb.t("figures.a.texte_non_boucle", la, somme=som_x,
+                              evaluees=c["evaluees"],
+                              incluses=c["incluses"], ecart=ecart))
     if c["incluses"] == 0:
-        avert.append("Aucune etude incluse : verifier les criteres avant de "
-                     "publier un schema qui ne retient rien.")
-    for etape, (a, b) in (("criblage", (c["examinees"], c["evaluees"])),
-                          ("texte integral", (c["evaluees"], c["incluses"]))):
+        avert.append(lb.t("figures.a.aucune_incluse", la))
+    for cle_etape, (a, b) in (("criblage", (c["examinees"], c["evaluees"])),
+                              ("texte integral",
+                               (c["evaluees"], c["incluses"]))):
         if a is not None and b is not None and b > a:
-            avert.append(f"Etape {etape} : le compte sortant ({b}) depasse le "
-                         f"compte entrant ({a}), un flux ne grossit pas.")
+            avert.append(lb.t(
+                "figures.a.flux_grossit", la,
+                etape=lb.valeur("figures.etape", cle_etape, la),
+                sortant=b, entrant=a))
 
 
 CONSTRUCTEURS = {"swot": swot, "bcg": bcg, "ansoff": ansoff, "pestel": pestel,
@@ -1471,7 +1512,16 @@ def _numero(v):
         return None
 
 
-def auditer(type_fig, data, theme=None):
+def auditer(type_fig, data, theme=None, langue_affichage=None):
+    """Regard critique deterministe sur une figure et sur sa charte.
+
+    Sans langue_affichage, les avis sont les chaines francaises d'origine a
+    l'octet pres. Les cles de donnees citees entre apostrophes (forces,
+    croissance, tam) et les noms fournis par l'appelant ne sont jamais
+    traduits : ce sont les mots que l'auteur doit retrouver dans son fichier.
+    """
+    lb = _libelles()
+    la = lb.resoudre_affichage(langue_affichage)
     avert = []
     if type_fig in CASES:
         comptes = {}
@@ -1479,63 +1529,67 @@ def auditer(type_fig, data, theme=None):
             items = data.get(cle, [])
             comptes[cle] = len(items)
             if not items:
-                avert.append(f"Case '{cle}' vide : une figure a case vide parait incomplete ou malhonnete.")
+                avert.append(lb.t("figures.a.case_vide", la, cle=cle))
             if len(items) > 7:
-                avert.append(f"Case '{cle}' : {len(items)} elements, plus de 7 et la lisibilite chute (le rendu tronque).")
+                avert.append(lb.t("figures.a.case_trop_pleine", la, cle=cle,
+                                  n=len(items)))
             for it in items:
                 if len(str(it)) > 90:
-                    avert.append(f"Case '{cle}' : un element depasse 90 caracteres, le resumer.")
+                    avert.append(lb.t("figures.a.case_element_long", la,
+                                      cle=cle))
         valeurs = [c for c in comptes.values() if c]
         if valeurs and max(valeurs) >= 4 * max(1, min(valeurs)):
-            avert.append("Desequilibre fort entre les cases : une case ecrase les autres, reequilibrer ou justifier.")
+            avert.append(lb.t("figures.a.desequilibre", la))
     if type_fig == "bcg":
         items = data.get("items", [])
         if not items:
-            avert.append("Matrice BCG sans aucun domaine d'activite place.")
+            avert.append(lb.t("figures.a.bcg_vide", la))
         for it in items:
             if not str(it.get("nom", "")).strip():
-                avert.append("Un point BCG n'a pas de nom : un point non etiquete n'est pas lisible.")
+                avert.append(lb.t("figures.a.bcg_sans_nom", la))
             for axe in ("croissance", "part"):
                 v = it.get(axe)
                 if v is None:
-                    avert.append(f"Point '{it.get('nom','?')}' : '{axe}' manquant, position arbitraire.")
+                    avert.append(lb.t("figures.a.bcg_axe_manquant", la,
+                                      nom=it.get("nom", "?"), axe=axe))
                 elif not (0 <= float(v) <= 100):
-                    avert.append(f"Point '{it.get('nom','?')}' : '{axe}'={v} hors de 0-100, echelle faussee.")
+                    avert.append(lb.t("figures.a.bcg_axe_hors_bornes", la,
+                                      nom=it.get("nom", "?"), axe=axe,
+                                      valeur=v))
         if len(items) > 10:
-            avert.append("Plus de 10 bulles : surcharge, regrouper les domaines mineurs.")
+            avert.append(lb.t("figures.a.bcg_trop_de_bulles", la))
     if type_fig == "tam-sam-som":
         blocs = {}
         for cle in ("tam", "sam", "som"):
             bloc = data.get(cle)
             if not isinstance(bloc, dict):
-                avert.append(f"Bloc '{cle}' absent ou mal forme : attendu un objet avec 'libelle' et 'valeur'.")
+                avert.append(lb.t("figures.a.tsm_bloc_absent", la, cle=cle))
                 continue
             blocs[cle] = bloc
             if not str(bloc.get("libelle", "")).strip():
-                avert.append(f"Bloc '{cle}' : libelle vide, un cercle sans libelle n'est pas lisible.")
+                avert.append(lb.t("figures.a.tsm_libelle_vide", la, cle=cle))
             if not str(bloc.get("valeur", "")).strip():
-                avert.append(f"Bloc '{cle}' : valeur vide.")
+                avert.append(lb.t("figures.a.tsm_valeur_vide", la, cle=cle))
         if len(blocs) == 3:
             nums = {cle: _numero(blocs[cle].get("valeur")) for cle in ("tam", "sam", "som")}
             if all(n is not None for n in nums.values()):
                 if not (nums["tam"] >= nums["sam"] >= nums["som"]):
-                    avert.append(
-                        f"Ordre attendu TAM >= SAM >= SOM non respecte (tam={nums['tam']:g}, "
-                        f"sam={nums['sam']:g}, som={nums['som']:g}) : verifier les valeurs ou le sens des cercles."
-                    )
+                    avert.append(lb.t("figures.a.tsm_ordre", la,
+                                      tam=nums["tam"], sam=nums["sam"],
+                                      som=nums["som"]))
             else:
-                avert.append("Valeurs non toutes numeriques de facon univoque : ordre TAM >= SAM >= SOM non verifie automatiquement, a controler a l'oeil.")
+                avert.append(lb.t("figures.a.tsm_non_numerique", la))
     if type_fig in TYPES_DONNEES:
-        _auditer_donnees(type_fig, data, avert)
+        _auditer_donnees(type_fig, data, avert, la)
     if theme is not None:
         t = charger_theme(theme)
-        err, warn = valider_theme(t)
+        err, warn = valider_theme(t, la)
         for e in err:
-            avert.append("Charte : " + e)
+            avert.append(lb.t("figures.a.charte", la, message=e))
         for w in warn:
-            avert.append("Charte : " + w)
+            avert.append(lb.t("figures.a.charte", la, message=w))
     if not avert:
-        avert.append("Aucun defaut structurel detecte. Verifier a l'oeil le titre, la source et l'honnetete des echelles.")
+        avert.append(lb.t("figures.a.aucun_defaut", la))
     return avert
 
 
@@ -1559,7 +1613,14 @@ def main(argv=None):
                         "PESTEL, BCG, Ansoff, chaine de valeur, PRISMA). "
                         "Defaut : fr. Les libelles venus des donnees et les "
                         "cles JSON ne changent pas")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue du regard critique de --audit et des messages "
+                        "de cette commande. Sans l'option : la langue de "
+                        "dessin (--langue). Ce sont deux choses : l'une part "
+                        "dans le SVG, l'autre reste au terminal")
     a = p.parse_args(argv)
+    lb = _libelles()
+    la = lb.resoudre_affichage(a.langue_affichage, a.langue)
     data = {}
     if a.data == "-":
         brut = sys.stdin.read().strip()
@@ -1569,16 +1630,16 @@ def main(argv=None):
         with open(a.data, encoding="utf-8") as f:
             data = json.load(f)
     if a.audit:
-        print("Regard critique sur la figure :")
-        for av in auditer(a.type, data, a.theme):
+        print(lb.t("figures.titre_audit", la))
+        for av in auditer(a.type, data, a.theme, la):
             print(f"  - {av}")
     if a.out:
         svg = construire(a.type, data, a.title, a.theme, a.langue)
         with open(a.out, "w", encoding="utf-8") as f:
             f.write(svg)
-        print(f"Figure ecrite : {a.out} ({len(svg)} octets)")
+        print(lb.t("figures.ecrite", la, chemin=a.out, octets=len(svg)))
     elif not a.audit:
-        print("Rien a faire : --out pour le SVG ou --audit pour la critique.", file=sys.stderr)
+        print(lb.t("figures.rien_a_faire", la), file=sys.stderr)
         return 2
     return 0
 

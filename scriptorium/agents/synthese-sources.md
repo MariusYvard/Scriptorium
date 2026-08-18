@@ -1,7 +1,7 @@
 ---
 name: synthese-sources
 description: >
-  Mène une recherche large, pondère les sources par fiabilité et récence, triangule, extrait les faits attribués et affecte un score de confiance. À utiliser pour le sourcing d'un document qui exige de nombreuses références ou une synthèse comparative.
+  Mène une recherche large, pondère les sources par fiabilité et récence, triangule, extrait les faits attribués et affecte un score de confiance. À utiliser pour le sourcing d'un document qui exige de nombreuses références ou une synthèse comparative. Déclencheurs anglais : "find and synthesise the literature", "gather the evidence for this claim", "build me a source table", "what does the research say", "check my sources".
 
   <example>
   Context: La compétence sourcer doit réunir les preuves d'une analyse stratégique sur un marché.
@@ -18,6 +18,15 @@ description: >
   assistant: "J'utilise l'agent synthese-sources pour repérer et documenter les signaux, chacun daté et pondéré."
   <commentary>
   Veille documentée : l'agent collecte, attribue et étiquette le niveau de preuve de chaque signal.
+  </commentary>
+  </example>
+
+  <example>
+  Context: An English-speaking researcher needs weighted evidence before writing a discussion section.
+  user: "Find and synthesise what the literature says about this effect."
+  assistant: "I am delegating to the synthese-sources agent for search, weighting, triangulation and dated attributed facts."
+  <commentary>
+  English request, same discipline: sources ranked by reliability and recency, each fact scored for confidence.
   </commentary>
   </example>
 model: sonnet

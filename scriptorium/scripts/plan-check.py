@@ -11,13 +11,51 @@ plan.json : {"genre": "...", "problematique": "...",
   ou sections = [{"titre": "...", "message": "..."}]
 
 Usage : python3 plan-check.py PLAN.json DOCUMENT.md [--format text|json]
-Module importable : analyser(plan, texte) -> dict.
+                                                    [--langue-affichage fr|en]
+Module importable : analyser(plan, texte) -> dict ;
+rapport_texte(d, langue_affichage=None) -> str. L'analyse ne connait aucune
+langue : elle apparie des titres, quels qu'ils soient. La sortie JSON ne
+porte que des donnees, elle ne change pas avec la langue d'affichage.
 """
 import argparse
+import importlib.util
 import json
+import os
 import re
 import sys
 from difflib import SequenceMatcher
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
+def _langue_du_texte(texte):
+    """Langue du document, par delegation a lint-style.py. Elle ne sert qu'a
+    choisir la langue d'affichage par defaut. Si le linter n'est pas la, le
+    francais fait office de defaut plutot qu'une erreur."""
+    try:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "lint-style.py")
+        spec = importlib.util.spec_from_file_location("lint_style", chemin)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.resoudre_langue(texte)
+    except Exception:
+        return None
+
 
 HEAD = re.compile(r'(?m)^#{1,6}\s+(.*)$')
 
@@ -63,25 +101,44 @@ def analyser(plan, texte):
     }
 
 
+def rapport_texte(d, langue_affichage=None):
+    """Rendu texte. Les titres de section viennent du plan et du document :
+    ils sont repris tels quels, jamais traduits."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    lignes = [lib.t("plan.titre", la, couverture=d["couverture_pct"])]
+    if d["sections_manquantes"]:
+        lignes.append("  " + lib.t("plan.manquantes", la,
+                                   sections=d["sections_manquantes"]))
+    if d["sections_hors_plan"]:
+        lignes.append("  " + lib.t("plan.hors_plan", la,
+                                   sections=d["sections_hors_plan"]))
+    if not d["sections_manquantes"] and not d["sections_hors_plan"]:
+        lignes.append("  " + lib.t("plan.conforme", la))
+    return "\n".join(lignes)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Conformite au plan.")
     ap.add_argument("plan")
     ap.add_argument("document")
     ap.add_argument("--format", choices=["text", "json"], default="text")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                    help="langue des libelles du rapport texte. Sans "
+                         "l'option : la langue du document (pragme "
+                         "lint-style:langue), sinon fr. La sortie JSON reste "
+                         "francaise quoi qu'il arrive")
     a = ap.parse_args(argv)
+    lib = _lib()
     plan = json.load(open(a.plan, encoding="utf-8"))
     texte = open(a.document, encoding="utf-8").read()
     d = analyser(plan, texte)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
         print(json.dumps(d, ensure_ascii=False, indent=2))
     else:
-        print(f"Conformite au plan : couverture {d['couverture_pct']}%")
-        if d["sections_manquantes"]:
-            print(f"  Sections prevues absentes : {d['sections_manquantes']}")
-        if d["sections_hors_plan"]:
-            print(f"  Sections hors plan (derive) : {d['sections_hors_plan']}")
-        if not d["sections_manquantes"] and not d["sections_hors_plan"]:
-            print("  Document conforme au plan.")
+        print(rapport_texte(d, lib.resoudre_affichage(
+            a.langue_affichage, _langue_du_texte(texte))))
     return 1 if d["sections_manquantes"] else 0
 
 

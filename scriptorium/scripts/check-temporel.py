@@ -34,6 +34,7 @@ Usage :
     python3 check-temporel.py FICHIER --versions glossaire.json
     python3 check-temporel.py FICHIER --date-reference 2026-07-08
     python3 check-temporel.py FICHIER --langue en
+    python3 check-temporel.py FICHIER --langue-affichage en
     cat doc.md | python3 check-temporel.py -
 
 Format du glossaire de versions (JSON, optionnel), nom vers date ISO :
@@ -44,8 +45,10 @@ Codes de sortie :
     1  --strict et au moins un constat
     2  erreur d'usage (fichier ou glossaire illisible, date invalide)
 
-Le module est importable : analyser(texte, langue=None) -> dict avec clé
-"constats".
+Le module est importable : analyser(texte, langue=None,
+langue_affichage=None) -> dict avec clé "constats". Sans langue_affichage,
+les messages des constats sont les chaînes françaises d'origine à l'octet
+près : ce sont elles que sérialise --format json.
 
 Limite assumée : la détection du marqueur de temps verbal passé et de la
 causalité repose sur des listes de motifs curées, pas sur une analyse
@@ -67,6 +70,22 @@ _spec = importlib.util.spec_from_file_location("traceability_ct",
                                                 os.path.join(ICI, "traceability.py"))
 _trac = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_trac)
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois. Comme pour
+    traceability.py ci-dessus, le module se lit par chemin : aucun sys.path
+    n'est garanti quand le script est lance depuis un dossier quelconque."""
+    global _LIB
+    if _LIB is None:
+        spec = importlib.util.spec_from_file_location(
+            "scriptorium_libelles", os.path.join(ICI, "libelles.py"))
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 SENT_RE = re.compile(r'[^.!?…]+[.!?…]+', re.S)
 HEAD_LIGNE_RE = re.compile(r'^\s{0,3}#{1,6}[^\n]*\n+')
@@ -216,7 +235,7 @@ def _annee_apres_position(segment, position):
     return None
 
 
-def _detecter_futur_au_passe(texte, date_reference, jeu):
+def _detecter_futur_au_passe(texte, date_reference, jeu, lib, la):
     constats = []
     for m in SENT_RE.finditer(texte):
         phrase = m.group(0)
@@ -229,15 +248,15 @@ def _detecter_futur_au_passe(texte, date_reference, jeu):
             "type": "futur-au-passe",
             "severite": AVERTISSEMENT,
             "ligne": _ligne_de(texte, m.start()),
-            "message": (f"Année {max(annees)} postérieure à la référence "
-                        f"({date_reference.year}) associée à un marqueur de passé dans la "
-                        f"même phrase : vérifier si le fait est déjà survenu."),
+            "message": lib.t("temporel.m.futur_au_passe", la,
+                             annee=max(annees),
+                             reference=date_reference.year),
             "extrait": _phrase_affichee(phrase),
         })
     return constats
 
 
-def _detecter_versions_anterieures(texte, versions):
+def _detecter_versions_anterieures(texte, versions, lib, la):
     constats = []
     if not versions:
         return constats
@@ -257,14 +276,14 @@ def _detecter_versions_anterieures(texte, versions):
                     "type": "version-anterieure",
                     "severite": AVERTISSEMENT,
                     "ligne": _ligne_de(texte, m.start()),
-                    "message": (f"« {nom} » mentionné avec une année antérieure à sa date "
-                                f"connue ({date_connue})."),
+                    "message": lib.t("temporel.m.version_anterieure", la,
+                                     nom=nom, date=date_connue),
                     "extrait": _phrase_affichee(phrase),
                 })
     return constats
 
 
-def _detecter_inversions_causales(texte, jeu):
+def _detecter_inversions_causales(texte, jeu, lib, la):
     constats = []
     for m in SENT_RE.finditer(texte):
         phrase = m.group(0)
@@ -286,15 +305,15 @@ def _detecter_inversions_causales(texte, jeu):
                 "type": "inversion-causale",
                 "severite": AVERTISSEMENT,
                 "ligne": _ligne_de(texte, m.start()),
-                "message": (f"Connecteur causal « {cm.group(0)} » : la date associée à la "
-                            f"cause ({annee_cause}) suit celle de l'effet ({annee_effet}) "
-                            f"au lieu de la précéder."),
+                "message": lib.t("temporel.m.inversion_causale", la,
+                                 connecteur=cm.group(0), cause=annee_cause,
+                                 effet=annee_effet),
                 "extrait": _phrase_affichee(phrase),
             })
     return constats
 
 
-def _detecter_langage_peremption(texte, jeu):
+def _detecter_langage_peremption(texte, jeu, lib, la):
     constats = []
     for m in SENT_RE.finditer(texte):
         phrase = m.group(0)
@@ -305,13 +324,14 @@ def _detecter_langage_peremption(texte, jeu):
                 "type": "langage-peremption",
                 "severite": SIGNAL,
                 "ligne": _ligne_de(texte, m.start() + pm.start()),
-                "message": f"« {pm.group(0)} » non ancré à une date ou une version dans la phrase.",
+                "message": lib.t("temporel.m.langage_peremption", la,
+                                 tournure=pm.group(0)),
                 "extrait": _phrase_affichee(phrase),
             })
     return constats
 
 
-def _detecter_chaines_incoherentes(texte, jeu):
+def _detecter_chaines_incoherentes(texte, jeu, lib, la):
     """Cherche, ligne par ligne dans la section bibliographie, un marqueur de
     preprint et un marqueur de version publiee tous deux presents, chacun
     associe a la premiere annee qui le suit dans la ligne (ordre de lecture)."""
@@ -334,25 +354,35 @@ def _detecter_chaines_incoherentes(texte, jeu):
                     "type": "chaine-incoherente",
                     "severite": AVERTISSEMENT,
                     "ligne": _ligne_de(texte, debut_biblio + offset),
-                    "message": (f"Référence : le preprint ({annee_preprint}) est daté après "
-                                f"la version publiée ({annee_publie})."),
+                    "message": lib.t("temporel.m.chaine_incoherente", la,
+                                     preprint=annee_preprint,
+                                     publie=annee_publie),
                     "extrait": ligne.strip()[:160],
                 })
         offset += len(brute)
     return constats
 
 
-def analyser(texte, date_reference=None, versions=None, langue=None):
+def analyser(texte, date_reference=None, versions=None, langue=None,
+             langue_affichage=None):
+    """Constats chronologiques du texte.
+
+    La langue d'ANALYSE choisit les motifs cherches, celle d'AFFICHAGE compose
+    les messages. Sans langue_affichage, les messages sont les chaines
+    francaises d'origine a l'octet pres : ce sont elles que serialise le mode
+    --format json."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     if date_reference is None:
         date_reference = datetime.date.today()
     langue = resoudre_langue(texte, langue)
     jeu = _jeu(langue)
     constats = []
-    constats += _detecter_futur_au_passe(texte, date_reference, jeu)
-    constats += _detecter_versions_anterieures(texte, versions)
-    constats += _detecter_inversions_causales(texte, jeu)
-    constats += _detecter_langage_peremption(texte, jeu)
-    constats += _detecter_chaines_incoherentes(texte, jeu)
+    constats += _detecter_futur_au_passe(texte, date_reference, jeu, lib, la)
+    constats += _detecter_versions_anterieures(texte, versions, lib, la)
+    constats += _detecter_inversions_causales(texte, jeu, lib, la)
+    constats += _detecter_langage_peremption(texte, jeu, lib, la)
+    constats += _detecter_chaines_incoherentes(texte, jeu, lib, la)
     constats.sort(key=lambda c: (c["ligne"], c["type"]))
     return {"constats": constats, "langue": langue}
 
@@ -364,20 +394,31 @@ def compter(constats):
     return n
 
 
-def rapport_texte(d, chemin):
+def rapport_texte(d, chemin, langue_affichage=None):
+    """Rendu texte. Les messages portes par d ont ete composes dans la langue
+    d'affichage par analyser() : ils sont repris tels quels. Le type de
+    constat, lui, est une valeur machine imprimee a dessein, c'est elle que
+    l'auteur cherche et que du code compare."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     constats = d["constats"]
     n = compter(constats)
-    out = [f"Vérification temporelle : {chemin or '(stdin)'}"]
-    out.append(f"  signaux={n[SIGNAL]}  avertissements={n[AVERTISSEMENT]}")
+    out = [lib.t("temporel.titre", la,
+                 chemin=chemin or lib.t("temporel.stdin", la))]
+    out.append("  " + lib.t("temporel.comptes", la, signaux=n[SIGNAL],
+                            avertissements=n[AVERTISSEMENT]))
     if not constats:
-        out.append("  Aucune défaillance chronologique détectée.")
+        out.append("  " + lib.t("temporel.aucun_constat", la))
         return "\n".join(out)
     type_courant = None
     for c in constats:
         if c["type"] != type_courant:
             type_courant = c["type"]
             out.append(f"\n[{type_courant}]")
-        out.append(f"  L{c['ligne']} ({c['severite']}) {c['message']}\n      « {c['extrait']} »")
+        out.append("  " + lib.t(
+            "temporel.constat", la, ligne=c["ligne"],
+            severite=lib.valeur("temporel.severite", c["severite"], la),
+            message=c["message"], extrait=c["extrait"]))
     return "\n".join(out)
 
 
@@ -393,11 +434,19 @@ def main(argv=None):
                    help="langue d'analyse. Sans l'option : le pragme "
                         "lint-style:langue du document, sinon fr. "
                         "auto lance la détection heuristique")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des libellés du rapport texte. Sans "
+                        "l'option : la langue d'analyse retenue. La sortie "
+                        "JSON reste française quoi qu'il arrive")
     a = p.parse_args(argv)
+    lib = _lib()
+    # Aucun texte n'est encore lu : la langue d'analyse est inconnue, seule
+    # l'option explicite peut orienter un message d'erreur de lecture.
+    la = lib.resoudre_affichage(a.langue_affichage)
     try:
         texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     except OSError as e:
-        print(f"Erreur de lecture : {e}", file=sys.stderr)
+        print(lib.t("temporel.err_lecture", la, erreur=e), file=sys.stderr)
         return 2
     versions = None
     if a.versions:
@@ -405,23 +454,29 @@ def main(argv=None):
             with open(a.versions, encoding="utf-8") as f:
                 versions = json.load(f)
         except (OSError, json.JSONDecodeError) as e:
-            print(f"Erreur de lecture du glossaire de versions : {e}", file=sys.stderr)
+            print(lib.t("temporel.err_glossaire", la, erreur=e),
+                  file=sys.stderr)
             return 2
     date_reference = datetime.date.today()
     if a.date_reference:
         try:
             date_reference = datetime.datetime.strptime(a.date_reference, "%Y-%m-%d").date()
         except ValueError as e:
-            print(f"Date de référence invalide : {e}", file=sys.stderr)
+            print(lib.t("temporel.err_date", la, erreur=e), file=sys.stderr)
             return 2
     chemin = None if a.fichier == "-" else a.fichier
-    d = analyser(texte, date_reference=date_reference, versions=versions,
-                 langue=a.langue)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        d = analyser(texte, date_reference=date_reference, versions=versions,
+                     langue=a.langue)
         print(json.dumps({"fichier": chemin, "compte": compter(d["constats"]), **d},
                           ensure_ascii=False, indent=2))
-    else:
-        print(rapport_texte(d, chemin))
+        return 1 if (a.strict and d["constats"]) else 0
+    la = lib.resoudre_affichage(a.langue_affichage,
+                                resoudre_langue(texte, a.langue))
+    d = analyser(texte, date_reference=date_reference, versions=versions,
+                 langue=a.langue, langue_affichage=la)
+    print(rapport_texte(d, chemin, la))
     if a.strict and d["constats"]:
         return 1
     return 0

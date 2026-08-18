@@ -33,16 +33,55 @@ Verdict ferme sur cinq valeurs. Consultatif par defaut.
 
 Usage :
   python3 check-disponibilite.py FICHIER.md [--format text|json] [--strict]
+                                            [--langue-affichage fr|en]
 
 Module importable : reperer_section, detecter_regimes, identifiants_perennes,
-analyser, rapport_texte.
+analyser(texte, nom=None, langue_affichage=None), rapport_texte(r,
+langue_affichage=None). Sans langue_affichage, le detail des constats, la
+limite et les angles morts sont les chaines francaises d'origine a l'octet
+pres : ce sont elles que serialise --format json. Le verdict, le nom de
+regle, le regime et la confiance restent des valeurs machine francaises.
 """
 import argparse
+import importlib.util
 import json
 import os
 import re
 import sys
 import unicodedata
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
+def _langue_du_texte(texte):
+    """Langue du manuscrit, par delegation a lint-style.py. Elle ne sert
+    qu'a choisir la langue d'affichage par defaut : le controle lui-meme
+    reconnait ses formulations dans les deux langues. Si le linter n'est pas
+    la, le francais fait office de defaut plutot qu'une erreur."""
+    try:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "lint-style.py")
+        spec = importlib.util.spec_from_file_location("lint_style", chemin)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod.resoudre_langue(texte)
+    except Exception:
+        return None
+
 
 CONFIRME, PROBABLE, INFORMATIF, DOUTEUX = (
     "confirme", "probable", "informatif", "douteux")
@@ -54,22 +93,23 @@ ORDRE_CONFIANCE = {CONFIRME: 0, PROBABLE: 1, INFORMATIF: 2, DOUTEUX: 3}
 REGIMES = ("depot-ouvert", "sur-demande", "embargo", "restriction-legale",
            "donnees-de-tiers", "aucune-donnee")
 
-LIBELLE_REGIME = {
-    "depot-ouvert": "dépôt public ouvert",
-    "sur-demande": "sur demande motivée",
-    "embargo": "embargo",
-    "restriction-legale": "non partageable pour raison légale",
-    "donnees-de-tiers": "données de tiers",
-    "aucune-donnee": "aucune donnée nouvelle",
-}
-
 VERDICTS = ("declaration absente", "declaration incoherente",
             "regime non identifie", "declaration a completer",
             "declaration conforme")
 
-LIMITE = ("Ce rapport contrôle la forme d'une déclaration, il ne la valide "
-          "pas contre le monde : aucun identifiant n'est résolu, aucun dépôt "
-          "n'est ouvert, aucune autorisation n'est vérifiée.")
+# Libelle francais d'un regime et limite du controle : ils sont DERIVES de la
+# couche de libelles plutot que redits ici, pour qu'une seule table porte les
+# deux langues. Le nom LIBELLE_REGIME reste, il est lu ailleurs.
+LIBELLE_REGIME = {r: _lib().valeur("dispo.regime", r, "fr") for r in REGIMES}
+
+LIMITE = _lib().t("dispo.limite", "fr")
+
+
+def _regimes_lisibles(codes, lib, la, separateur=", "):
+    """Suite de regimes rendue dans la langue d'affichage. Les codes, eux,
+    restent les valeurs machine du JSON."""
+    return separateur.join(lib.valeur("dispo.regime", c, la) for c in codes)
+
 
 # Titres de section rencontres en francais et en anglais. La detection porte
 # sur un titre markdown, pas sur une phrase du corps : une declaration qui
@@ -310,56 +350,49 @@ def identifiants_perennes(corps):
     return trouves
 
 
-def _controler_ouverture(corps, ids, constats):
+def _controler_ouverture(corps, ids, constats, lib, la):
     """Depot ouvert annonce : l'identifiant perenne est la preuve de
     l'annonce. L'annoncer sans le donner est une incoherence, pas un oubli
     de style."""
     if not ids:
         constats.append(_constat(
             "ouverture-sans-identifiant",
-            "un dépôt public ouvert est annoncé sans identifiant pérenne "
-            "(DOI, handle, ARK, SWHID, numéro d'accession). Une adresse web "
-            "ordinaire ne fixe rien.",
+            lib.t("dispo.d.ouverture_sans_identifiant", la),
             CONFIRME, "identifiant"))
     elif not any(i["type"] in ("doi", "handle", "ark") for i in ids):
         constats.append(_constat(
             "identifiant-sans-doi",
-            "l'ouverture repose sur un %s sans DOI ni handle ni ARK. "
-            "Vérifier que le dépôt visé attribue bien un identifiant citable."
-            % ", ".join(sorted({i["type"] for i in ids})),
+            lib.t("dispo.d.identifiant_sans_doi", la,
+                  types=", ".join(sorted({i["type"] for i in ids}))),
             INFORMATIF, "identifiant"))
     for m in MOTIF_MENTION_DOI.finditer(corps):
         valeur = m.group(1).rstrip(".,;)]}\"'")
         if not MOTIF_DOI_VALIDE.match(valeur):
             constats.append(_constat(
-                "doi-mal-forme",
-                "la valeur annoncée comme DOI ne suit pas la syntaxe "
-                "10.préfixe/suffixe.",
+                "doi-mal-forme", lib.t("dispo.d.doi_mal_forme", la),
                 PROBABLE, "identifiant", valeur))
 
 
-def _controler_embargo(corps, constats):
+def _controler_embargo(corps, constats, lib, la):
     """Un embargo sans date de levee est un embargo sans fin : l'element qui
     le distingue d'un refus est justement sa date."""
     if not MOTIF_DATE.search(_sans_accents(corps)):
         constats.append(_constat(
-            "embargo-sans-date",
-            "un embargo est annoncé sans date de levée. Sans date, la "
-            "déclaration ne se distingue pas d'un refus de partage.",
+            "embargo-sans-date", lib.t("dispo.d.embargo_sans_date", la),
             CONFIRME, "regime"))
 
 
-def _controler_demande(corps, regimes, ids, constats):
+def _controler_demande(corps, regimes, ids, constats, lib, la):
     """"Disponibles sur demande" est la formulation la moins suivie d'effet
     (references/disponibilite.md, section 1). Elle reste acceptable quand
     elle porte un contact, des criteres d'acces et une duree."""
     manques = []
     if not MOTIF_CONTACT.search(corps):
-        manques.append("le contact qui décide")
+        manques.append(lib.t("dispo.manque.contact", la))
     if not MOTIF_CRITERE.search(_sans_accents(corps)):
-        manques.append("les critères d'accès")
+        manques.append(lib.t("dispo.manque.criteres", la))
     if not MOTIF_DUREE.search(_sans_accents(corps)):
-        manques.append("la durée de disponibilité")
+        manques.append(lib.t("dispo.manque.duree", la))
     if not manques:
         return
     # Quand le corps annonce aussi un depot ouvert identifie, la mention
@@ -368,13 +401,12 @@ def _controler_demande(corps, regimes, ids, constats):
     confiance = (DOUTEUX if "depot-ouvert" in regimes and ids else PROBABLE)
     constats.append(_constat(
         "demande-sans-conditions",
-        "un accès sur demande est annoncé sans %s. Une demande sans "
-        "conditions déclarées est la formulation la moins suivie d'effet."
-        % ", ".join(manques),
+        lib.t("dispo.d.demande_sans_conditions", la,
+              manques=", ".join(manques)),
         confiance, "regime"))
 
 
-def _controler_code(corps, constats):
+def _controler_code(corps, constats, lib, la):
     """Le code obeit a des regles voisines des donnees, avec deux exigences
     propres : une licence nommee et une version figee."""
     if not MOTIF_CODE.search(corps):
@@ -382,71 +414,62 @@ def _controler_code(corps, constats):
     if not MOTIF_LICENCE_NOMMEE.search(corps):
         if MOTIF_MOT_LICENCE.search(corps):
             constats.append(_constat(
-                "licence-non-nommee",
-                "du code est annoncé et une licence est évoquée sans être "
-                "nommée. Nommer la licence exacte (MIT, Apache 2.0, GPL).",
+                "licence-non-nommee", lib.t("dispo.d.licence_non_nommee", la),
                 PROBABLE, "code"))
         else:
             constats.append(_constat(
-                "code-sans-licence",
-                "du code est annoncé sans aucune licence. Sans licence "
-                "explicite, le code reste sous droit d'auteur par défaut, "
-                "donc lisible et non réutilisable.",
+                "code-sans-licence", lib.t("dispo.d.code_sans_licence", la),
                 CONFIRME, "code"))
     if MOTIF_HEBERGEUR_CODE.search(corps) and not MOTIF_VERSION_FIGEE.search(corps):
         constats.append(_constat(
             "code-sans-version-figee",
-            "le code renvoie à un dépôt de développement sans version figée "
-            "(étiquette, DOI d'archive, empreinte de commit). Un dépôt se "
-            "renomme, passe en privé, se réécrit.",
-            PROBABLE, "code"))
+            lib.t("dispo.d.code_sans_version_figee", la), PROBABLE, "code"))
 
 
-def _controler_restriction(corps, constats):
+def _controler_restriction(corps, constats, lib, la):
     """Une restriction sans motif nomme se lit comme un refus sans raison."""
     plat = _sans_accents(corps)
     if not (MOTIF_MOTIF_RESTRICTION.search(plat)
             or MOTIF_MOTIF_RESTRICTION_2.search(plat)):
         constats.append(_constat(
             "restriction-sans-motif",
-            "un partage restreint est annoncé sans motif nommé (données à "
-            "caractère personnel, secret industriel, espèce protégée, "
-            "patrimoine, sécurité).",
-            PROBABLE, "regime"))
+            lib.t("dispo.d.restriction_sans_motif", la), PROBABLE, "regime"))
 
 
-def _controler_tiers(corps, constats):
+def _controler_tiers(corps, constats, lib, la):
     """Des donnees de tiers sans detenteur nomme laissent le lecteur sans
     porte a laquelle frapper."""
     if not MOTIF_DETENTEUR.search(corps):
         constats.append(_constat(
             "tiers-sans-detenteur",
-            "des données de tiers sont annoncées sans nommer leur détenteur "
-            "ni la procédure d'accès auprès de lui.",
-            PROBABLE, "regime"))
+            lib.t("dispo.d.tiers_sans_detenteur", la), PROBABLE, "regime"))
 
 
-def analyser(texte, nom=None):
+def analyser(texte, nom=None, langue_affichage=None):
     """Controle la declaration de disponibilite d'un manuscrit.
 
     Prend le texte du manuscrit (comme traceability.analyser), pas un chemin :
     les cas d'eval travaillent alors sur des declarations ecrites en clair.
     N'ecrit jamais, ne corrige jamais.
+
+    Sans langue_affichage, le detail des constats, la limite et les angles
+    morts sont les chaines francaises d'origine a l'octet pres : ce sont
+    elles que serialise le mode --format json.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     section = reperer_section(texte or "")
     rapport = {"fichier": nom, "section": {"trouvee": section["trouvee"],
                                            "titres": section["titres"],
                                            "ligne": section["ligne"]},
                "regimes": [], "identifiants": [], "constats": [],
                "comptes": {}, "verdict": "declaration absente",
-               "limite": LIMITE, "non_verifie": _non_verifie()}
+               "limite": lib.t("dispo.limite", la),
+               "non_verifie": _non_verifie(lib, la)}
     constats = []
     if not section["trouvee"]:
         constats.append(_constat(
-            "section-absente",
-            "aucune section de disponibilité des données ou du code. Les "
-            "revues la réclament, les financeurs publics en font une "
-            "obligation contractuelle.",
+            "section-absente", lib.t("dispo.d.section_absente", la),
             CONFIRME, "structure"))
         return _fermer(rapport, constats)
 
@@ -454,8 +477,7 @@ def analyser(texte, nom=None):
     if len(corps.split()) < SEUIL_MOTS_SECTION:
         constats.append(_constat(
             "section-vide",
-            "la section de disponibilité porte un titre sans déclaration "
-            "lisible (%d mots)." % len(corps.split()),
+            lib.t("dispo.d.section_vide", la, mots=len(corps.split())),
             CONFIRME, "structure"))
         return _fermer(rapport, constats)
 
@@ -467,35 +489,33 @@ def analyser(texte, nom=None):
     if not regimes:
         constats.append(_constat(
             "regime-non-identifie",
-            "la section existe mais aucune formulation n'y désigne un régime "
-            "connu (%s)." % ", ".join(LIBELLE_REGIME[r] for r in REGIMES),
+            lib.t("dispo.d.regime_non_identifie", la,
+                  regimes=_regimes_lisibles(REGIMES, lib, la)),
             PROBABLE, "regime"))
     if "depot-ouvert" in regimes:
-        _controler_ouverture(corps, ids, constats)
+        _controler_ouverture(corps, ids, constats, lib, la)
     if "embargo" in regimes:
-        _controler_embargo(corps, constats)
+        _controler_embargo(corps, constats, lib, la)
     if "sur-demande" in regimes:
-        _controler_demande(corps, regimes, ids, constats)
+        _controler_demande(corps, regimes, ids, constats, lib, la)
     if "restriction-legale" in regimes:
-        _controler_restriction(corps, constats)
+        _controler_restriction(corps, constats, lib, la)
     if "donnees-de-tiers" in regimes:
-        _controler_tiers(corps, constats)
-    _controler_code(corps, constats)
+        _controler_tiers(corps, constats, lib, la)
+    _controler_code(corps, constats, lib, la)
 
     autres = [r for r in regimes if r != "aucune-donnee"]
     if "aucune-donnee" in regimes and autres:
         constats.append(_constat(
             "regimes-contradictoires",
-            "la section déclare l'absence de donnée nouvelle et, dans le même "
-            "corps, un régime de partage (%s)."
-            % ", ".join(LIBELLE_REGIME[r] for r in autres),
+            lib.t("dispo.d.regimes_contradictoires", la,
+                  regimes=_regimes_lisibles(autres, lib, la)),
             CONFIRME, "regime"))
     elif len(regimes) > 1:
         constats.append(_constat(
             "regimes-multiples",
-            "la section combine %s. Cette combinaison est légitime si chaque "
-            "régime nomme le matériel qu'il couvre."
-            % " et ".join(LIBELLE_REGIME[r] for r in regimes),
+            lib.t("dispo.d.regimes_multiples", la,
+                  regimes=_regimes_lisibles(regimes, lib, la, " et ")),
             INFORMATIF, "regime"))
     return _fermer(rapport, constats)
 
@@ -527,73 +547,77 @@ def _fermer(rapport, constats):
     return rapport
 
 
-def _non_verifie():
+def _non_verifie(lib, la):
     """Ce que ce controle ne regarde pas, dit plutot que taise.
 
     Un rapport qui ne nomme pas ses angles morts se lit comme un quitus.
     """
-    return [
-        "aucun identifiant n'est résolu : un DOI bien formé peut ne pointer "
-        "sur rien",
-        "le contenu du dépôt n'est pas ouvert : rien ne dit qu'il porte ce "
-        "que la déclaration annonce",
-        "aucune autorisation n'est vérifiée (consentement des personnes, "
-        "accord de l'employeur, licence des données de tiers)",
-        "la politique de la revue cible n'est pas lue : elle peut exiger "
-        "d'autres éléments ou un autre emplacement",
-        "une déclaration exacte mais placée hors d'une section titrée échappe "
-        "à la détection, qui porte sur un titre",
-    ]
+    return [lib.t(c, la) for c in (
+        "dispo.nv.identifiant", "dispo.nv.depot", "dispo.nv.autorisation",
+        "dispo.nv.revue", "dispo.nv.hors_section")]
 
 
-LIBELLE_CONFIANCE = {CONFIRME: "CONFIRME ", PROBABLE: "probable ",
-                     INFORMATIF: "informatif", DOUTEUX: "douteux   "}
+# Categories de constat, dans l'ordre ou le rapport les presente. La cle est
+# la valeur machine portee par le constat, la valeur est la cle du libelle
+# de son titre.
+CATEGORIES = (("structure", "dispo.cat.structure"),
+              ("regime", "dispo.cat.regime"),
+              ("identifiant", "dispo.cat.identifiant"),
+              ("code", "dispo.cat.code"))
 
-TITRES_CATEGORIE = {"structure": "Structure de la déclaration",
-                    "regime": "Régime déclaré",
-                    "identifiant": "Identifiant pérenne",
-                    "code": "Code"}
 
-
-def rapport_texte(r):
-    """Rendu texte du rapport. Voir analyser() pour la structure."""
-    lignes = ["%s : %s" % (r.get("fichier") or "(texte)", r["verdict"].upper())]
+def rapport_texte(r, langue_affichage=None):
+    """Rendu texte du rapport. Voir analyser() pour la structure. Le detail
+    de chaque constat, la limite et les angles morts ont ete composes dans la
+    langue d'affichage par analyser() : ils sont repris tels quels."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     s = r["section"]
-    lignes.append("  Section : %s"
-                  % (", ".join(s["titres"]) + " (ligne %s)" % s["ligne"]
-                     if s["trouvee"] else "absente"))
-    lignes.append("  Régimes : %s"
-                  % (", ".join(LIBELLE_REGIME[x] for x in r["regimes"])
-                     or "aucun identifié"))
+    lignes = [lib.t("dispo.entete", la,
+                    fichier=r.get("fichier") or lib.t("dispo.texte", la),
+                    verdict=lib.valeur("dispo.verdict", r["verdict"],
+                                       la).upper())]
+    lignes.append("  " + lib.t(
+        "dispo.section", la,
+        section=lib.t("dispo.section_situee", la,
+                      titres=", ".join(s["titres"]), ligne=s["ligne"])
+        if s["trouvee"] else lib.t("dispo.section_absente", la)))
+    lignes.append("  " + lib.t(
+        "dispo.regimes", la,
+        regimes=_regimes_lisibles(r["regimes"], lib, la)
+        or lib.t("dispo.aucun_regime", la)))
     if r["identifiants"]:
-        lignes.append("  Identifiants pérennes : %s"
-                      % ", ".join("%s %s" % (i["type"], i["valeur"])
-                                  for i in r["identifiants"]))
+        lignes.append("  " + lib.t(
+            "dispo.identifiants", la,
+            identifiants=", ".join("%s %s" % (i["type"], i["valeur"])
+                                   for i in r["identifiants"])))
     lignes.append("")
     par_categorie = {}
     for c in r["constats"]:
         par_categorie.setdefault(c["categorie"], []).append(c)
     if not r["constats"]:
-        lignes.append("  aucun constat : la déclaration porte ce que son "
-                      "régime exige")
-    for cat in ("structure", "regime", "identifiant", "code"):
+        lignes.append("  " + lib.t("dispo.aucun_constat", la))
+    for cat, cle_titre in CATEGORIES:
         groupe = par_categorie.get(cat)
         if not groupe:
             continue
-        lignes.append("  %s" % TITRES_CATEGORIE[cat])
+        lignes.append("  " + lib.t(cle_titre, la))
         for c in groupe:
-            extrait = (" -> %s" % c["extrait"]) if c["extrait"] else ""
-            lignes.append("    [%s] %s : %s%s"
-                          % (LIBELLE_CONFIANCE[c["confiance"]], c["regle"],
-                             c["detail"], extrait))
+            extrait = (lib.t("dispo.extrait", la, extrait=c["extrait"])
+                       if c["extrait"] else "")
+            lignes.append("    " + lib.t(
+                "dispo.constat", la,
+                confiance=lib.valeur("dispo.confiance", c["confiance"], la),
+                regle=c["regle"], detail=c["detail"], extrait=extrait))
         lignes.append("")
-    lignes.append("  %d confirmé(s), %d probable(s), %d informatif(s), "
-                  "%d douteux"
-                  % (r["comptes"][CONFIRME], r["comptes"][PROBABLE],
-                     r["comptes"][INFORMATIF], r["comptes"][DOUTEUX]))
+    lignes.append("  " + lib.t(
+        "dispo.comptes", la, confirmes=r["comptes"][CONFIRME],
+        probables=r["comptes"][PROBABLE],
+        informatifs=r["comptes"][INFORMATIF], douteux=r["comptes"][DOUTEUX]))
     lignes.append("")
-    lignes.append("Limite : %s" % r.get("limite", LIMITE))
-    lignes.append("Non vérifié ici :")
+    lignes.append(lib.t("dispo.limite_ligne", la,
+                        limite=r.get("limite") or lib.t("dispo.limite", la)))
+    lignes.append(lib.t("dispo.non_verifie", la))
     for m in r["non_verifie"]:
         lignes.append("  - %s" % m)
     return "\n".join(lignes)
@@ -620,23 +644,34 @@ def main(argv=None):
     p.add_argument("--strict", action="store_true",
                    help="code de sortie 1 hors du verdict "
                         "\"declaration conforme\"")
+    p.add_argument("--langue-affichage", choices=("fr", "en"), default=None,
+                   help="langue des libellés du rapport texte. Sans "
+                        "l'option : la langue du manuscrit (pragme "
+                        "lint-style:langue), sinon fr. La sortie JSON reste "
+                        "française quoi qu'il arrive")
     a = p.parse_args(argv)
+    lib = _lib()
 
     if a.fichier == "-":
-        texte, nom = sys.stdin.read(), "(entrée standard)"
+        texte, nom = sys.stdin.read(), None
     else:
         if not os.path.isfile(a.fichier):
-            print("fichier introuvable : %s" % a.fichier, file=sys.stderr)
+            print(lib.t("dispo.err_introuvable",
+                        lib.resoudre_affichage(a.langue_affichage),
+                        chemin=a.fichier), file=sys.stderr)
             return 2
         with open(a.fichier, encoding="utf-8") as f:
             texte = f.read()
         nom = os.path.basename(a.fichier)
 
-    r = analyser(texte, nom)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        r = analyser(texte, nom or "(entrée standard)")
         print(json.dumps(r, ensure_ascii=False, indent=2))
-    else:
-        print(rapport_texte(r))
+        return 1 if (a.strict and r["verdict"] != "declaration conforme") else 0
+    la = lib.resoudre_affichage(a.langue_affichage, _langue_du_texte(texte))
+    r = analyser(texte, nom or lib.t("dispo.entree_standard", la), la)
+    print(rapport_texte(r, la))
     return 1 if (a.strict and r["verdict"] != "declaration conforme") else 0
 
 

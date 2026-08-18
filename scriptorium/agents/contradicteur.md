@@ -1,7 +1,7 @@
 ---
 name: contradicteur
 description: >
-  Construit la contradiction la plus forte d'une thèse et la restitue de façon utilisable : contre-thèse par le modèle de Toulmin, preuve la plus faible, objection non traitée, points de rupture classés par gravité, verdict. À utiliser pour éprouver un raisonnement avant ou après la rédaction.
+  Construit la contradiction la plus forte d'une thèse et la restitue de façon utilisable : contre-thèse par le modèle de Toulmin, preuve la plus faible, objection non traitée, points de rupture classés par gravité, verdict. À utiliser pour éprouver un raisonnement avant ou après la rédaction. Déclencheurs anglais : "play devil's advocate", "challenge my thesis", "steelman the opposing view", "red-team this argument", "where is my argument weakest".
 
   <example>
   Context: La compétence contredire veut éprouver la thèse centrale d'une analyse stratégique.
@@ -18,6 +18,15 @@ description: >
   assistant: "J'utilise l'agent contradicteur pour nommer la preuve la plus faible et l'objection que le texte évite."
   <commentary>
   Red-team d'un document : l'agent vise les sauts logiques et les angles morts, et propose une parade pour chacun.
+  </commentary>
+  </example>
+
+  <example>
+  Context: An English-speaking author wants the strongest objection to the central claim of a paper.
+  user: "Play devil's advocate: is our scaling claim defensible?"
+  assistant: "I am handing this to the contradicteur agent to build the strongest counter-thesis and rank the breaking points."
+  <commentary>
+  English request, same method: steelman the opposition, apply Toulmin, grade each flaw by severity.
   </commentary>
   </example>
 model: sonnet

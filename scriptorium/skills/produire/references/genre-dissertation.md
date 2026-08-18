@@ -18,6 +18,10 @@ Proscrire la paraphrase. Dégager des axes de lecture, avancer des idées et les
 
 L'introduction pose le problème : termes, bornes, problématique, annonce du plan. La conclusion répond à la problématique et peut ouvrir sur une autre question, sans argument neuf.
 
+## Transposition en anglais
+
+La dissertation est un exercice scolaire et universitaire français. L'anglais n'en a pas d'équivalent. L'écrit le plus proche est l'`academic essay`, qui s'organise autour d'un `thesis statement` annoncé dès la fin de l'introduction, sans plan annoncé ni dialectique en charpente : les objections y sont traitées en `counterargument` puis `rebuttal`, subordonnés à la thèse. Produire une dissertation en anglais donne donc un texte qu'un lecteur anglophone lira comme mal construit. Les trois différences détaillées, la conduite à tenir puis le piège du mot `dissertation` lui-même (il désigne la thèse de doctorat en usage américain) sont dans `genres-anglais.md`.
+
 ## Barre de qualité
 
 - Les termes du sujet sont définis, le hors-sujet écarté.

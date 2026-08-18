@@ -40,6 +40,7 @@ Usage :
 Code de sortie 1 sur erreur bloquante ou ecart majeur en comparaison.
 """
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -94,29 +95,50 @@ MOTIF_NON_REMPLISSABLE = {
 EMU_POUCE = 914400
 
 
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
 def _q(ns, tag):
     return "{%s}%s" % (ns, tag)
 
 
-def detecter_format(chemin):
+def detecter_format(chemin, langue_affichage=None):
     """Format et famille d'un fichier, par son contenu puis par son extension.
 
     Le contenu prime : un fichier renomme .docx qui commence par %PDF- est un
     PDF, et le traiter comme un zip produirait une erreur obscure au lieu d'un
     constat clair. L'extension ne sert qu'a departager les familles zip entre
     elles, que leur magie commune ne distingue pas.
+
+    Le couple rendu (format, famille) est une valeur machine : il ne change
+    pas de langue. langue_affichage ne touche que les messages d'arret.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     if not os.path.isfile(chemin):
-        raise SystemExit("fichier introuvable : %s" % chemin)
+        raise SystemExit(lib.t("gab.e.introuvable", la, chemin=chemin))
     ext = os.path.splitext(chemin)[1].lower().lstrip(".")
     with open(chemin, "rb") as f:
         tete = f.read(8)
     if tete[:5] == b"%PDF-":
         return "pdf", "page-fixe"
     if tete[:2] != b"PK":
-        raise SystemExit(
-            "%s n'est ni un PDF ni une archive : format non reconnu"
-            % os.path.basename(chemin))
+        raise SystemExit(lib.t("gab.e.non_reconnu", la,
+                               fichier=os.path.basename(chemin)))
     famille = FAMILLES.get(ext)
     if famille and famille != "page-fixe":
         return ext, famille
@@ -134,30 +156,33 @@ def detecter_format(chemin):
                 mime = z.read("mimetype").decode("ascii", "replace")
         return ("odp", "diapositives-odf") if "presentation" in mime \
             else ("odt", "texte-odf")
-    raise SystemExit("%s est une archive, mais d'aucun format de document "
-                     "reconnu" % os.path.basename(chemin))
+    raise SystemExit(lib.t("gab.e.archive_inconnue", la,
+                           fichier=os.path.basename(chemin)))
 
 
-def lire_parties(chemin, piece_attendue="word/document.xml"):
+def lire_parties(chemin, piece_attendue="word/document.xml",
+                 langue_affichage=None):
     """Toutes les entrees du zip en memoire. Un document bureautique est petit.
 
     piece_attendue nomme la partie sans laquelle le fichier n'est pas du format
     voulu. La passer a None accepte n'importe quelle archive, ce qui sert aux
     formats dont la piece maitresse varie.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     if not os.path.isfile(chemin):
-        raise SystemExit("fichier introuvable : %s" % chemin)
+        raise SystemExit(lib.t("gab.e.introuvable", la, chemin=chemin))
     try:
         with zipfile.ZipFile(chemin) as z:
             noms = z.namelist()
             if piece_attendue and piece_attendue not in noms:
-                raise SystemExit(
-                    "%s ne porte pas %s : format inattendu"
-                    % (os.path.basename(chemin), piece_attendue))
+                raise SystemExit(lib.t(
+                    "gab.e.piece_manquante", la,
+                    fichier=os.path.basename(chemin), piece=piece_attendue))
             return {n: z.read(n) for n in noms}
     except zipfile.BadZipFile:
-        raise SystemExit("%s n'est pas une archive lisible"
-                         % os.path.basename(chemin))
+        raise SystemExit(lib.t("gab.e.archive_illisible", la,
+                               fichier=os.path.basename(chemin)))
 
 
 def _racine(parties, nom):
@@ -799,7 +824,7 @@ def _ecart(gravite, regle, detail):
     return {"gravite": gravite, "regle": regle, "detail": detail}
 
 
-def comparer(inv, chemin, tolerance_cm=0.1):
+def comparer(inv, chemin, tolerance_cm=0.1, langue_affichage=None):
     """Confronte un document a l'inventaire d'un gabarit. Verdict ferme.
 
     Trois valeurs : conforme, ecarts mineurs, ecarts majeurs. Un style inconnu
@@ -810,20 +835,28 @@ def comparer(inv, chemin, tolerance_cm=0.1):
     Comparer un document a un gabarit d'une autre famille n'a pas de sens et
     s'arrete par un message nomme : les mesures ne portent pas sur les memes
     objets, et un verdict rendu malgre tout serait faux sans le dire.
+
+    Ce rapport n'est jamais ecrit sur le disque : le detail de chaque ecart et
+    la liste des angles morts se composent directement dans la langue
+    demandee. Sans langue_affichage ce sont les chaines francaises d'origine a
+    l'octet pres, celles que serialise --format json. Le verdict, la gravite
+    et le nom de regle restent des valeurs machine francaises dans les deux
+    cas.
     """
-    fmt, famille = detecter_format(chemin)
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    fmt, famille = detecter_format(chemin, la)
     attendue = inv.get("famille", "texte-ooxml")
     if famille != attendue:
-        raise SystemExit(
-            "le gabarit est de famille %s et le document de famille %s : "
-            "comparaison sans objet" % (attendue, famille))
+        raise SystemExit(lib.t("gab.e.familles", la, attendue=attendue,
+                               obtenue=famille))
     if famille == "diapositives-ooxml":
-        return _comparer_pptx(inv, chemin, tolerance_cm)
+        return _comparer_pptx(inv, chemin, tolerance_cm, la)
     if famille == "page-fixe":
-        return _comparer_pdf(inv, chemin, tolerance_cm)
+        return _comparer_pdf(inv, chemin, tolerance_cm, la)
     if famille in ("texte-odf", "diapositives-odf"):
-        return _comparer_odf(inv, chemin, tolerance_cm)
-    return _comparer_docx(inv, chemin, tolerance_cm)
+        return _comparer_odf(inv, chemin, tolerance_cm, la)
+    return _comparer_docx(inv, chemin, tolerance_cm, la)
 
 
 def _envelopper(chemin, inv, ecarts, non_verifie):
@@ -853,7 +886,8 @@ def _envelopper(chemin, inv, ecarts, non_verifie):
     }
 
 
-def _ecarts_mise_en_page(attendue, obtenue, tolerance_cm, cles):
+def _ecarts_mise_en_page(attendue, obtenue, tolerance_cm, cles, la=None):
+    lib = _lib()
     ecarts = []
     for cle in cles:
         if cle not in attendue:
@@ -861,24 +895,27 @@ def _ecarts_mise_en_page(attendue, obtenue, tolerance_cm, cles):
         if cle not in obtenue:
             ecarts.append(_ecart(
                 "majeur", "mise en page absente",
-                "la mesure %s du gabarit (%s cm) n'est pas declaree dans le "
-                "document" % (cle, attendue[cle])))
+                lib.t("gab.d.mise_en_page_absente", la, mesure=cle,
+                      valeur=attendue[cle])))
             continue
         if abs(attendue[cle] - obtenue[cle]) > tolerance_cm:
             ecarts.append(_ecart(
                 "majeur", "mise en page divergente",
-                "%s : gabarit %s cm, document %s cm"
-                % (cle, attendue[cle], obtenue[cle])))
+                lib.t("gab.d.mise_en_page_divergente", la, mesure=cle,
+                      attendu=attendue[cle], obtenu=obtenue[cle])))
     if attendue.get("orientation") and obtenue.get("orientation") \
             and attendue["orientation"] != obtenue["orientation"]:
         ecarts.append(_ecart(
             "majeur", "orientation divergente",
-            "gabarit %s, document %s"
-            % (attendue["orientation"], obtenue["orientation"])))
+            lib.t("gab.d.orientation", la,
+                  attendu=lib.valeur("gab.orientation",
+                                     attendue["orientation"], la),
+                  obtenu=lib.valeur("gab.orientation",
+                                    obtenue["orientation"], la))))
     return ecarts
 
 
-def _comparer_pptx(inv, chemin, tolerance_cm=0.1):
+def _comparer_pptx(inv, chemin, tolerance_cm=0.1, la=None):
     """Comparaison d'une presentation : dispositions, taille, espaces.
 
     L'identifiant stable est le nom de la disposition. Une diapositive qui se
@@ -886,7 +923,8 @@ def _comparer_pptx(inv, chemin, tolerance_cm=0.1):
     diapositive sans disposition identifiable est un cas a regarder, une
     disposition proposee et jamais employee est normale.
     """
-    parties = lire_parties(chemin, "ppt/presentation.xml")
+    lib = _lib()
+    parties = lire_parties(chemin, "ppt/presentation.xml", la)
     connues = {d["nom"] for d in inv.get("dispositions", [])}
     slides = diapositives(parties)
     ecarts = []
@@ -895,28 +933,28 @@ def _comparer_pptx(inv, chemin, tolerance_cm=0.1):
         if s["disposition"] is None:
             ecarts.append(_ecart(
                 "mineur", "disposition non identifiable",
-                "%s ne se reclame d'aucune disposition lisible"
-                % os.path.basename(s["partie"])))
+                lib.t("gab.d.disposition_non_identifiable", la,
+                      partie=os.path.basename(s["partie"]))))
         elif s["disposition"] not in connues:
             ecarts.append(_ecart(
                 "majeur", "disposition hors gabarit",
-                "%s emploie la disposition %s, absente du gabarit"
-                % (os.path.basename(s["partie"]), s["disposition"])))
+                lib.t("gab.d.disposition_hors_gabarit", la,
+                      partie=os.path.basename(s["partie"]),
+                      disposition=s["disposition"])))
 
     employees = {s["disposition"] for s in slides if s["disposition"]}
     for nom in sorted(connues - employees):
         ecarts.append(_ecart(
             "info", "disposition jamais employee",
-            "le gabarit propose la disposition %s, aucune diapositive ne "
-            "l'emploie" % nom))
+            lib.t("gab.d.disposition_jamais_employee", la, disposition=nom)))
 
     if not slides:
         ecarts.append(_ecart("mineur", "presentation vide",
-                             "le document ne porte aucune diapositive"))
+                             lib.t("gab.d.presentation_vide", la)))
 
     ecarts += _ecarts_mise_en_page(
         inv.get("mise_en_page") or {}, taille_diapositive(parties),
-        tolerance_cm, ("largeur", "hauteur"))
+        tolerance_cm, ("largeur", "hauteur"), la)
 
     # Espaces reserves d'une disposition non repris par la diapositive qui s'en
     # reclame : le modele prevoyait une zone que la diapositive laisse de cote.
@@ -932,19 +970,21 @@ def _comparer_pptx(inv, chemin, tolerance_cm=0.1):
         if manquants:
             ecarts.append(_ecart(
                 "mineur", "espace reserve non repris",
-                "%s laisse vides les zones %s prevues par %s"
-                % (os.path.basename(s["partie"]),
-                   ", ".join(TYPES_ESPACE.get(m, m) for m in manquants),
-                   s["disposition"])))
+                lib.t("gab.d.espace_non_repris", la,
+                      partie=os.path.basename(s["partie"]),
+                      zones=", ".join(
+                          lib.valeur("gab.espace", TYPES_ESPACE[m], la)
+                          if m in TYPES_ESPACE else m for m in manquants),
+                      disposition=s["disposition"])))
 
     return _envelopper(chemin, inv, ecarts, [
-        "le contenu redactionnel n'est pas juge ici, seule la forme l'est",
-        "la position et la taille des espaces reserves ne sont pas mesurees",
-        "le masque de diapositive et le theme ne sont pas compares",
+        lib.t("gab.nv.contenu", la),
+        lib.t("gab.nv.espaces", la),
+        lib.t("gab.nv.masque", la),
     ])
 
 
-def _comparer_pdf(inv, chemin, tolerance_cm=0.1):
+def _comparer_pdf(inv, chemin, tolerance_cm=0.1, la=None):
     """Comparaison d'un PDF : format de page, orientation, pages, polices.
 
     Un PDF ne porte ni styles ni marges declarees : la comparaison se limite au
@@ -952,60 +992,60 @@ def _comparer_pdf(inv, chemin, tolerance_cm=0.1):
     passe sous silence, pour qu'un verdict conforme ne se lise pas comme une
     conformite totale.
     """
+    lib = _lib()
     obtenu = _inventorier_pdf(chemin)
     ecarts = []
     ecarts += _ecarts_mise_en_page(
         inv.get("mise_en_page") or {}, obtenu.get("mise_en_page") or {},
-        max(tolerance_cm, 0.2), ("largeur", "hauteur"))
+        max(tolerance_cm, 0.2), ("largeur", "hauteur"), la)
 
     attendu_nom = (inv.get("mise_en_page") or {}).get("format_nomme")
     obtenu_nom = (obtenu.get("mise_en_page") or {}).get("format_nomme")
     if attendu_nom and obtenu_nom and attendu_nom != obtenu_nom:
         ecarts.append(_ecart("majeur", "format de page divergent",
-                             "gabarit %s, document %s"
-                             % (attendu_nom, obtenu_nom)))
+                             lib.t("gab.d.format_page", la,
+                                   attendu=attendu_nom, obtenu=obtenu_nom)))
 
     if len(obtenu.get("formats_de_page") or []) > 1:
         ecarts.append(_ecart(
             "mineur", "formats de page melanges",
-            "le document mele %d formats de page differents"
-            % len(obtenu["formats_de_page"])))
+            lib.t("gab.d.formats_melanges", la,
+                  n=len(obtenu["formats_de_page"]))))
 
     limite = inv.get("pages_max")
     if limite and obtenu.get("pages") and obtenu["pages"] > limite:
         ecarts.append(_ecart(
             "majeur", "limite de pages depassee",
-            "%d pages pour une limite de %d" % (obtenu["pages"], limite)))
+            lib.t("gab.d.limite_pages", la, pages=obtenu["pages"],
+                  limite=limite)))
 
     if obtenu.get("chiffre"):
         ecarts.append(_ecart(
-            "mineur", "document chiffre",
-            "le PDF est chiffre : son contenu n'a pas ete inspecte"))
+            "mineur", "document chiffre", lib.t("gab.d.chiffre", la)))
 
     if obtenu.get("polices") and not obtenu.get("polices_incorporees"):
         ecarts.append(_ecart(
             "mineur", "aucune police incorporee",
-            "aucun nom de police ne porte de prefixe de sous-ensemble : le "
-            "rendu depend des polices installees chez le lecteur"))
+            lib.t("gab.d.police_non_incorporee", la)))
 
     if obtenu.get("pages") is None:
         ecarts.append(_ecart(
             "info", "pagination illisible",
-            "le compte de pages n'a pas pu se lire en binaire, probablement "
-            "un flux d'objets compresse"))
+            lib.t("gab.d.pagination_illisible", la)))
 
     return _envelopper(chemin, inv, ecarts, [
-        "les marges d'un PDF ne sont pas une donnee du fichier et ne se "
-        "comparent pas",
-        "le respect des styles de titre ne survit pas a l'export PDF",
-        "l'integrite de lecture du texte se controle avec check-lecture-pdf.py",
+        lib.t("gab.nv.marges_pdf", la),
+        lib.t("gab.nv.styles_pdf", la),
+        lib.t("gab.nv.lecture_pdf", la),
     ])
 
 
-def _comparer_odf(inv, chemin, tolerance_cm=0.1):
+def _comparer_odf(inv, chemin, tolerance_cm=0.1, la=None):
     """Comparaison ODF : styles nommes employes, dimensions, marges."""
-    fmt, famille = detecter_format(chemin)
-    obtenu = _inventorier_odf(chemin, lire_parties(chemin, "content.xml"),
+    lib = _lib()
+    fmt, famille = detecter_format(chemin, la)
+    obtenu = _inventorier_odf(chemin,
+                              lire_parties(chemin, "content.xml", la),
                               famille)
     connus = {s["id"] for s in inv.get("styles", [])}
     # Un style automatique (P1, T2, Table1) est le residu d'une mise en forme
@@ -1018,8 +1058,7 @@ def _comparer_odf(inv, chemin, tolerance_cm=0.1):
             continue
         ecarts.append(_ecart(
             "majeur", "style hors gabarit",
-            "le style %s est applique %d fois et n'existe pas dans le gabarit"
-            % (sid, n)))
+            lib.t("gab.d.style_hors_gabarit", la, style=sid, n=n)))
 
     corps = inv.get("style_corps")
     titre1 = inv.get("hierarchie_titres", {}).get("1")
@@ -1027,21 +1066,22 @@ def _comparer_odf(inv, chemin, tolerance_cm=0.1):
         if sid and sid not in obtenu.get("styles_utilises", {}):
             ecarts.append(_ecart(
                 "mineur", "style du gabarit jamais employe",
-                "le style %s est prevu par le gabarit et n'apparait pas"
-                % sid))
+                lib.t("gab.d.style_jamais_employe", la, style=sid)))
 
     ecarts += _ecarts_mise_en_page(
         inv.get("mise_en_page") or {}, obtenu.get("mise_en_page") or {},
-        tolerance_cm, ("top", "bottom", "left", "right", "largeur", "hauteur"))
+        tolerance_cm, ("top", "bottom", "left", "right", "largeur", "hauteur"),
+        la)
 
     return _envelopper(chemin, inv, ecarts, [
-        "le contenu redactionnel n'est pas juge ici, seule la forme l'est",
-        "les styles automatiques nes d'une mise en forme directe sont ignores",
+        lib.t("gab.nv.contenu", la),
+        lib.t("gab.nv.styles_automatiques", la),
     ])
 
 
-def _comparer_docx(inv, chemin, tolerance_cm=0.1):
-    parties = lire_parties(chemin)
+def _comparer_docx(inv, chemin, tolerance_cm=0.1, la=None):
+    lib = _lib()
+    parties = lire_parties(chemin, "word/document.xml", la)
     connus = {s["id"] for s in inv.get("styles", [])}
     employes = styles_utilises(parties)
     ecarts = []
@@ -1050,8 +1090,8 @@ def _comparer_docx(inv, chemin, tolerance_cm=0.1):
     for sid in inconnus:
         ecarts.append(_ecart(
             "majeur", "style hors gabarit",
-            "le style %s est applique %d fois et n'existe pas dans le gabarit"
-            % (sid, employes[sid])))
+            lib.t("gab.d.style_hors_gabarit", la, style=sid,
+                  n=employes[sid])))
 
     prevus = set(inv.get("hierarchie_titres", {}).values())
     corps = inv.get("style_corps")
@@ -1066,23 +1106,23 @@ def _comparer_docx(inv, chemin, tolerance_cm=0.1):
         ecarts.append(_ecart(
             "mineur" if sid in structurants else "info",
             "style du gabarit jamais employe",
-            "le style %s est prevu par le gabarit et n'apparait pas" % sid))
+            lib.t("gab.d.style_jamais_employe", la, style=sid)))
 
     ecarts += _ecarts_mise_en_page(
         inv.get("mise_en_page") or {}, mise_en_page(parties), tolerance_cm,
-        ("top", "bottom", "left", "right", "largeur", "hauteur"))
+        ("top", "bottom", "left", "right", "largeur", "hauteur"), la)
 
     roles_attendus = {e["role"] for e in inv.get("entetes_et_pieds", [])}
     roles_obtenus = {e["role"] for e in entetes_et_pieds(parties)}
     for role in sorted(roles_attendus - roles_obtenus):
         ecarts.append(_ecart(
             "majeur", "en-tete ou pied manquant",
-            "le gabarit declare un %s, le document n'en a pas" % role))
+            lib.t("gab.d.entete_pied_manquant", la,
+                  role=lib.valeur("gab.role", role, la))))
 
     return _envelopper(chemin, inv, ecarts, [
-        "le contenu redactionnel n'est pas juge ici, seule la forme l'est",
-        "un element de forme decrit hors du fichier gabarit echappe a cette "
-        "comparaison",
+        lib.t("gab.nv.contenu", la),
+        lib.t("gab.nv.hors_fichier", la),
     ])
 
 
@@ -1107,7 +1147,7 @@ def _paragraphe(texte, style):
             % (pr, _echapper(texte)))
 
 
-def contenu_en_paragraphes(markdown, inv):
+def contenu_en_paragraphes(markdown, inv, la=None):
     """Traduit un Markdown simple en paragraphes styles du gabarit.
 
     Les titres # a ###### prennent le style de titre du niveau correspondant
@@ -1136,8 +1176,8 @@ def contenu_en_paragraphes(markdown, inv):
             style = titres.get(niveau)
             if not style:
                 style = corps
-                avis.append("niveau de titre %s absent du gabarit, rendu en "
-                            "style de corps" % niveau)
+                avis.append(_lib().t("gab.a.niveau_titre", la,
+                                     niveau=niveau))
             fragments.append(_paragraphe(m.group(2), style))
             continue
         bloc.append(nue)
@@ -1193,7 +1233,7 @@ def _drawing(rid, largeur_emu, hauteur_emu, nom, ident):
 
 
 def inserer_image(parties, chemin_image, largeur_cm=4.0, hauteur_cm=None,
-                  ident=1000):
+                  ident=1000, la=None):
     """Ajoute une image au corps et rend le fragment de paragraphe a inserer.
 
     Trois ecritures : le binaire dans word/media, la relation dans le fichier
@@ -1201,7 +1241,8 @@ def inserer_image(parties, chemin_image, largeur_cm=4.0, hauteur_cm=None,
     partie n'est reserialisee, chaque ajout est une insertion ciblee.
     """
     if not os.path.isfile(chemin_image):
-        raise SystemExit("image introuvable : %s" % chemin_image)
+        raise SystemExit(_lib().t("gab.e.image_introuvable", la,
+                                  chemin=chemin_image))
     donnees = open(chemin_image, "rb").read()
     ext = os.path.splitext(chemin_image)[1].lower().lstrip(".") or "png"
     base = "image_scriptorium_%d.%s" % (ident, ext)
@@ -1266,50 +1307,59 @@ def ecrire_docx(parties, sortie):
 
 
 def remplir(inv, markdown, sortie, logo=None, logo_largeur_cm=4.0,
-            source=None, disposition=None):
+            source=None, disposition=None, langue_affichage=None):
     """Injecte le contenu dans le gabarit lui-meme, sans le recreer.
 
     Le remplissage ne vaut que pour les familles ou l'ecriture est sure. Pour
     les autres, le refus est explicite et porte son motif : mieux vaut un arret
     nomme qu'un fichier approximatif que l'auteur croirait conforme.
+
+    Le fichier produit ne depend d'aucune langue d'affichage : seuls le
+    rapport rendu et les messages d'arret la suivent. Sans langue_affichage
+    ce sont les chaines francaises d'origine.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     chemin = source or inv.get("source_chemin")
     if not chemin or not os.path.isfile(chemin):
-        raise SystemExit(
-            "gabarit source introuvable (%s) : passer --source" % chemin)
+        raise SystemExit(lib.t("gab.e.source_introuvable", la,
+                               chemin=chemin))
     famille = inv.get("famille", "texte-ooxml")
     if famille not in REMPLISSABLES:
-        raise SystemExit(
-            "remplissage impossible pour un gabarit %s : %s"
-            % (famille, MOTIF_NON_REMPLISSABLE.get(famille, "format non ecrit")))
+        motif = MOTIF_NON_REMPLISSABLE.get(famille)
+        raise SystemExit(lib.t(
+            "gab.e.non_remplissable", la, famille=famille,
+            motif=lib.valeur("gab.motif", motif, la) if motif
+            else lib.t("gab.inv.format_non_ecrit", la)))
     prot = inv.get("protection") or {}
     if prot.get("applique"):
-        raise SystemExit(
-            "gabarit protege en edition (%s) : le remplissage s'arrete plutot "
-            "que de produire un fichier douteux"
-            % (prot.get("edition") or "restriction declaree"))
+        raise SystemExit(lib.t(
+            "gab.e.protege", la,
+            edition=prot.get("edition") or lib.t("gab.e.restriction", la)))
     if famille == "diapositives-ooxml":
         return _remplir_pptx(inv, markdown, sortie, chemin, disposition,
-                             logo, logo_largeur_cm)
-    return _remplir_docx(inv, markdown, sortie, chemin, logo, logo_largeur_cm)
+                             logo, logo_largeur_cm, la)
+    return _remplir_docx(inv, markdown, sortie, chemin, logo,
+                         logo_largeur_cm, la)
 
 
 def _remplir_docx(inv, markdown, sortie, chemin, logo=None,
-                  logo_largeur_cm=4.0):
+                  logo_largeur_cm=4.0, la=None):
     """Le contenu s'ajoute a la fin du corps, avant la derniere section.
 
     Rien n'est remplace : une page de garde, un sommaire ou un filigrane du
     gabarit survivent a l'operation. Le nettoyage des paragraphes de
     remplissage du modele reste un geste de l'auteur.
     """
-    parties = lire_parties(chemin)
+    parties = lire_parties(chemin, "word/document.xml", la)
     doc = parties["word/document.xml"]
-    fragments, avis = contenu_en_paragraphes(markdown, inv)
+    fragments, avis = contenu_en_paragraphes(markdown, inv, la)
     rapport = {"sortie": sortie, "paragraphes": len(fragments),
                "avertissements": avis, "logo": None}
 
     if logo:
-        frag_logo, meta = inserer_image(parties, logo, logo_largeur_cm)
+        frag_logo, meta = inserer_image(parties, logo, logo_largeur_cm,
+                                        la=la)
         doc = parties["word/document.xml"]
         fragments.insert(0, frag_logo)
         rapport["logo"] = meta
@@ -1321,7 +1371,7 @@ def _remplir_docx(inv, markdown, sortie, chemin, logo=None,
     elif b"</w:body>" in doc:
         doc = doc.replace(b"</w:body>", bloc + b"</w:body>", 1)
     else:
-        raise SystemExit("corps du document illisible, remplissage annule")
+        raise SystemExit(_lib().t("gab.e.corps_illisible", la))
     parties["word/document.xml"] = doc
     ecrire_docx(parties, sortie)
     return rapport
@@ -1350,26 +1400,26 @@ def contenu_en_diapositives(markdown):
     return slides
 
 
-def _choisir_disposition(inv, demandee):
+def _choisir_disposition(inv, demandee, la=None):
     """Disposition d'accueil : celle demandee, sinon la premiere qui porte a la
     fois un titre et un corps, sinon la premiere declaree."""
+    lib = _lib()
     cartes = inv.get("dispositions") or []
     if not cartes:
-        raise SystemExit("le gabarit ne declare aucune disposition")
+        raise SystemExit(lib.t("gab.e.aucune_disposition", la))
     if demandee:
         for d in cartes:
             if d["nom"] == demandee:
                 return d, None
         noms = ", ".join(d["nom"] for d in cartes)
-        raise SystemExit("disposition %s absente du gabarit. Disponibles : %s"
-                         % (demandee, noms))
+        raise SystemExit(lib.t("gab.e.disposition_absente", la,
+                               disposition=demandee, noms=noms))
     for d in cartes:
         types = {e["type"] for e in d["espaces"]}
         if types & {"title", "ctrTitle"} and "body" in types:
             return d, None
-    return cartes[0], ("aucune disposition ne porte a la fois un titre et un "
-                       "corps, la premiere declaree (%s) est employee"
-                       % cartes[0]["nom"])
+    return cartes[0], lib.t("gab.a.disposition_defaut", la,
+                            disposition=cartes[0]["nom"])
 
 
 def _forme_texte(ident, nom, type_ph, index, lignes, largeur, hauteur,
@@ -1430,7 +1480,7 @@ def _diapositive_xml(titre, corps, espaces, largeur_emu, hauteur_emu):
 
 
 def _remplir_pptx(inv, markdown, sortie, chemin, disposition=None,
-                  logo=None, logo_largeur_cm=4.0):
+                  logo=None, logo_largeur_cm=4.0, la=None):
     """Ajoute des diapositives au gabarit, dans une de ses dispositions.
 
     Quatre ecritures par diapositive : la partie elle-meme, ses relations vers
@@ -1438,12 +1488,13 @@ def _remplir_pptx(inv, markdown, sortie, chemin, disposition=None,
     liste de la presentation. En oublier une donne un fichier que PowerPoint
     refuse d'ouvrir ou ouvre en perdant la diapositive.
     """
-    parties = lire_parties(chemin, "ppt/presentation.xml")
-    modele, avis_disposition = _choisir_disposition(inv, disposition)
+    lib = _lib()
+    parties = lire_parties(chemin, "ppt/presentation.xml", la)
+    modele, avis_disposition = _choisir_disposition(inv, disposition, la)
     slides = contenu_en_diapositives(markdown)
     avis = [avis_disposition] if avis_disposition else []
     if not slides:
-        raise SystemExit("le contenu ne produit aucune diapositive")
+        raise SystemExit(lib.t("gab.e.aucune_diapositive", la))
 
     mep = inv.get("mise_en_page") or {}
     largeur = int((mep.get("largeur") or 25.4) * EMU_CM)
@@ -1493,7 +1544,7 @@ def _remplir_pptx(inv, markdown, sortie, chemin, disposition=None,
     else:
         m = re.search(rb"<p:sldMasterIdLst.*?</p:sldMasterIdLst>", pres, re.S)
         if not m:
-            raise SystemExit("presentation.xml illisible, remplissage annule")
+            raise SystemExit(lib.t("gab.e.presentation_illisible", la))
         pres = (pres[:m.end()] + b"<p:sldIdLst>" + bloc + b"</p:sldIdLst>"
                 + pres[m.end():])
 
@@ -1505,100 +1556,147 @@ def _remplir_pptx(inv, markdown, sortie, chemin, disposition=None,
                "disposition": modele["nom"], "avertissements": avis,
                "logo": None}
     if logo:
-        avis.append("le placement d'un logo en diapositive suit le masque du "
-                    "gabarit : le poser par diapositive le dupliquerait")
+        avis.append(lib.t("gab.a.logo_diapositive", la))
     ecrire_docx(parties, sortie)
     return rapport
 
 
-def _rendre_inventaire(inv):
+def _rendre_inventaire(inv, la=None):
+    """Rendu texte de l'inventaire.
+
+    L'inventaire, lui, est ECRIT sur le disque et relu par la comparaison :
+    ses lacunes, son motif de non-remplissage, ses libelles d'espace reserve
+    et sa famille y restent francais. Ils sont traduits ICI, a l'affichage
+    seulement, par les tables VALEURS. Les noms de style, de disposition et de
+    police viennent du fichier, ils sont repris tels quels."""
+    lib = _lib()
     famille = inv.get("famille", "texte-ooxml")
-    lignes = ["Gabarit : %s (%s, famille %s)"
-              % (inv["source"], inv.get("format", "?"), famille), ""]
+    lignes = [lib.t("gab.inv.titre", la, source=inv["source"],
+                    format=inv.get("format", "?"),
+                    famille=lib.valeur("gab.famille", famille, la)), ""]
     mep = inv["mise_en_page"]
 
     if famille == "diapositives-ooxml":
-        lignes.append("Dispositions declarees : %d"
-                      % len(inv.get("dispositions") or []))
+        lignes.append(lib.t("gab.inv.dispositions", la,
+                            n=len(inv.get("dispositions") or [])))
         for d in inv.get("dispositions") or []:
-            zones = ", ".join(sorted({e["libelle"] for e in d["espaces"]}))
-            lignes.append("  %-28s %s" % (d["nom"], zones or "aucune zone"))
-        lignes.append("Diapositives : %d" % len(inv.get("diapositives") or []))
+            zones = ", ".join(sorted(
+                {lib.valeur("gab.espace", e["libelle"], la)
+                 for e in d["espaces"]}))
+            lignes.append("  " + lib.t(
+                "gab.inv.disposition_ligne", la, nom=d["nom"],
+                zones=zones or lib.t("gab.inv.aucune_zone", la)))
+        lignes.append(lib.t("gab.inv.diapositives", la,
+                            n=len(inv.get("diapositives") or [])))
         if inv.get("dispositions_employees"):
-            lignes.append("Dispositions employees : %s"
-                          % ", ".join(inv["dispositions_employees"]))
+            lignes.append(lib.t("gab.inv.dispositions_employees", la,
+                                noms=", ".join(inv["dispositions_employees"])))
         if mep:
-            lignes.append("Diapositive : %s x %s cm, %s, ratio %s"
-                          % (mep.get("largeur", "?"), mep.get("hauteur", "?"),
-                             mep.get("orientation", "?"), mep.get("ratio", "?")))
+            lignes.append(lib.t(
+                "gab.inv.diapositive_taille", la,
+                largeur=mep.get("largeur", "?"),
+                hauteur=mep.get("hauteur", "?"),
+                orientation=lib.valeur("gab.orientation",
+                                       mep.get("orientation", "?"), la),
+                ratio=mep.get("ratio", "?")))
     elif famille == "page-fixe":
-        lignes.append("Version PDF : %s" % (inv.get("version_pdf") or "?"))
-        lignes.append("Pages : %s" % (inv.get("pages") or "illisible"))
+        lignes.append(lib.t("gab.inv.version_pdf", la,
+                            version=inv.get("version_pdf") or "?"))
+        lignes.append(lib.t("gab.inv.pages", la, pages=inv.get("pages")
+                            or lib.t("gab.inv.illisible", la)))
         if mep:
-            lignes.append("Page : %s x %s cm, %s%s"
-                          % (mep.get("largeur", "?"), mep.get("hauteur", "?"),
-                             mep.get("orientation", "?"),
-                             ", format %s" % mep["format_nomme"]
-                             if mep.get("format_nomme") else ""))
+            lignes.append(lib.t(
+                "gab.inv.page_pdf", la, largeur=mep.get("largeur", "?"),
+                hauteur=mep.get("hauteur", "?"),
+                orientation=lib.valeur("gab.orientation",
+                                       mep.get("orientation", "?"), la),
+                format_nomme=lib.t("gab.inv.format_nomme", la,
+                                   nom=mep["format_nomme"])
+                if mep.get("format_nomme") else ""))
         for f in inv.get("formats_de_page") or []:
-            lignes.append("  %s x %s cm sur %d page(s)"
-                          % (f["largeur"], f["hauteur"], f["pages"]))
-        lignes.append("Polices incorporees : %d sur %d nommees"
-                      % (inv.get("polices_incorporees", 0),
-                         len(inv.get("polices") or [])))
+            lignes.append("  " + lib.t("gab.inv.format_page_ligne", la,
+                                       largeur=f["largeur"],
+                                       hauteur=f["hauteur"],
+                                       pages=f["pages"]))
+        lignes.append(lib.t("gab.inv.polices_incorporees", la,
+                            n=inv.get("polices_incorporees", 0),
+                            total=len(inv.get("polices") or [])))
         if inv.get("chiffre"):
-            lignes.append("Chiffrement : present, contenu non inspecte")
+            lignes.append(lib.t("gab.inv.chiffrement", la))
     else:
-        lignes.append("Styles declares : %d" % len(inv["styles"]))
+        lignes.append(lib.t("gab.inv.styles", la, n=len(inv["styles"])))
         if inv["hierarchie_titres"]:
             paires = ", ".join(
                 "%s=%s" % (n, s)
                 for n, s in sorted(inv["hierarchie_titres"].items()))
-            lignes.append("Titres : %s" % paires)
+            lignes.append(lib.t("gab.inv.titres", la, paires=paires))
         else:
-            lignes.append("Titres : aucun style de titre reconnu")
-        lignes.append("Corps : %s" % (inv["style_corps"] or "non identifie"))
+            lignes.append(lib.t("gab.inv.aucun_titre", la))
+        lignes.append(lib.t("gab.inv.corps", la, style=inv["style_corps"]
+                            or lib.t("gab.inv.non_identifie", la)))
         if mep:
-            lignes.append(
-                "Page : %s x %s cm, %s, marges h%s b%s g%s d%s"
-                % (mep.get("largeur", "?"), mep.get("hauteur", "?"),
-                   mep.get("orientation", "portrait"), mep.get("top", "?"),
-                   mep.get("bottom", "?"), mep.get("left", "?"),
-                   mep.get("right", "?")))
+            lignes.append(lib.t(
+                "gab.inv.page", la, largeur=mep.get("largeur", "?"),
+                hauteur=mep.get("hauteur", "?"),
+                orientation=lib.valeur("gab.orientation",
+                                       mep.get("orientation", "portrait"),
+                                       la),
+                top=mep.get("top", "?"), bottom=mep.get("bottom", "?"),
+                left=mep.get("left", "?"), right=mep.get("right", "?")))
         for e in inv["entetes_et_pieds"]:
-            champs = (", champs " + "+".join(e["champs"])) if e["champs"] else ""
-            lignes.append("%s : %s%s"
-                          % (e["role"], e["texte"] or "(vide)", champs))
+            champs = (lib.t("gab.inv.champs", la,
+                            champs="+".join(e["champs"]))
+                      if e["champs"] else "")
+            lignes.append(lib.t(
+                "gab.inv.entete_pied", la,
+                role=lib.valeur("gab.role", e["role"], la),
+                texte=e["texte"] or lib.t("gab.inv.vide", la),
+                champs=champs))
 
     if inv["polices"]:
-        lignes.append("Polices nommees : %s" % ", ".join(inv["polices"][:12]))
+        lignes.append(lib.t("gab.inv.polices", la,
+                            noms=", ".join(inv["polices"][:12])))
     if inv["protection"]:
-        lignes.append("Protection : %s%s"
-                      % (inv["protection"].get("edition"),
-                         " (appliquee)" if inv["protection"].get("applique")
-                         else ""))
+        lignes.append(lib.t(
+            "gab.inv.protection", la,
+            edition=inv["protection"].get("edition"),
+            applique=lib.t("gab.inv.appliquee", la)
+            if inv["protection"].get("applique") else ""))
     if not inv.get("remplissable"):
-        lignes.append("Remplissage : impossible, %s"
-                      % inv.get("motif_non_remplissable", "format non ecrit"))
+        motif = inv.get("motif_non_remplissable")
+        lignes.append(lib.t(
+            "gab.inv.remplissage_impossible", la,
+            motif=lib.valeur("gab.motif", motif, la) if motif
+            else lib.t("gab.inv.format_non_ecrit", la)))
     lignes.append("")
-    lignes.append("Ce que cet inventaire ne couvre pas :")
+    lignes.append(lib.t("gab.inv.lacunes", la))
     for m in inv["lacunes"]:
-        lignes.append("  - %s" % m)
+        lignes.append("  - %s" % lib.valeur("gab.lacune", m, la))
     return "\n".join(lignes)
 
 
-def _rendre_comparaison(rap):
-    lignes = ["%s contre %s" % (rap["document"], rap["gabarit"]), ""]
+def _rendre_comparaison(rap, la=None):
+    """Rendu texte de la comparaison. Le detail de chaque ecart a deja ete
+    compose dans la langue d'affichage par comparer() : il est repris tel
+    quel. La gravite, le nom de regle et le verdict sont des valeurs machine,
+    traduits ici par la table VALEURS et jamais dans les donnees."""
+    lib = _lib()
+    lignes = [lib.t("gab.cmp.titre", la, document=rap["document"],
+                    gabarit=rap["gabarit"]), ""]
     for e in rap["ecarts"]:
-        lignes.append("  [%s] %s : %s"
-                      % (e["gravite"], e["regle"], e["detail"]))
+        lignes.append("  " + lib.t(
+            "gab.cmp.ecart", la,
+            gravite=lib.valeur("gab.gravite", e["gravite"], la),
+            regle=lib.valeur("gab.regle", e["regle"], la),
+            detail=e["detail"]))
     if not rap["ecarts"]:
-        lignes.append("  aucun ecart de forme releve")
+        lignes.append("  " + lib.t("gab.cmp.aucun_ecart", la))
     lignes.append("")
-    lignes.append("Verdict : %s (%d majeurs, %d mineurs)"
-                  % (rap["verdict"], rap["majeurs"], rap["mineurs"]))
+    lignes.append(lib.t("gab.cmp.verdict", la,
+                        verdict=lib.valeur("gab.verdict", rap["verdict"], la),
+                        majeurs=rap["majeurs"], mineurs=rap["mineurs"]))
     lignes.append("")
-    lignes.append("Non verifie ici :")
+    lignes.append(lib.t("gab.cmp.non_verifie", la))
     for m in rap["non_verifie"]:
         lignes.append("  - %s" % m)
     return "\n".join(lignes)
@@ -1610,19 +1708,33 @@ def main(argv=None):
                     "remplir.")
     sp = p.add_subparsers(dest="action")
 
-    pi = sp.add_parser("inventorier", help="lire la structure d'un gabarit")
+    # Option commune a toutes les sous-commandes : posee sur un parent, elle
+    # s'ecrit apres la sous-commande comme dans les dix-sept scripts deja
+    # cables.
+    commun = argparse.ArgumentParser(add_help=False)
+    commun.add_argument("--langue-affichage", choices=("fr", "en"),
+                        default=None,
+                        help="langue des libelles du rapport texte (defaut "
+                             "fr : un gabarit bureautique ne porte pas de "
+                             "pragme de langue). L'inventaire ecrit sur le "
+                             "disque et la sortie JSON restent francais")
+
+    pi = sp.add_parser("inventorier", help="lire la structure d'un gabarit",
+                       parents=[commun])
     pi.add_argument("gabarit")
     pi.add_argument("--out", help="fichier JSON de sortie")
     pi.add_argument("--format", choices=("text", "json"), default="text")
 
-    pc = sp.add_parser("comparer", help="confronter un document a un gabarit")
+    pc = sp.add_parser("comparer", help="confronter un document a un gabarit",
+                       parents=[commun])
     pc.add_argument("inventaire")
     pc.add_argument("document")
     pc.add_argument("--format", choices=("text", "json"), default="text")
     pc.add_argument("--strict", action="store_true",
                     help="code de sortie 1 des le premier ecart mineur")
 
-    pr = sp.add_parser("remplir", help="injecter du contenu dans le gabarit")
+    pr = sp.add_parser("remplir", help="injecter du contenu dans le gabarit",
+                       parents=[commun])
     pr.add_argument("inventaire")
     pr.add_argument("contenu")
     pr.add_argument("--out", required=True)
@@ -1634,28 +1746,34 @@ def main(argv=None):
                     help="nom de la disposition d'accueil (presentations)")
     pr.add_argument("--format", choices=("text", "json"), default="text")
 
-    sp.add_parser("formats", help="formats reconnus et ce que chacun permet")
+    sp.add_parser("formats", help="formats reconnus et ce que chacun permet",
+                  parents=[commun])
 
     a = p.parse_args(argv)
+    lib = _lib()
+    la = lib.resoudre_affichage(getattr(a, "langue_affichage", None))
     if getattr(a, "action", None) == "formats":
-        print("Formats reconnus par gabarit.py\n")
+        print(lib.t("gab.fmt.titre", la) + "\n")
         for famille in ("texte-ooxml", "diapositives-ooxml", "texte-odf",
                         "diapositives-odf", "page-fixe"):
             exts = sorted(e for e, f in FAMILLES.items() if f == famille)
-            actions = "inventorier, comparer"
-            if famille in REMPLISSABLES:
-                actions += ", remplir"
-            print("  %-20s %-22s %s" % (famille, ".".join([""] + exts).strip("."),
-                                        actions))
+            actions = lib.t("gab.fmt.actions_remplir" if famille
+                            in REMPLISSABLES else "gab.fmt.actions", la)
+            print("  %-20s %-22s %s"
+                  % (lib.valeur("gab.famille", famille, la),
+                     ".".join([""] + exts).strip("."), actions))
             motif = MOTIF_NON_REMPLISSABLE.get(famille)
             if motif:
-                print("  %-20s %s" % ("", motif))
+                print("  %-20s %s" % ("",
+                                      lib.valeur("gab.motif", motif, la)))
         return 0
     if not a.action:
         p.print_help()
         return 0
 
     if a.action == "inventorier":
+        # L'inventaire ecrit est une donnee relue par la comparaison : il
+        # reste francais, quelle que soit la langue du rapport a l'ecran.
         inv = inventorier(a.gabarit)
         if a.out:
             with open(a.out, "w", encoding="utf-8") as f:
@@ -1663,43 +1781,50 @@ def main(argv=None):
         if a.format == "json":
             print(json.dumps(inv, ensure_ascii=False, indent=2))
         else:
-            print(_rendre_inventaire(inv))
+            print(_rendre_inventaire(inv, la))
             if a.out:
-                print("\nInventaire ecrit dans %s" % a.out)
+                print("\n" + lib.t("gab.inv.ecrit", la, chemin=a.out))
         return 0
 
     inv = json.load(open(a.inventaire, encoding="utf-8"))
 
     if a.action == "comparer":
-        rap = comparer(inv, a.document)
         if a.format == "json":
+            # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+            rap = comparer(inv, a.document)
             print(json.dumps(rap, ensure_ascii=False, indent=2))
         else:
-            print(_rendre_comparaison(rap))
+            rap = comparer(inv, a.document, langue_affichage=la)
+            print(_rendre_comparaison(rap, la))
         if rap["majeurs"]:
             return 1
         return 1 if (a.strict and rap["mineurs"]) else 0
 
     if a.action == "remplir":
         markdown = open(a.contenu, encoding="utf-8").read()
-        rap = remplir(inv, markdown, a.out, logo=a.logo,
-                      logo_largeur_cm=a.logo_largeur_cm, source=a.source,
-                      disposition=a.disposition)
         if a.format == "json":
+            # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+            rap = remplir(inv, markdown, a.out, logo=a.logo,
+                          logo_largeur_cm=a.logo_largeur_cm, source=a.source,
+                          disposition=a.disposition)
             print(json.dumps(rap, ensure_ascii=False, indent=2))
         else:
+            rap = remplir(inv, markdown, a.out, logo=a.logo,
+                          logo_largeur_cm=a.logo_largeur_cm, source=a.source,
+                          disposition=a.disposition, langue_affichage=la)
             if "diapositives" in rap:
-                print("%d diapositives ajoutees dans %s, disposition %s"
-                      % (rap["diapositives"], rap["sortie"],
-                         rap["disposition"]))
+                print(lib.t("gab.rem.diapositives", la,
+                            n=rap["diapositives"], sortie=rap["sortie"],
+                            disposition=rap["disposition"]))
             else:
-                print("%d paragraphes injectes dans %s"
-                      % (rap["paragraphes"], rap["sortie"]))
+                print(lib.t("gab.rem.paragraphes", la,
+                            n=rap["paragraphes"], sortie=rap["sortie"]))
             if rap.get("logo"):
-                print("Logo : %s, %s cm de large"
-                      % (rap["logo"]["fichier"], rap["logo"]["largeur_cm"]))
+                print(lib.t("gab.rem.logo", la,
+                            fichier=rap["logo"]["fichier"],
+                            largeur=rap["logo"]["largeur_cm"]))
             for av in rap["avertissements"]:
-                print("  avertissement : %s" % av)
+                print("  " + lib.t("gab.rem.avertissement", la, message=av))
         return 0
     return 0
 

@@ -2,6 +2,10 @@
 
 Support visuel affiché pendant une session dédiée (conférence, colloque, soutenance, journée portes ouvertes), consulté sans l'auteur present une partie du temps. Le poster n'est pas un article réduit ni un mur de texte : c'est une amorce de conversation. Le format et l'orientation sont imposés par l'organisateur : le portrait (a0 ou a1) domine dans les colloques, le paysage existe dans certaines conférences. Vérifier la consigne avant de composer, l'orientation commande toute la structure en colonnes. Sa réussite se mesure à ce qu'il déclenche un échange, pas à l'exhaustivité de ce qu'il couvre. Format LaTeX via `assets/gabarit-poster.tex` ou PowerPoint via le skill externe `pptx` quand LaTeX n'est pas disponible ou que le poster doit rester éditable après la session (voir `livrer`, action document, pour la même logique de choix appliquée au rapport).
 
+## Langue
+
+La langue se fixe au cadrage, avec le genre. La structure de ce playbook vaut telle quelle en anglais : seuls les intitulés de bandeau changent (Background, Methods, Results, Conclusions, Take-home message). Le décalage réel est en amont, l'acceptation se jouant sur le conference abstract soumis des mois plus tôt sous la limite de mots de l'appel. Voir `genres-anglais.md`, chargé en plus de ce playbook pour un poster en anglais, puis `style-anglais.md` pour la forme.
+
 ## Le poster comme amorce de conversation
 
 Le passant ne lit pas un poster comme un texte suivi. Il en fait le tour du regard, retient une chose, puis décide d'approcher ou non. Le rôle du support est de rendre cette décision facile et de donner à l'auteur, présent devant sa planche, un point de départ pour parler. Un poster qui tente de tout dire dans le détail perd cette fonction : le visiteur le lit en silence et repart sans échanger un mot. Composer pour la conversation change les choix de fond : une seule idée centrale mise en avant, des détails tenus en réserve pour la discussion orale plutôt qu'imprimés en petits caractères.

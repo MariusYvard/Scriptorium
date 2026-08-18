@@ -21,6 +21,10 @@ Citer la source exacte : article et code, décision avec sa juridiction et sa da
 
 Le cœur du raisonnement. Appliquer la règle aux faits pas à pas. Qualifier juridiquement chaque fait (un retard devient une inexécution). Traiter l'argument adverse, ne pas l'éluder.
 
+## Transposition en anglais
+
+L'IRAC vaut dans les deux langues. Son correspondant anglais s'appelle `legal memorandum` et se décline en CRAC ou CREAC selon le poids donné à la conclusion. Seul le vocabulaire de procédure change, avec la hiérarchie des sources qu'il suppose : holding, dictum, binding precedent, persuasive authority relèvent d'un système de précédent sans équivalent terme à terme en droit écrit. Détail dans `genres-anglais.md`.
+
 ## Barre de qualité
 
 - La question de droit est posée précisément, une seule à la fois.

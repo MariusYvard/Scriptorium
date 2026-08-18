@@ -132,15 +132,35 @@ def resoudre_langue(texte, langue=None):
     return _lint().resoudre_langue(texte, langue)
 
 
-LIBELLES_OBJET = {"figure": "figures", "tableau": "tableaux",
-                  "equation": "equations", "annexe": "annexes"}
+# Le pluriel de chaque type d'objet vit desormais dans la table
+# traceability.objets de libelles.py, une seule source pour les deux langues.
 
-LIBELLES_ANOMALIE = {
-    "numero_duplique": "Numeros de %s en double (plusieurs legendes, un seul numero) : %s",
-    "numero_manquant": "Saut dans la suite des %s (numero jamais defini) : %s",
-    "ne_commence_pas_a_un": "La suite des %s ne commence pas a 1 : premier numero %s",
-    "notation_mixte": "Numerotation des %s melangee (chiffres et lettres) : %s",
+# Cle de libelle par type d'anomalie. Le nom d'anomalie, lui, est une valeur
+# machine : il figure dans la sortie JSON et ne change pas de langue.
+CLES_ANOMALIE = {
+    "numero_duplique": "traceability.a.numero_duplique",
+    "numero_manquant": "traceability.a.numero_manquant",
+    "ne_commence_pas_a_un": "traceability.a.ne_commence_pas_a_un",
+    "notation_mixte": "traceability.a.notation_mixte",
 }
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py a la demande, une seule fois. Meme raison que pour
+    lint-style.py : le module se lit par chemin, aucun sys.path n'est
+    garanti."""
+    global _LIB
+    if _LIB is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
 
 
 def separer_biblio(texte):
@@ -389,34 +409,41 @@ def _rendre(numeros, notation):
     return numeros
 
 
-def problemes(d):
+# Cle de donnee -> cle de libelle, dans l'ordre d'impression. La cle de
+# donnee est machine, elle ne change pas de langue.
+CONSTATS_AFFICHES = (
+    ("citations_pendantes", "traceability.p.citations_pendantes"),
+    ("references_orphelines", "traceability.p.references_orphelines"),
+    ("figures_appelees_non_definies", "traceability.p.figures_appelees"),
+    ("figures_definies_non_appelees", "traceability.p.figures_definies"),
+    ("tableaux_appeles_non_definis", "traceability.p.tableaux_appeles"),
+    ("tableaux_definis_non_appeles", "traceability.p.tableaux_definis"),
+    ("equations_appelees_non_definies", "traceability.p.equations_appelees"),
+    ("equations_definies_non_appelees", "traceability.p.equations_definies"),
+    ("annexes_appelees_non_definies", "traceability.p.annexes_appelees"),
+    ("annexes_definies_non_appelees", "traceability.p.annexes_definies"),
+)
+
+
+def problemes(d, langue_affichage=None):
+    """Constats lisibles tires de l'analyse.
+
+    Sans langue_affichage, les chaines sont celles d'origine a l'octet pres :
+    c'est cette liste que serialise la cle problemes du mode --format json."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     p = []
-    if d["citations_pendantes"]:
-        p.append(f"Citations pendantes (citees, absentes de la biblio) : {d['citations_pendantes']}")
-    if d["references_orphelines"]:
-        p.append(f"References orphelines (listees, jamais citees) : {d['references_orphelines']}")
-    if d["figures_appelees_non_definies"]:
-        p.append(f"Figures appelees mais non definies : {d['figures_appelees_non_definies']}")
-    if d["figures_definies_non_appelees"]:
-        p.append(f"Figures definies mais jamais appelees : {d['figures_definies_non_appelees']}")
-    if d["tableaux_appeles_non_definis"]:
-        p.append(f"Tableaux appeles mais non definis : {d['tableaux_appeles_non_definis']}")
-    if d["tableaux_definis_non_appeles"]:
-        p.append(f"Tableaux definis mais jamais appeles : {d['tableaux_definis_non_appeles']}")
-    if d["equations_appelees_non_definies"]:
-        p.append(f"Equations appelees mais non definies : {d['equations_appelees_non_definies']}")
-    if d["equations_definies_non_appelees"]:
-        p.append(f"Equations definies mais jamais appelees : {d['equations_definies_non_appelees']}")
-    if d["annexes_appelees_non_definies"]:
-        p.append(f"Annexes appelees mais non definies : {d['annexes_appelees_non_definies']}")
-    if d["annexes_definies_non_appelees"]:
-        p.append(f"Annexes definies mais jamais appelees : {d['annexes_definies_non_appelees']}")
+    for cle, libelle in CONSTATS_AFFICHES:
+        if d[cle]:
+            p.append(lib.t(libelle, la, n=d[cle]))
     for a in d["numerotation_anomalies"]:
         notation = d["sequences"][a["objet"]]["notation"]
-        p.append(LIBELLES_ANOMALIE[a["anomalie"]]
-                 % (LIBELLES_OBJET[a["objet"]], _rendre(a["numeros"], notation)))
+        p.append(lib.t(CLES_ANOMALIE[a["anomalie"]], la,
+                       objet=lib.valeur("traceability.objets", a["objet"], la),
+                       numeros=_rendre(a["numeros"], notation)))
     if d["tags_variantes_mal_formees"]:
-        p.append(f"Tags de lacune mal formes (casse non conforme) : {d['tags_variantes_mal_formees']}")
+        p.append(lib.t("traceability.p.tags_mal_formes", la,
+                       n=d["tags_variantes_mal_formees"]))
     return p
 
 
@@ -427,28 +454,46 @@ def main(argv=None):
     ap.add_argument("--langue", choices=["fr", "en", "auto"], default=None,
                      help="langue des noms d'objets cherches. Sans l'option : "
                           "le pragme lint-style:langue du document, sinon fr")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                     help="langue des libelles du rapport texte. Sans "
+                          "l'option : la langue d'analyse retenue. La sortie "
+                          "JSON reste francaise quoi qu'il arrive")
     a = ap.parse_args(argv)
+    lib = _lib()
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     d = analyser(texte, a.langue)
-    p = problemes(d)
     if a.format == "json":
-        print(json.dumps({"analyse": d, "problemes": p}, ensure_ascii=False, indent=2))
-    else:
-        print("Tracabilite")
-        print(f"  langue analysee : {d['langue']}")
-        print(f"  biblio presente : {d['biblio_presente']} | references definies : {len(d['references_definies'])}")
-        print(f"  tags [LACUNE MATERIELLE] : {d['tags_lacune_materielle']} | "
-              f"tags [PREUVE FAIBLE] : {d['tags_preuve_faible']}")
-        compte = " | ".join(f"{o} : {len(d['sequences'][o]['numeros'])}" for o in OBJETS)
-        print(f"  objets numerotes : {compte}")
-        if not p:
-            print("  Aucun probleme de tracabilite.")
-        for x in p:
-            print(f"  - {x}")
-        if d["tags_par_section"]:
-            print("  Repartition par section :")
-            for titre, c in d["tags_par_section"].items():
-                print(f"    {titre} : lacune={c['lacune_materielle']} preuve_faible={c['preuve_faible']}")
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        p = problemes(d)
+        print(json.dumps({"analyse": d, "problemes": p},
+                         ensure_ascii=False, indent=2))
+        return 1 if p else 0
+    la = lib.resoudre_affichage(a.langue_affichage, d["langue"])
+    p = problemes(d, la)
+    print(lib.t("traceability.titre", la))
+    print("  " + lib.t("traceability.langue_analysee", la,
+                       langue=d["langue"]))
+    print("  " + lib.t("traceability.biblio", la,
+                       presente=d["biblio_presente"],
+                       n=len(d["references_definies"])))
+    print("  " + lib.t("traceability.tags", la,
+                       lacune=d["tags_lacune_materielle"],
+                       preuve=d["tags_preuve_faible"]))
+    compte = " | ".join(
+        lib.t("traceability.objet_compte", la,
+              objet=lib.valeur("traceability.objet", o, la),
+              n=len(d["sequences"][o]["numeros"])) for o in OBJETS)
+    print("  " + lib.t("traceability.objets_numerotes", la, compte=compte))
+    if not p:
+        print("  " + lib.t("traceability.aucun_probleme", la))
+    for x in p:
+        print(f"  - {x}")
+    if d["tags_par_section"]:
+        print("  " + lib.t("traceability.repartition", la))
+        for titre, c in d["tags_par_section"].items():
+            print("    " + lib.t("traceability.repartition_ligne", la,
+                                 titre=titre, lacune=c["lacune_materielle"],
+                                 preuve=c["preuve_faible"]))
     return 1 if p else 0
 
 

@@ -2,6 +2,10 @@
 
 Support de présentation orale, projeté pendant que l'auteur parle. Le support n'est pas le document : il appuie le discours, il ne le remplace pas. Couvre la soutenance scolaire ou académique et la présentation professionnelle qui expose un travail ou un résultat. Pour convaincre d'acheter ou d'investir, voir le genre pitch. La préparation l'emporte sur l'improvisation. L'attention d'une audience tient sept à dix minutes, prévoir une rupture de rythme au-delà. Sortie en PowerPoint (skill pptx) ou en HTML.
 
+## Langue
+
+La langue se fixe au cadrage, avec le genre. Le support de présentation professionnelle ne change pas d'une langue à l'autre. L'exercice académique, si : la soutenance française (publique, support projeté, jury constitué, mention) n'est pas le viva voce britannique (examen oral fermé devant deux examinateurs, sans support projeté par défaut), ni la defense nord-américaine (séminaire public puis session fermée). Établir le dispositif avant de bâtir le support. Voir `genres-anglais.md`, chargé en plus de ce playbook pour une présentation en anglais.
+
 ## Principe
 
 Une idée par diapositive. Le titre de chaque diapositive est une phrase assertive qui porte le message, pas une étiquette : "Les ventes ont doublé en un an", pas "Ventes". Le texte est réduit, la donnée ou la figure porte la preuve.

@@ -1,7 +1,7 @@
 ---
 name: redacteur
 description: >
-  Rédige du contenu long-format de haut niveau en appliquant un playbook de genre, un plan, des preuves et le style maison simultanément. À utiliser pour produire un document complet, un lot de sections denses, ou réécrire un passage exigeant.
+  Rédige du contenu long-format de haut niveau en appliquant un playbook de genre, un plan, des preuves et le style maison simultanément. À utiliser pour produire un document complet, un lot de sections denses, ou réécrire un passage exigeant. Déclencheurs anglais : "draft the full paper", "write the methods and results sections", "write this chapter from the outline", "rewrite this section to publication standard".
 
   <example>
   Context: La compétence rediger doit produire une analyse stratégique de 20 pages.
@@ -18,6 +18,15 @@ description: >
   assistant: "J'utilise l'agent redacteur pour rédiger ces sections en respectant la structure IMRAD et la carte preuve-affirmation."
   <commentary>
   Sections denses à forte contrainte structurelle : l'agent applique le playbook et retourne le texte au parent.
+  </commentary>
+  </example>
+
+  <example>
+  Context: A twenty-page technical report must be drafted in English from an approved outline.
+  user: "Draft the full report from the outline and the evidence map."
+  assistant: "I am delegating to the redacteur agent, section by section, with the genre playbook and the house style."
+  <commentary>
+  English request for long-form drafting: the agent holds outline, evidence, genre and style together.
   </commentary>
   </example>
 model: sonnet

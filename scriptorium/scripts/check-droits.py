@@ -22,10 +22,20 @@ se confond jamais avec "autorisation requise", comme "non mesurable" ne se
 confond pas avec "lecture non fiable" dans check-lecture-pdf.py. Une absence
 d'information n'est ni une interdiction, ni une permission.
 
+Langue d'affichage : chaque fonction qui compose une chaine lisible prend un
+parametre langue_affichage optionnel. Sans lui, les chaines sont les chaines
+francaises d'origine a l'octet pres, et ce sont elles que serialise
+--format json. Le verdict, l'etat d'autorisation, le nom de licence et
+l'element manquant restent des valeurs machine francaises dans les deux
+langues, comme le veut le partage pose par libelles.py. La ligne de credit
+suit la langue d'affichage : elle se colle dans le document, et un document
+anglais ne porte pas un credit francais.
+
 Usage :
     python3 check-droits.py licence --doi 10.xxxx/yyyy [--reseau] [--format text|json] [--strict]
     python3 check-droits.py registre REGISTRE.json [--reseau] [--format text|json] [--strict]
     python3 check-droits.py credits REGISTRE.json [--sortie texte|html|latex]
+    (les trois acceptent --langue-affichage fr|en)
 
 Module importable : normaliser_licence, classer, resoudre_doi,
 ligne_attribution, alternative_redessin, valider_registre, section_credits,
@@ -36,6 +46,23 @@ import importlib.util
 import json
 import os
 import sys
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 INDEX_TIMEOUT = 8
 
@@ -51,72 +78,71 @@ ETATS_AUTORISATION = ("non demandee", "demandee", "obtenue", "refusee")
 TYPES_FIGURES_DONNEES = ("courbe", "nuage", "histogramme", "boite", "flux",
                          "prisma")
 
-LIMITE = ("Ce rapport dit ce que la licence déclare, il ne prononce pas la "
-          "légalité d'un usage. Le contrat signé avec une revue, la politique "
-          "d'un employeur ou le droit applicable peuvent en décider autrement.")
+LIMITE = _lib().t("droits.limite", "fr")
 
 # Familles de licence, table locale sans reseau. Chaque entree dit ce que la
 # licence declare permettre, jamais ce que le droit autorise dans un cas
 # donne. Un ND ferme toute adaptation, donc tout recadrage ; un SA impose sa
 # licence au document derive ; un NC ferme l'usage commercial.
+#
+# "conditions" porte des CLES de libelle, pas des phrases : la condition
+# imprimee se compose au moment ou la fiche est produite, dans la langue
+# d'affichage demandee. "nom" reste le libelle francais, c'est lui que porte
+# la sortie JSON ; sa traduction passe par la table VALEURS, indexee par le
+# code de la famille.
 FAMILLES = {
     "cc0": {
         "nom": "CC0", "commercial": True, "adaptation": True,
         "partage_identique": False, "attribution_exigee": False,
         "verdict": "reutilisable avec attribution",
-        "conditions": ["Attribution non exigée par la licence, conservée par "
-                       "honnêteté de sourçage."]},
+        "conditions": ["droits.c.attribution_non_exigee"]},
     "domaine-public": {
         "nom": "Domaine public", "commercial": True, "adaptation": True,
         "partage_identique": False, "attribution_exigee": False,
         "verdict": "reutilisable avec attribution",
-        "conditions": ["Attribution non exigée par la licence, conservée par "
-                       "honnêteté de sourçage."]},
+        "conditions": ["droits.c.attribution_non_exigee"]},
     "cc-by": {
         "nom": "CC BY", "commercial": True, "adaptation": True,
         "partage_identique": False, "attribution_exigee": True,
         "verdict": "reutilisable avec attribution",
-        "conditions": ["Attribution complète : titre, auteur, source, licence.",
-                       "Mention des modifications si la figure est retouchée."]},
+        "conditions": ["droits.c.attribution_complete",
+                       "droits.c.mention_modifications"]},
     "cc-by-sa": {
         "nom": "CC BY-SA", "commercial": True, "adaptation": True,
         "partage_identique": True, "attribution_exigee": True,
         "verdict": "reutilisable sous conditions",
-        "conditions": ["Le document dérivé se diffuse sous la même licence.",
-                       "Vérifier que la destination accepte cette contrainte."]},
+        "conditions": ["droits.c.partage_identique",
+                       "droits.c.destination_contrainte"]},
     "cc-by-nc": {
         "nom": "CC BY-NC", "commercial": False, "adaptation": True,
         "partage_identique": False, "attribution_exigee": True,
         "verdict": "reutilisable sous conditions",
-        "conditions": ["Usage commercial fermé (livre vendu, rapport facturé, "
-                       "support de formation payante)."]},
+        "conditions": ["droits.c.commercial_ferme_exemples"]},
     "cc-by-nc-sa": {
         "nom": "CC BY-NC-SA", "commercial": False, "adaptation": True,
         "partage_identique": True, "attribution_exigee": True,
         "verdict": "reutilisable sous conditions",
-        "conditions": ["Usage commercial fermé.",
-                       "Le document dérivé se diffuse sous la même licence."]},
+        "conditions": ["droits.c.commercial_ferme",
+                       "droits.c.partage_identique"]},
     "cc-by-nd": {
         "nom": "CC BY-ND", "commercial": True, "adaptation": False,
         "partage_identique": False, "attribution_exigee": True,
         "verdict": "reutilisable sous conditions",
-        "conditions": ["Aucune adaptation : ni recadrage, ni retouche, ni "
-                       "traduction de la légende incrustée.",
-                       "La figure se reproduit entière ou pas du tout."]},
+        "conditions": ["droits.c.aucune_adaptation_legende",
+                       "droits.c.figure_entiere"]},
     "cc-by-nc-nd": {
         "nom": "CC BY-NC-ND", "commercial": False, "adaptation": False,
         "partage_identique": False, "attribution_exigee": True,
         "verdict": "reutilisable sous conditions",
-        "conditions": ["Usage commercial fermé.",
-                       "Aucune adaptation : ni recadrage, ni retouche."]},
+        "conditions": ["droits.c.commercial_ferme",
+                       "droits.c.aucune_adaptation"]},
     "tous-droits-reserves": {
         "nom": "Tous droits réservés", "commercial": False,
         "adaptation": False, "partage_identique": False,
         "attribution_exigee": True,
         "verdict": "autorisation requise",
-        "conditions": ["Demande écrite à l'éditeur avant toute reproduction.",
-                       "Une licence de fouille de textes ne couvre pas la "
-                       "republication d'une figure."]},
+        "conditions": ["droits.c.demande_ecrite",
+                       "droits.c.fouille_pas_republication"]},
 }
 
 # Chemins Creative Commons rencontres dans une URL de licence Crossref.
@@ -218,16 +244,24 @@ def _lire_code(bas):
 
 
 def normaliser_licence(valeur, version_contenu=None, date_application=None,
-                       origine=None):
+                       origine=None, langue_affichage=None):
     """Normalise une valeur de licence (slug OpenAlex ou URL Crossref) en une
     fiche fermee. Une valeur non reconnue est declaree telle quelle, avec
-    reconnue=False et le verdict "licence inconnue"."""
+    reconnue=False et le verdict "licence inconnue".
+
+    Sans langue_affichage, les conditions sont les phrases francaises
+    d'origine a l'octet pres. La cle privee "_editeur" retient la condition
+    d'editeur reconnue, s'il y en a une : elle sert a traduire le nom
+    affiche, et _sans_prive la retire de la sortie JSON."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     fiche = {"brut": valeur, "code": None, "nom": None, "version": None,
              "url": None, "reconnue": False, "commercial": None,
              "adaptation": None, "partage_identique": None,
              "attribution_exigee": None, "conditions": [],
              "verdict": "licence inconnue", "version_contenu": version_contenu,
-             "date_application": date_application, "origine": origine}
+             "date_application": date_application, "origine": origine,
+             "_editeur": None}
     if not valeur or not isinstance(valeur, str):
         return fiche
     v = valeur.strip()
@@ -243,11 +277,26 @@ def normaliser_licence(valeur, version_contenu=None, date_application=None,
                   "adaptation": famille["adaptation"],
                   "partage_identique": famille["partage_identique"],
                   "attribution_exigee": famille["attribution_exigee"],
-                  "conditions": list(famille["conditions"]),
-                  "verdict": famille["verdict"]})
+                  "conditions": [lib.t(c, la) for c in famille["conditions"]],
+                  "verdict": famille["verdict"], "_editeur": nom_editeur})
     nom = nom_editeur or famille["nom"]
     fiche["nom"] = "%s %s" % (nom, version) if version and not nom_editeur else nom
     return fiche
+
+
+def _nom_licence(fiche, lib, la):
+    """Nom affiche d'une licence, dans la langue demandee.
+
+    Le nom porte par la fiche est le libelle francais, valeur machine du
+    JSON. La traduction s'appuie sur le CODE de famille (ou sur la condition
+    d'editeur reconnue), jamais sur le nom lui-meme, pour que la version lue
+    dans l'URL se recolle a l'identique."""
+    if fiche.get("_editeur"):
+        return lib.valeur("droits.editeur", fiche["_editeur"], la)
+    if not fiche.get("code"):
+        return fiche.get("nom") or fiche.get("brut")
+    nom = lib.valeur("droits.licence", fiche["code"], la)
+    return "%s %s" % (nom, fiche["version"]) if fiche.get("version") else nom
 
 
 def classer(fiches):
@@ -264,7 +313,7 @@ def classer(fiches):
     return min((f["verdict"] for f in reconnues), key=lambda v: RANG_VERDICT[v])
 
 
-def licence_crossref(doi, timeout=INDEX_TIMEOUT):
+def licence_crossref(doi, timeout=INDEX_TIMEOUT, langue_affichage=None):
     """Licences declarees par Crossref pour un DOI.
 
     Crossref porte un tableau "license" dont chaque entree donne une URL
@@ -291,13 +340,14 @@ def licence_crossref(doi, timeout=INDEX_TIMEOUT):
             entree.get("URL"),
             version_contenu=entree.get("content-version"),
             date_application=((entree.get("start") or {}).get("date-time")),
-            origine="crossref"))
+            origine="crossref", langue_affichage=langue_affichage))
     titres = message.get("title") or []
     return {"consulte": True, "trouve": True, "licences": fiches,
             "titre": titres[0] if titres else None}
 
 
-def licence_openalex(doi, timeout=INDEX_TIMEOUT, api_key=None):
+def licence_openalex(doi, timeout=INDEX_TIMEOUT, api_key=None,
+                     langue_affichage=None):
     """Licence de la meilleure localisation ouverte declaree par OpenAlex.
 
     OpenAlex expose l'acces ouvert dans "open_access" (is_oa, oa_status) et
@@ -330,7 +380,9 @@ def licence_openalex(doi, timeout=INDEX_TIMEOUT, api_key=None):
         loc = data.get(cle) or {}
         valeur = loc.get("license") or loc.get("license_id")
         if valeur:
-            fiches.append(normaliser_licence(valeur, origine="openalex/%s" % cle))
+            fiches.append(normaliser_licence(
+                valeur, origine="openalex/%s" % cle,
+                langue_affichage=langue_affichage))
     acces = data.get("open_access") or {}
     return {"consulte": True, "trouve": True, "licences": fiches,
             "titre": data.get("title"),
@@ -339,7 +391,7 @@ def licence_openalex(doi, timeout=INDEX_TIMEOUT, api_key=None):
 
 
 def resoudre_doi(doi, reseau=False, timeout=INDEX_TIMEOUT,
-                 api_key_openalex=None):
+                 api_key_openalex=None, langue_affichage=None):
     """Resout la licence declaree d'une source par son DOI.
 
     Sans --reseau, aucun index n'est consulte et le verdict reste "licence
@@ -349,17 +401,20 @@ def resoudre_doi(doi, reseau=False, timeout=INDEX_TIMEOUT,
     sans licence declaree, licence declaree et lue. Aucune ne produit
     "autorisation requise" par defaut.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     rapport = {"doi": doi, "reseau": bool(reseau), "index": {}, "licences": [],
                "verdict": "licence inconnue", "detail": "", "titre": None,
-               "acces_ouvert": None, "conditions": [], "limite": LIMITE}
+               "acces_ouvert": None, "conditions": [],
+               "limite": lib.t("droits.limite", la)}
     if not reseau:
-        rapport["detail"] = ("--reseau désactivé : aucune licence consultée. "
-                             "Renseigner la licence à la main dans le registre.")
-        rapport["alternative"] = alternative_redessin(rapport["verdict"])
+        rapport["detail"] = lib.t("droits.d.reseau_desactive", la)
+        rapport["alternative"] = alternative_redessin(
+            rapport["verdict"], langue_affichage=la)
         return rapport
 
-    cr = licence_crossref(doi, timeout)
-    oa = licence_openalex(doi, timeout, api_key_openalex)
+    cr = licence_crossref(doi, timeout, langue_affichage=la)
+    oa = licence_openalex(doi, timeout, api_key_openalex, langue_affichage=la)
     rapport["index"] = {
         "crossref": {"consulte": cr["consulte"], "trouve": cr["trouve"],
                      "licences": len(cr["licences"])},
@@ -380,28 +435,28 @@ def resoudre_doi(doi, reseau=False, timeout=INDEX_TIMEOUT,
         retenue = min(reconnues, key=lambda f: RANG_VERDICT[f["verdict"]])
         rapport["conditions"] = list(retenue["conditions"])
         rapport["licence_retenue"] = retenue
-        rapport["detail"] = ("licence %s déclarée par %s"
-                             % (retenue["nom"], ", ".join(trouves) or "un index"))
+        rapport["detail"] = lib.t(
+            "droits.d.licence_declaree", la,
+            licence=_nom_licence(retenue, lib, la),
+            index=", ".join(trouves) or lib.t("droits.d.index_generique", la))
     elif fiches:
-        rapport["detail"] = ("%d licence(s) déclarée(s) mais aucune reconnue "
-                             "par la table locale : lire les conditions à la "
-                             "source avant de reproduire." % len(fiches))
+        rapport["detail"] = lib.t("droits.d.aucune_reconnue", la,
+                                  n=len(fiches))
     elif trouves:
-        rapport["detail"] = ("source trouvée par %s, aucune licence déclarée : "
-                             "absence d'information, ni interdiction ni "
-                             "permission." % ", ".join(trouves))
+        rapport["detail"] = lib.t("droits.d.aucune_declaree", la,
+                                  index=", ".join(trouves))
     elif consultes:
-        rapport["detail"] = ("DOI non trouvé par %s : la licence reste "
-                             "inconnue." % ", ".join(consultes))
+        rapport["detail"] = lib.t("droits.d.doi_non_trouve", la,
+                                  index=", ".join(consultes))
     else:
-        rapport["detail"] = ("aucun index joignable (réseau indisponible) : "
-                             "mesure omise, jamais remplacée par une valeur "
-                             "supposée.")
-    rapport["alternative"] = alternative_redessin(rapport["verdict"])
+        rapport["detail"] = lib.t("droits.d.aucun_index", la)
+    rapport["alternative"] = alternative_redessin(rapport["verdict"],
+                                                  langue_affichage=la)
     return rapport
 
 
-def alternative_redessin(verdict, auteur=None, type_figure=None):
+def alternative_redessin(verdict, auteur=None, type_figure=None,
+                         langue_affichage=None):
     """Nomme la voie qui evite la question du droit de reproduction.
 
     Les donnees ne sont pas protegeables, leur mise en forme l'est. Refaire
@@ -414,16 +469,19 @@ def alternative_redessin(verdict, auteur=None, type_figure=None):
         return None
     if type_figure and type_figure not in TYPES_FIGURES_DONNEES:
         type_figure = None
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     return {
-        "voie": "redessin depuis les données publiées",
-        "mention": "D'après les données de %s" % (auteur or "l'auteur de la source"),
+        "voie": lib.t("droits.alt.voie", la),
+        "mention": lib.t("droits.alt.mention", la,
+                         auteur=auteur or lib.t("droits.alt.auteur_inconnu",
+                                                la)),
+        # Les types de figure et la commande sont des valeurs machine : le
+        # nom du type est celui qu'attend figures.py, il ne se traduit pas.
         "types_figures": list(TYPES_FIGURES_DONNEES),
         "commande": ("python3 figures.py %s --data donnees.json --out figure.svg"
                      % (type_figure or "courbe")),
-        "note": ("Relever les valeurs publiées (texte, tableau, données "
-                 "supplémentaires), puis tracer avec la charte du document. "
-                 "Ne pas décalquer le rendu d'origine, qui est la partie "
-                 "protégée. Voir references/figures-catalogue.md."),
+        "note": lib.t("droits.alt.note", la),
     }
 
 
@@ -441,16 +499,24 @@ def _echapper_latex(s):
     return sortie.replace("~", "\\textasciitilde{}").replace("^", "\\textasciicircum{}")
 
 
-def ligne_attribution(figure, licence=None):
+def ligne_attribution(figure, licence=None, langue_affichage=None):
     """Ligne de crédit prête à coller, dans les trois formes utiles.
 
     Une licence Creative Commons demande le titre, l'auteur, la source et la
     licence, plus la mention des modifications quand la figure a ete recadree
     ou redessinee. Les elements absents ne sont pas inventes : ils sont listes
     dans "manques" et le gabarit porte alors une marque visible.
+
+    La ligne suit la langue d'affichage, parce qu'elle se colle dans le
+    document : un document anglais ne porte pas un credit francais. La liste
+    "manques", elle, reste en valeurs machine francaises.
     """
-    fiche = licence or normaliser_licence(figure.get("licence"))
-    libelle = figure.get("libelle") or figure.get("id") or "Figure"
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    fiche = licence or normaliser_licence(figure.get("licence"),
+                                          langue_affichage=la)
+    libelle = (figure.get("libelle") or figure.get("id")
+               or lib.t("droits.attr.figure_defaut", la))
     titre = figure.get("titre")
     auteur = figure.get("auteur")
     source = figure.get("source")
@@ -462,18 +528,26 @@ def ligne_attribution(figure, licence=None):
     manques = [nom for nom, val in (("titre", titre), ("auteur", auteur),
                                     ("source", source),
                                     ("licence", nom_licence)) if not val]
-    marque = "[À COMPLÉTER : %s]"
-    titre_a = titre or marque % "titre"
-    auteur_a = auteur or marque % "auteur"
-    source_a = source or marque % "source"
-    licence_a = nom_licence or marque % "licence"
-    modifs = figure.get("modifications")
-    phrase_modif = ("Figure modifiée (%s)." % modifs if modifs
-                    else "Figure reproduite sans modification.")
+    if nom_licence and fiche.get("reconnue"):
+        nom_licence = _nom_licence(fiche, lib, la)
 
-    source_txt = "%s (%s)" % (source_a, lien) if lien else source_a
-    texte = ('%s : "%s", %s, %s, sous licence %s. %s'
-             % (libelle, titre_a, auteur_a, source_txt, licence_a, phrase_modif))
+    def marque(element):
+        return lib.t("droits.attr.marque", la,
+                     element=lib.valeur("droits.element", element, la))
+
+    titre_a = titre or marque("titre")
+    auteur_a = auteur or marque("auteur")
+    source_a = source or marque("source")
+    licence_a = nom_licence or marque("licence")
+    modifs = figure.get("modifications")
+    phrase_modif = (lib.t("droits.attr.modifiee", la, modifications=modifs)
+                    if modifs else lib.t("droits.attr.sans_modification", la))
+
+    source_txt = (lib.t("droits.attr.source_lien", la, source=source_a,
+                        lien=lien) if lien else source_a)
+    texte = lib.t("droits.attr.texte", la, libelle=libelle, titre=titre_a,
+                  auteur=auteur_a, source=source_txt, licence=licence_a,
+                  modification=phrase_modif)
 
     lien_h = ('<a href="%s">%s</a>' % (_echapper_html(lien),
                                        _echapper_html(source_a))
@@ -481,17 +555,19 @@ def ligne_attribution(figure, licence=None):
     licence_h = ('<a href="%s">%s</a>' % (_echapper_html(fiche["url"]),
                                           _echapper_html(licence_a))
                  if fiche.get("url") else _echapper_html(licence_a))
-    html = ('<p class="credit-figure">%s : &quot;%s&quot;, %s, %s, sous licence '
-            '%s. %s</p>'
-            % (_echapper_html(libelle), _echapper_html(titre_a),
-               _echapper_html(auteur_a), lien_h, licence_h,
-               _echapper_html(phrase_modif)))
+    html = lib.t("droits.attr.html", la, libelle=_echapper_html(libelle),
+                 titre=_echapper_html(titre_a),
+                 auteur=_echapper_html(auteur_a), source=lien_h,
+                 licence=licence_h,
+                 modification=_echapper_html(phrase_modif))
 
     lien_l = ("\\href{%s}{%s}" % (lien, _echapper_latex(source_a)) if lien
               else _echapper_latex(source_a))
-    corps_l = ("%s. %s, %s, sous licence %s. %s"
-               % (_echapper_latex(titre_a), _echapper_latex(auteur_a), lien_l,
-                  _echapper_latex(licence_a), _echapper_latex(phrase_modif)))
+    corps_l = lib.t("droits.attr.latex_corps", la,
+                    titre=_echapper_latex(titre_a),
+                    auteur=_echapper_latex(auteur_a), source=lien_l,
+                    licence=_echapper_latex(licence_a),
+                    modification=_echapper_latex(phrase_modif))
     latex = "\\caption[%s]{%s}" % (_echapper_latex(titre_a), corps_l)
     return {"texte": texte, "html": html, "latex": latex,
             "latex_credit": "%s : %s" % (_echapper_latex(libelle), corps_l),
@@ -510,7 +586,7 @@ def charger_registre(chemin):
     return registre
 
 
-def valider_registre(registre):
+def valider_registre(registre, langue_affichage=None):
     """Valide le registre. Retourne (erreurs, avertissements).
 
     Une erreur rend le registre inexploitable pour produire la section de
@@ -519,96 +595,99 @@ def valider_registre(registre):
     modification declaree sous une licence qui interdit toute adaptation,
     autorisation refusee sur une figure conservee.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     erreurs, avertissements = [], []
     if not isinstance(registre, dict):
-        return ["Le registre n'est pas un objet JSON."], []
+        return [lib.t("droits.v.pas_un_objet", la)], []
     figures = registre.get("figures")
     if not isinstance(figures, list) or not figures:
-        return ["Clé \"figures\" absente, vide ou mal formée."], []
+        return [lib.t("droits.v.figures_absentes", la)], []
     vus = set()
     for i, fig in enumerate(figures, 1):
         if not isinstance(fig, dict):
-            erreurs.append("Entrée %d : ce n'est pas un objet." % i)
+            erreurs.append(lib.t("droits.v.entree_pas_objet", la, rang=i))
             continue
         ident = fig.get("id")
-        rang = ident or "entrée %d" % i
+        rang = ident or lib.t("droits.v.rang", la, rang=i)
         if not ident:
-            erreurs.append("Entrée %d : clé \"id\" absente." % i)
+            erreurs.append(lib.t("droits.v.id_absent", la, rang=i))
         elif ident in vus:
-            erreurs.append("Figure %s : identifiant dupliqué." % ident)
+            erreurs.append(lib.t("droits.v.id_duplique", la, rang=ident))
         else:
             vus.add(ident)
         if not fig.get("source"):
-            erreurs.append("Figure %s : clé \"source\" absente, la ligne de "
-                           "crédit ne peut pas être écrite." % rang)
+            erreurs.append(lib.t("droits.v.source_absente", la, rang=rang))
         if not fig.get("titre"):
-            avertissements.append("Figure %s : titre absent, la ligne de "
-                                  "crédit restera incomplète." % rang)
+            avertissements.append(lib.t("droits.v.titre_absent", la,
+                                        rang=rang))
         if not fig.get("auteur"):
-            avertissements.append("Figure %s : auteur absent, la ligne de "
-                                  "crédit restera incomplète." % rang)
+            avertissements.append(lib.t("droits.v.auteur_absent", la,
+                                        rang=rang))
         if not fig.get("doi") and not fig.get("url"):
-            avertissements.append("Figure %s : ni DOI ni URL, la source n'est "
-                                  "pas résoluble par un lecteur." % rang)
-        _valider_verdict(fig, rang, erreurs, avertissements)
+            avertissements.append(lib.t("droits.v.sans_lien", la, rang=rang))
+        _valider_verdict(fig, rang, erreurs, avertissements, lib, la)
     return erreurs, avertissements
 
 
-def _valider_verdict(fig, rang, erreurs, avertissements):
+def _valider_verdict(fig, rang, erreurs, avertissements, lib, la):
     """Controle le verdict declare, la licence declaree et l'etat de la
     demande d'autorisation d'une entree du registre."""
-    fiche = normaliser_licence(fig.get("licence"))
+    fiche = normaliser_licence(fig.get("licence"), langue_affichage=la)
     declare = fig.get("verdict")
     if declare is not None and declare not in VERDICTS:
-        erreurs.append("Figure %s : verdict \"%s\" hors de la liste fermée "
-                       "(%s)." % (rang, declare, ", ".join(VERDICTS)))
+        erreurs.append(lib.t(
+            "droits.v.verdict_hors_liste", la, rang=rang, verdict=declare,
+            liste=", ".join(lib.valeur("droits.verdict", v, la)
+                            for v in VERDICTS)))
         declare = None
     calcule = classer([fiche])
     if declare and fiche["reconnue"] and declare != calcule:
-        erreurs.append("Figure %s : verdict déclaré \"%s\" incompatible avec "
-                       "la licence déclarée %s, qui donne \"%s\"."
-                       % (rang, declare, fiche["nom"], calcule))
+        erreurs.append(lib.t(
+            "droits.v.verdict_incompatible", la, rang=rang,
+            declare=lib.valeur("droits.verdict", declare, la),
+            licence=_nom_licence(fiche, lib, la),
+            calcule=lib.valeur("droits.verdict", calcule, la)))
     effectif = declare or calcule
     if fig.get("licence") and not fiche["reconnue"]:
-        avertissements.append("Figure %s : licence \"%s\" non reconnue par la "
-                              "table locale, conditions à lire à la source."
-                              % (rang, fig.get("licence")))
+        avertissements.append(lib.t("droits.v.licence_non_reconnue", la,
+                                    rang=rang, licence=fig.get("licence")))
     if fiche["reconnue"] and fiche["adaptation"] is False and fig.get("modifications"):
-        erreurs.append("Figure %s : modification déclarée (%s) sous une licence "
-                       "%s, qui interdit toute adaptation, donc tout recadrage."
-                       % (rang, fig.get("modifications"), fiche["nom"]))
+        erreurs.append(lib.t(
+            "droits.v.modification_interdite", la, rang=rang,
+            modifications=fig.get("modifications"),
+            licence=_nom_licence(fiche, lib, la)))
 
     autorisation = fig.get("autorisation")
     etat = None
     if autorisation is not None:
         if not isinstance(autorisation, dict):
-            erreurs.append("Figure %s : clé \"autorisation\" mal formée." % rang)
+            erreurs.append(lib.t("droits.v.autorisation_mal_formee", la,
+                                 rang=rang))
         else:
             etat = autorisation.get("etat")
             if etat is not None and etat not in ETATS_AUTORISATION:
-                erreurs.append("Figure %s : état d'autorisation \"%s\" hors de "
-                               "la liste fermée (%s)."
-                               % (rang, etat, ", ".join(ETATS_AUTORISATION)))
+                erreurs.append(lib.t(
+                    "droits.v.etat_hors_liste", la, rang=rang, etat=etat,
+                    liste=", ".join(lib.valeur("droits.autorisation", e, la)
+                                    for e in ETATS_AUTORISATION)))
                 etat = None
     if etat == "refusee":
-        erreurs.append("Figure %s : autorisation refusée, la figure ne peut "
-                       "pas être reproduite. La retirer ou la redessiner "
-                       "depuis les données." % rang)
+        erreurs.append(lib.t("droits.v.autorisation_refusee", la, rang=rang))
     elif effectif == "autorisation requise" and etat != "obtenue":
-        avertissements.append("Figure %s : autorisation requise, état \"%s\". "
-                              "Obtenir l'accord écrit de l'éditeur avant "
-                              "diffusion." % (rang, etat or "non renseigné"))
+        avertissements.append(lib.t(
+            "droits.v.autorisation_requise", la, rang=rang,
+            etat=(lib.valeur("droits.autorisation", etat, la) if etat
+                  else lib.t("droits.v.etat_non_renseigne", la))))
     elif effectif == "licence inconnue":
-        avertissements.append("Figure %s : licence inconnue. Une absence "
-                              "d'information n'est pas une permission : "
-                              "établir la licence ou redessiner depuis les "
-                              "données." % rang)
+        avertissements.append(lib.t("droits.v.licence_inconnue", la,
+                                    rang=rang))
     fig["_fiche"] = fiche
     fig["_verdict_effectif"] = effectif
     fig["_etat_autorisation"] = etat
 
 
-def section_credits(registre, sortie="texte"):
+def section_credits(registre, sortie="texte", langue_affichage=None):
     """Section de crédits des figures empruntées, prête à coller.
 
     Un document de quarante pages qui emprunte huit figures porte la liste de
@@ -616,55 +695,68 @@ def section_credits(registre, sortie="texte"):
     reproduction n'est pas acquise reste dans la liste, avec son état : la
     section sert aussi de tableau de bord avant diffusion.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     figures = (registre.get("figures") or []) if isinstance(registre, dict) else []
     lignes = []
     for fig in figures:
         if not isinstance(fig, dict):
             continue
-        fiche = fig.get("_fiche") or normaliser_licence(fig.get("licence"))
-        att = ligne_attribution(fig, fiche)
+        fiche = fig.get("_fiche") or normaliser_licence(fig.get("licence"),
+                                                        langue_affichage=la)
+        att = ligne_attribution(fig, fiche, la)
         lignes.append(att["html"] if sortie == "html"
                       else att["latex_credit"] if sortie == "latex"
                       else att["texte"])
     if sortie == "html":
-        return ("<section class=\"credits-figures\">\n<h2>Crédits des figures"
-                "</h2>\n%s\n</section>" % "\n".join(lignes))
+        return ("<section class=\"credits-figures\">\n<h2>%s"
+                "</h2>\n%s\n</section>"
+                % (lib.t("droits.credits.titre_html", la), "\n".join(lignes)))
     if sortie == "latex":
-        return ("\\section*{Crédits des figures}\n\\begin{itemize}\n%s\n"
-                "\\end{itemize}" % "\n".join("\\item %s" % l for l in lignes))
-    return "## Crédits des figures\n\n%s" % "\n\n".join(lignes)
+        return ("\\section*{%s}\n\\begin{itemize}\n%s\n\\end{itemize}"
+                % (lib.t("droits.credits.titre_latex", la),
+                   "\n".join("\\item %s" % l for l in lignes)))
+    return "%s\n\n%s" % (lib.t("droits.credits.titre_md", la),
+                         "\n\n".join(lignes))
 
 
 def analyser(source, reseau=False, timeout=INDEX_TIMEOUT,
-             api_key_openalex=None):
+             api_key_openalex=None, langue_affichage=None):
     """Valide un registre de figures empruntées et rend le rapport complet.
 
     Avec --reseau, une figure qui porte un DOI sans licence déclarée voit sa
     licence résolue auprès des index, puis validée comme les autres. Sans
     réseau, rien n'est supposé : la licence absente reste inconnue.
+
+    Sans langue_affichage, chaque chaine lisible du rapport est la chaine
+    francaise d'origine a l'octet pres : ce sont elles que serialise
+    --format json.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     registre = charger_registre(source) if isinstance(source, str) else source
     rapport = {"fichier": registre.get("_chemin") if isinstance(registre, dict) else None,
                "reseau": bool(reseau), "figures": [], "erreurs": [],
                "avertissements": [], "verdict": "registre invalide",
-               "limite": LIMITE}
+               "limite": lib.t("droits.limite", la)}
     figures = (registre.get("figures") or []) if isinstance(registre, dict) else []
     if reseau:
         for fig in figures:
             if isinstance(fig, dict) and fig.get("doi") and not fig.get("licence"):
-                res = resoudre_doi(fig["doi"], True, timeout, api_key_openalex)
+                res = resoudre_doi(fig["doi"], True, timeout,
+                                   api_key_openalex, langue_affichage=la)
                 fig["_resolution"] = {"verdict": res["verdict"],
                                       "detail": res["detail"]}
                 retenue = res.get("licence_retenue")
                 if retenue:
                     fig["licence"] = retenue["brut"]
-    erreurs, avertissements = valider_registre(registre)
+    erreurs, avertissements = valider_registre(registre, la)
     rapport["erreurs"] = erreurs
     rapport["avertissements"] = avertissements
-    return _fermer_rapport(rapport, figures, erreurs)
+    return _fermer_rapport(rapport, figures, erreurs, lib, la)
 
 
-def _fermer_rapport(rapport, figures, erreurs):
+def _fermer_rapport(rapport, figures, erreurs, lib, la):
     """Assemble la fiche de chaque figure et ferme le verdict du registre sur
     quatre valeurs. Une erreur de validation prime : un registre qu'on ne
     peut pas lire ne rend pas un verdict de droits."""
@@ -672,7 +764,8 @@ def _fermer_rapport(rapport, figures, erreurs):
     for fig in figures:
         if not isinstance(fig, dict):
             continue
-        fiche = fig.get("_fiche") or normaliser_licence(fig.get("licence"))
+        fiche = fig.get("_fiche") or normaliser_licence(fig.get("licence"),
+                                                        langue_affichage=la)
         verdict = fig.get("_verdict_effectif") or classer([fiche])
         etat = fig.get("_etat_autorisation")
         if verdict == "autorisation requise" and etat != "obtenue":
@@ -682,14 +775,18 @@ def _fermer_rapport(rapport, figures, erreurs):
         rapport["figures"].append({
             "id": fig.get("id"), "libelle": fig.get("libelle"),
             "source": fig.get("source"), "doi": fig.get("doi"),
-            "licence": fiche.get("nom") or fig.get("licence"),
+            # En francais, _nom_licence rend exactement fiche["nom"] : la
+            # sortie JSON ne bouge pas, seul l'affichage anglais change.
+            "licence": (_nom_licence(fiche, lib, la) if fiche.get("nom")
+                        else fig.get("licence")),
             "licence_reconnue": fiche.get("reconnue"),
             "verdict": verdict, "conditions": fiche.get("conditions") or [],
             "autorisation": etat,
             "modifications": fig.get("modifications"),
             "resolution": fig.get("_resolution"),
-            "attribution": ligne_attribution(fig, fiche),
-            "alternative": alternative_redessin(verdict, fig.get("auteur")),
+            "attribution": ligne_attribution(fig, fiche, la),
+            "alternative": alternative_redessin(verdict, fig.get("auteur"),
+                                                langue_affichage=la),
         })
     if erreurs:
         rapport["verdict"] = "registre invalide"
@@ -702,77 +799,114 @@ def _fermer_rapport(rapport, figures, erreurs):
     return rapport
 
 
-def rapport_licence_texte(res):
-    """Rendu texte de la resolution de licence d'un DOI."""
-    out = ["Droits de réutilisation : %s" % res["doi"]]
-    out.append("  Verdict : %s" % res["verdict"].upper())
-    out.append("  Motif : %s" % res["detail"])
+def rapport_licence_texte(res, langue_affichage=None):
+    """Rendu texte de la resolution de licence d'un DOI. Le motif, les
+    conditions et l'alternative ont ete composes dans la langue d'affichage
+    par resoudre_doi() : ils sont repris tels quels."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    out = [lib.t("droits.lic.titre", la, doi=res["doi"])]
+    out.append("  " + lib.t("droits.lic.verdict", la, verdict=lib.valeur(
+        "droits.verdict", res["verdict"], la).upper()))
+    out.append("  " + lib.t("droits.lic.motif", la, motif=res["detail"]))
     if res.get("titre"):
-        out.append("  Titre : %s" % res["titre"])
+        out.append("  " + lib.t("droits.lic.titre_source", la,
+                                titre=res["titre"]))
     if res.get("acces_ouvert"):
         ao = res["acces_ouvert"]
-        out.append("  Accès ouvert : %s (statut %s)"
-                   % (ao.get("est_ouvert"), ao.get("statut")))
+        out.append("  " + lib.t("droits.lic.acces_ouvert", la,
+                                ouvert=ao.get("est_ouvert"),
+                                statut=ao.get("statut")))
     if res.get("index"):
         for nom, r in sorted(res["index"].items()):
-            out.append("  Index %s : consulté=%s trouvé=%s licences=%d"
-                       % (nom, r["consulte"], r["trouve"], r["licences"]))
+            out.append("  " + lib.t("droits.lic.index", la, nom=nom,
+                                    consulte=r["consulte"], trouve=r["trouve"],
+                                    licences=r["licences"]))
     if res.get("licences"):
-        out.append("Licences déclarées :")
+        out.append(lib.t("droits.lic.licences", la))
         for f in res["licences"]:
-            out.append("  [%s] %s (%s)"
-                       % ("reconnue" if f["reconnue"] else "non reconnue",
-                          f.get("nom") or f.get("brut"), f.get("origine")))
+            out.append("  " + lib.t(
+                "droits.lic.licence_ligne", la,
+                etat=lib.t("droits.lic.reconnue" if f["reconnue"]
+                           else "droits.lic.non_reconnue", la),
+                nom=_nom_licence(f, lib, la) or f.get("brut"),
+                origine=f.get("origine")))
     if res.get("conditions"):
-        out.append("Conditions :")
+        out.append(lib.t("droits.lic.conditions", la))
         out += ["  - %s" % c for c in res["conditions"]]
     if res.get("alternative"):
         alt = res["alternative"]
-        out.append("Alternative sans emprunt : %s" % alt["voie"])
-        out.append("  Mention : %s" % alt["mention"])
-        out.append("  Types de figures de données : %s"
-                   % ", ".join(alt["types_figures"]))
+        out.append(lib.t("droits.lic.alternative", la, voie=alt["voie"]))
+        out.append("  " + lib.t("droits.lic.mention", la,
+                                mention=alt["mention"]))
+        out.append("  " + lib.t("droits.lic.types_figures", la,
+                                types=", ".join(alt["types_figures"])))
         out.append("  %s" % alt["commande"])
-    out.append("Limite : %s" % res.get("limite", LIMITE))
+    out.append(lib.t("droits.lic.limite", la,
+                     limite=res.get("limite") or lib.t("droits.limite", la)))
     return "\n".join(out)
 
 
-def rapport_texte(rapport):
-    """Rendu texte du rapport de registre. Voir analyser() pour la structure."""
-    out = ["Registre des figures empruntées : %s"
-           % (rapport.get("fichier") or "(en mémoire)")]
-    out.append("  Verdict : %s" % rapport["verdict"].upper())
-    out.append("  Figures : %d" % len(rapport["figures"]))
+def rapport_texte(rapport, langue_affichage=None):
+    """Rendu texte du rapport de registre. Voir analyser() pour la structure.
+    Erreurs, avertissements, conditions et credits ont ete composes dans la
+    langue d'affichage par analyser() : ils sont repris tels quels."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    out = [lib.t("droits.reg.titre", la,
+                 fichier=(rapport.get("fichier")
+                          or lib.t("droits.reg.en_memoire", la)))]
+    out.append("  " + lib.t("droits.reg.verdict", la, verdict=lib.valeur(
+        "droits.verdict_registre", rapport["verdict"], la).upper()))
+    out.append("  " + lib.t("droits.reg.figures", la,
+                            n=len(rapport["figures"])))
     for f in rapport["figures"]:
         out.append("")
-        out.append("  [%s] %s" % (f["verdict"].upper(), f.get("id") or "?"))
-        out.append("    Source : %s" % (f.get("source") or "absente"))
+        out.append("  " + lib.t(
+            "droits.reg.figure", la,
+            verdict=lib.valeur("droits.verdict", f["verdict"], la).upper(),
+            id=f.get("id") or "?"))
+        out.append("    " + lib.t(
+            "droits.reg.source", la,
+            source=(f.get("source")
+                    or lib.t("droits.reg.source_absente", la))))
         if f.get("licence"):
-            out.append("    Licence : %s (%s)"
-                       % (f["licence"],
-                          "reconnue" if f.get("licence_reconnue") else "non reconnue"))
+            out.append("    " + lib.t(
+                "droits.reg.licence", la, licence=f["licence"],
+                etat=lib.t("droits.lic.reconnue" if f.get("licence_reconnue")
+                           else "droits.lic.non_reconnue", la)))
         if f.get("autorisation"):
-            out.append("    Autorisation : %s" % f["autorisation"])
+            out.append("    " + lib.t("droits.reg.autorisation", la,
+                                      etat=lib.valeur("droits.autorisation",
+                                                      f["autorisation"], la)))
         if f.get("resolution"):
-            out.append("    Résolution réseau : %s" % f["resolution"]["detail"])
+            out.append("    " + lib.t("droits.reg.resolution", la,
+                                      detail=f["resolution"]["detail"]))
         for c in f.get("conditions") or []:
-            out.append("    Condition : %s" % c)
-        out.append("    Crédit : %s" % f["attribution"]["texte"])
+            out.append("    " + lib.t("droits.reg.condition", la, condition=c))
+        out.append("    " + lib.t("droits.reg.credit", la,
+                                  credit=f["attribution"]["texte"]))
         if f["attribution"]["manques"]:
-            out.append("    Éléments manquants : %s"
-                       % ", ".join(f["attribution"]["manques"]))
+            out.append("    " + lib.t(
+                "droits.reg.manques", la,
+                elements=", ".join(lib.valeur("droits.element", m, la)
+                                   for m in f["attribution"]["manques"])))
         if f.get("alternative"):
-            out.append("    Alternative : %s, mention \"%s\", figures %s"
-                       % (f["alternative"]["voie"], f["alternative"]["mention"],
-                          ", ".join(f["alternative"]["types_figures"])))
+            out.append("    " + lib.t(
+                "droits.reg.alternative", la, voie=f["alternative"]["voie"],
+                mention=f["alternative"]["mention"],
+                types=", ".join(f["alternative"]["types_figures"])))
     out.append("")
-    out.append("Erreurs :" if rapport["erreurs"] else "Erreurs : aucune")
+    out.append(lib.t("droits.reg.erreurs" if rapport["erreurs"]
+                     else "droits.reg.erreurs_aucune", la))
     out += ["  - %s" % e for e in rapport["erreurs"]]
-    out.append("Avertissements :" if rapport["avertissements"]
-               else "Avertissements : aucun")
+    out.append(lib.t("droits.reg.avertissements" if rapport["avertissements"]
+                     else "droits.reg.avertissements_aucun", la))
     out += ["  - %s" % a for a in rapport["avertissements"]]
     out.append("")
-    out.append("Limite : %s" % rapport.get("limite", LIMITE))
+    out.append(lib.t("droits.lic.limite", la,
+                     limite=rapport.get("limite")
+                     or lib.t("droits.limite", la)))
     return "\n".join(out)
 
 
@@ -827,18 +961,31 @@ def main(argv=None):
     pc = sp.add_parser("credits", help="émettre la section de crédits du document")
     pc.add_argument("fichier")
     pc.add_argument("--sortie", choices=["texte", "html", "latex"], default="texte")
+
+    for sous in (pl, pr, pc):
+        sous.add_argument("--langue-affichage", choices=["fr", "en"],
+                          default=None,
+                          help="langue des libellés du rapport et de la ligne "
+                               "de crédit (défaut fr : un registre JSON ne "
+                               "porte pas de pragme de langue). La sortie "
+                               "JSON reste française quoi qu'il arrive")
     return _executer(p.parse_args(argv))
 
 
 def _executer(a):
     """Execute l'action demandee et rend le code de sortie."""
+    lib = _lib()
+    la = lib.resoudre_affichage(getattr(a, "langue_affichage", None))
     cle = getattr(a, "openalex_cle", None) or os.environ.get("OPENALEX_API_KEY")
     if a.action == "licence":
-        res = resoudre_doi(a.doi, a.reseau, api_key_openalex=cle)
         if a.format == "json":
+            # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+            res = resoudre_doi(a.doi, a.reseau, api_key_openalex=cle)
             print(json.dumps(_sans_prive(res), ensure_ascii=False, indent=2))
         else:
-            print(rapport_licence_texte(res))
+            res = resoudre_doi(a.doi, a.reseau, api_key_openalex=cle,
+                               langue_affichage=la)
+            print(rapport_licence_texte(res, la))
         if a.strict and res["verdict"] in ("autorisation requise",
                                            "licence inconnue"):
             return 1
@@ -846,17 +993,20 @@ def _executer(a):
     try:
         registre = charger_registre(a.fichier)
     except (OSError, ValueError) as e:
-        print("Erreur de lecture du registre : %s" % e, file=sys.stderr)
+        print(lib.t("droits.err_registre", la, erreur=e), file=sys.stderr)
         return 2
     if a.action == "credits":
-        valider_registre(registre)
-        print(section_credits(registre, a.sortie))
+        valider_registre(registre, la)
+        print(section_credits(registre, a.sortie, la))
         return 0
-    rapport = analyser(registre, a.reseau, api_key_openalex=cle)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        rapport = analyser(registre, a.reseau, api_key_openalex=cle)
         print(json.dumps(_sans_prive(rapport), ensure_ascii=False, indent=2))
     else:
-        print(rapport_texte(rapport))
+        rapport = analyser(registre, a.reseau, api_key_openalex=cle,
+                           langue_affichage=la)
+        print(rapport_texte(rapport, la))
     if a.strict and rapport["verdict"] != "credits complets":
         return 1
     return 0

@@ -51,6 +51,25 @@ PASSIF_RE = re.compile(
 
 LANGUES = ("fr", "en")
 
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py a la demande, une seule fois. Meme raison que pour
+    lint-style.py : le module se lit par chemin, aucun sys.path n'est
+    garanti."""
+    global _LIB
+    if _LIB is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
 _LINT = None
 
 
@@ -167,51 +186,62 @@ def mesurer(texte, langue=None):
     }
 
 
-def interpreter(m):
+def interpreter(m, langue_affichage=None):
+    """Lecture des metriques, en prose. Sans langue_affichage, les notes sont
+    celles d'origine a l'octet pres : ce sont elles que porte la cle lecture
+    de la sortie JSON, qui ne se traduit pas."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     notes = []
     if m["longueur_phrase_ecart_type"] < 5 and m["phrases"] >= 5:
-        notes.append("Écart-type faible : rythme monotone, varier la longueur des phrases.")
+        notes.append(lib.t("readability.n.rythme_monotone", la))
     if m["longueur_phrase_moyenne"] > 28:
-        notes.append("Phrases longues en moyenne : fatigue l'attention, intercaler des phrases courtes.")
+        notes.append(lib.t("readability.n.phrases_longues", la))
     if m["phrases_courtes_inf8_pct"] < 8 and m["phrases"] >= 6:
-        notes.append("Peu de phrases courtes : réserver des phrases brèves aux messages clés.")
+        notes.append(lib.t("readability.n.peu_de_courtes", la))
     if m["indice_lix"] > 56:
-        notes.append("LIX élevé (texte difficile), acceptable pour un lectorat expert, lourd sinon.")
+        notes.append(lib.t("readability.n.lix_eleve", la))
     if m["indice_lix"] < 34 and m["mots"] > 120:
-        notes.append("LIX bas (texte très simple), vérifier que la précision n'est pas sacrifiée.")
+        notes.append(lib.t("readability.n.lix_bas", la))
     if m["densite_lexicale"] < 0.35 and m["mots"] > 200:
-        notes.append("Densité lexicale faible : répétitions probables, varier le vocabulaire.")
+        notes.append(lib.t("readability.n.densite_faible", la))
     if m["taux_passif_approx_pct"] is None:
         # Une mesure absente se dit, elle ne se tait pas : sans cette ligne, un
         # texte dont le passif n'a pas ete mesure se lirait comme un texte dont
         # le passif a ete mesure et juge acceptable.
         for nf in m.get("mesures_non_faites", []):
-            notes.append("Mesure non faite (%s) : %s." % (nf["mesure"], nf["motif"]))
+            notes.append(lib.t("readability.n.mesure_non_faite", la,
+                               mesure=nf["mesure"],
+                               motif=lib.motif(nf["motif"], la)))
     elif m["taux_passif_approx_pct"] > 25:
-        notes.append("Taux de passif élevé : préférer des verbes d'action quand c'est possible.")
+        notes.append(lib.t("readability.n.passif_eleve", la))
     if not notes:
-        notes.append("Rythme et lisibilité dans les bornes attendues.")
+        notes.append(lib.t("readability.n.dans_les_bornes", la))
     return notes
 
 
-def rapport_texte(m):
-    out = ["Métriques de lisibilité", f"  langue mesurée : {m.get('langue')}"]
-    cle_lib = {
-        "mots": "Mots", "phrases": "Phrases", "paragraphes": "Paragraphes",
-        "longueur_phrase_moyenne": "Longueur phrase (moy.)",
-        "longueur_phrase_ecart_type": "Longueur phrase (écart-type)",
-        "phrases_longues_sup30_pct": "Phrases > 30 mots (%)",
-        "phrases_courtes_inf8_pct": "Phrases < 8 mots (%)",
-        "phrases_par_paragraphe_moyenne": "Phrases / paragraphe (moy.)",
-        "densite_lexicale": "Densité lexicale (TTR)",
-        "taux_passif_approx_pct": "Passif approx. (%)",
-        "indice_lix": "Indice LIX",
-    }
-    for k, lib in cle_lib.items():
-        valeur = "non mesuré" if m[k] is None else m[k]
-        out.append(f"  {lib:32} {valeur}")
-    out.append("\nLecture :")
-    out += [f"  - {n}" for n in interpreter(m)]
+# Ordre d'impression des metriques. Les CLES sont celles de la sortie JSON,
+# elles ne changent pas de langue ; seul leur libelle en change.
+METRIQUES_AFFICHEES = (
+    "mots", "phrases", "paragraphes", "longueur_phrase_moyenne",
+    "longueur_phrase_ecart_type", "phrases_longues_sup30_pct",
+    "phrases_courtes_inf8_pct", "phrases_par_paragraphe_moyenne",
+    "densite_lexicale", "taux_passif_approx_pct", "indice_lix",
+)
+
+
+def rapport_texte(m, langue_affichage=None):
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    out = [lib.t("readability.titre", la),
+           "  " + lib.t("readability.langue_mesuree", la,
+                        langue=m.get("langue"))]
+    for k in METRIQUES_AFFICHEES:
+        valeur = (lib.t("readability.non_mesure", la) if m[k] is None
+                  else m[k])
+        out.append("  %-32s %s" % (lib.t("readability.m." + k, la), valeur))
+    out.append("\n" + lib.t("readability.lecture", la))
+    out += [f"  - {n}" for n in interpreter(m, la)]
     return "\n".join(out)
 
 
@@ -223,18 +253,28 @@ def main(argv=None):
                    help="langue de mesure. Sans l'option : le pragme "
                         "lint-style:langue du document, sinon fr. "
                         "auto lance la détection heuristique")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des libellés du rapport texte. Sans "
+                        "l'option : la langue de mesure retenue. La sortie "
+                        "JSON reste française quoi qu'il arrive")
     a = p.parse_args(argv)
+    lib = _lib()
     try:
         texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     except OSError as e:
-        print(f"Erreur de lecture : {e}", file=sys.stderr)
+        print(lib.t("readability.erreur_lecture",
+                    lib.resoudre_affichage(a.langue_affichage), erreur=e),
+              file=sys.stderr)
         return 2
     m = mesurer(texte, a.langue)
     if a.format == "json":
+        # La cle lecture reste francaise : elle est lue par des outils, pas
+        # seulement par un humain.
         print(json.dumps({"metriques": m, "lecture": interpreter(m)},
                          ensure_ascii=False, indent=2))
     else:
-        print(rapport_texte(m))
+        print(rapport_texte(
+            m, lib.resoudre_affichage(a.langue_affichage, m.get("langue"))))
     return 0
 
 

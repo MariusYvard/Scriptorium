@@ -19,19 +19,48 @@ machine, que la police demandée par la charte est bien installée, et retombe
 sur une famille Latin Modern sinon (backend optionnel, dégradation propre :
 sans fc-list, le nom demandé est simplement repris tel quel, comme avant).
 
+Le CSS et le préambule LaTeX sont des LIVRABLES : ils partent dans le
+document et ne dépendent d'aucune langue d'affichage. Seuls les messages de
+validation (erreurs, avertissements) et le rapport texte suivent
+--langue-affichage. Sans l'option, ils restent en français : une charte est
+un fichier de configuration, elle ne porte pas de langue.
+
 Usage :
     python3 theme.py charte.json [--format text|json|css|latex]
+                                 [--langue-affichage fr|en]
 
-Module importable : charger(source) -> dict ; valider(theme) -> (erreurs, avertissements) ;
+Module importable : charger(source) -> dict ;
+valider(theme, langue_affichage=None) -> (erreurs, avertissements) ;
 contraste(hex_a, hex_b) -> float ; distance_dichromate(hex_a, hex_b) -> float ;
-css(theme) -> str ; latex(theme) -> str.
+css(theme) -> str ; latex(theme) -> str. Sans langue_affichage, erreurs et
+avertissements sont les chaines francaises d'origine a l'octet pres : ce sont
+elles que serialise --format json.
 """
 import argparse
+import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
@@ -147,27 +176,35 @@ def distance_dichromate(a, b):
     return ((ma - mb) ** 2 + (ba - bb) ** 2) ** 0.5
 
 
-def valider(t):
+def valider(t, langue_affichage=None):
     """Retourne (erreurs, avertissements). Une erreur invalide la charte,
-    un avertissement signale un risque de lisibilité."""
+    un avertissement signale un risque de lisibilité.
+
+    Sans langue_affichage, les deux listes sont les chaines francaises
+    d'origine à l'octet près : ce sont elles que sérialise --format json."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     err, warn = [], []
     if t.get("_palette_nom_inconnu"):
         noms = ", ".join(sorted(PALETTES))
-        warn.append(f"Palette nommée '{t['_palette_nom_inconnu']}' inconnue (attendu : {noms}) ; repli sur la palette par défaut.")
+        warn.append(lib.t("theme.v.palette_inconnue", la,
+                          nom=t["_palette_nom_inconnu"], noms=noms))
     for k in ("encre", "trait", "fond", "accent"):
         if not _hex_ok(t[k]):
-            err.append(f"Couleur '{k}' invalide : {t[k]} (attendu #RRGGBB).")
+            err.append(lib.t("theme.v.couleur_invalide", la, cle=k,
+                             valeur=t[k]))
     for i, c in enumerate(t["palette"]):
         if not _hex_ok(c):
-            err.append(f"palette[{i}] invalide : {c} (attendu #RRGGBB).")
+            err.append(lib.t("theme.v.palette_invalide", la, i=i, valeur=c))
     if _hex_ok(t["encre"]) and _hex_ok(t["fond"]):
         r = contraste(t["encre"], t["fond"])
         if r < 4.5:
-            warn.append(f"Contraste encre sur fond {r:.1f}:1 (< 4.5), texte peu lisible.")
+            warn.append(lib.t("theme.v.contraste_fond", la, ratio=r))
     if _hex_ok(t["encre"]):
         for i, c in enumerate(t["palette"]):
             if _hex_ok(c) and contraste(t["encre"], c) < 4.5:
-                warn.append(f"Contraste encre sur palette[{i}] {contraste(t['encre'], c):.1f}:1 (< 4.5).")
+                warn.append(lib.t("theme.v.contraste_palette", la, i=i,
+                                  ratio=contraste(t["encre"], c)))
     if t.get("palette_source") == "manuelle":
         pal = t["palette"]
         for i in range(len(pal)):
@@ -175,11 +212,9 @@ def valider(t):
                 if _hex_ok(pal[i]) and _hex_ok(pal[j]):
                     d = distance_dichromate(pal[i], pal[j])
                     if d < SEUIL_DICHROMATE:
-                        warn.append(
-                            f"Vision dichromate (approximation) : palette[{i}] et palette[{j}] "
-                            f"proches (distance {d:.0f} < {SEUIL_DICHROMATE}) ; ajouter une forme, "
-                            f"un motif ou un libellé pour les distinguer sans la couleur seule."
-                        )
+                        warn.append(lib.t("theme.v.dichromate", la, i=i, j=j,
+                                          distance=d,
+                                          seuil=SEUIL_DICHROMATE))
     return err, warn
 
 
@@ -379,30 +414,42 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="Validation d'une charte graphique.")
     p.add_argument("fichier", help="chemin du JSON de charte")
     p.add_argument("--format", choices=["text", "json", "css", "latex"], default="text")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des messages de validation et du rapport "
+                        "texte (defaut fr : une charte est un fichier de "
+                        "configuration, elle ne porte pas de langue). Le CSS, "
+                        "le preambule LaTeX et la sortie JSON n'en dependent "
+                        "pas")
     a = p.parse_args(argv)
+    lib = _lib()
+    la = lib.resoudre_affichage(a.langue_affichage)
     try:
         t = charger(a.fichier)
     except (OSError, json.JSONDecodeError) as e:
-        print(f"Erreur de lecture : {e}", file=sys.stderr)
+        print(lib.t("theme.err_lecture", la, erreur=e), file=sys.stderr)
         return 2
-    err, warn = valider(t)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        err, warn = valider(t)
         print(json.dumps({"theme": t, "erreurs": err, "avertissements": warn},
                          ensure_ascii=False, indent=2))
-    elif a.format == "css":
+        return 1 if err else 0
+    err, warn = valider(t, la)
+    if a.format == "css":
         print(css(t))
     elif a.format == "latex":
         print(latex(t))
     else:
-        print("Charte graphique normalisee :")
+        print(lib.t("theme.titre", la))
         for k, v in t.items():
             if k.startswith("_"):
                 continue
             print(f"  {k}: {v}")
-        print("Erreurs :" if err else "Erreurs : aucune")
+        print(lib.t("theme.erreurs" if err else "theme.erreurs_aucune", la))
         for e in err:
             print(f"  - {e}")
-        print("Avertissements :" if warn else "Avertissements : aucun")
+        print(lib.t("theme.avertissements" if warn
+                    else "theme.avertissements_aucun", la))
         for w in warn:
             print(f"  - {w}")
     return 1 if err else 0

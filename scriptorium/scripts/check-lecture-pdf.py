@@ -23,8 +23,14 @@ lecture non fiable, non mesurable.
 
 Usage :
     python3 check-lecture-pdf.py FICHIER.pdf [--format text|json] [--strict]
+                                             [--langue-affichage fr|en]
 
-Module importable : analyser(chemin) -> dict ; rapport_texte(rapport) -> str.
+Module importable : analyser(chemin, langue_affichage=None) -> dict ;
+rapport_texte(rapport, langue_affichage=None) -> str. Sans langue_affichage,
+les constats sont les chaines francaises d'origine a l'octet pres : ce sont
+elles que serialise --format json. Le fichier analyse est un PDF, il ne porte
+pas de pragme de langue : l'affichage part donc du francais, et seule
+l'option le change.
 """
 import argparse
 import importlib.util
@@ -67,8 +73,24 @@ def _charger_check_presentation():
 # le fait deja pour check-presentation.py lui-meme (voir _evals_pdf.py).
 _CHKP = _charger_check_presentation()
 
+_LIB = None
 
-def verifier_integrite_binaire(chemin):
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
+def verifier_integrite_binaire(chemin, langue_affichage=None):
     """Lecture binaire directe, sans backend : en-tete %PDF-, marqueur
     %%EOF en fin de fichier, presence d'une table xref/startxref. Marche
     toujours, meme sans aucun backend PDF installe."""
@@ -78,7 +100,10 @@ def verifier_integrite_binaire(chemin):
         with open(chemin, "rb") as f:
             donnees = f.read()
     except OSError as e:
-        resultat["erreur"] = f"lecture binaire impossible : {e}"
+        lib = _lib()
+        resultat["erreur"] = lib.t(
+            "lecture.m.erreur_binaire",
+            lib.resoudre_affichage(langue_affichage), erreur=e)
         return resultat
     resultat["entete_pdf"] = donnees[:1024].lstrip().startswith(b"%PDF-")
     queue = donnees[-TAILLE_QUEUE_EOF:] if len(donnees) > TAILLE_QUEUE_EOF else donnees
@@ -108,12 +133,14 @@ def _texte_suspect(texte):
     return False
 
 
-def _compacter(liste, max_n=20):
+def _compacter(liste, max_n=20, langue_affichage=None):
     """Represente une liste d'entiers de facon lisible, tronquee si longue."""
     if len(liste) <= max_n:
         return ", ".join(str(i) for i in liste)
-    reste = len(liste) - max_n
-    return ", ".join(str(i) for i in liste[:max_n]) + f", ... (+{reste})"
+    lib = _lib()
+    return (", ".join(str(i) for i in liste[:max_n])
+            + lib.t("lecture.reste", lib.resoudre_affichage(langue_affichage),
+                    reste=len(liste) - max_n))
 
 
 def _calculer_verdict(pages_total, taux_couverture, defectueux, chkp_absent):
@@ -136,23 +163,31 @@ def _calculer_verdict(pages_total, taux_couverture, defectueux, chkp_absent):
     return "lecture partielle"
 
 
-def analyser(chemin):
+def analyser(chemin, langue_affichage=None):
     """Analyse complete d'un fichier PDF avant ancrage. Retourne un rapport
     dict : fichier, pages_total, pages_texte, taux_couverture,
     pages_sans_texte, pages_ancrables, pages_non_ancrables, verdict, binaire,
-    info, avertissements, problemes."""
+    info, avertissements, problemes.
+
+    Sans langue_affichage, les trois listes de constats portent les chaines
+    francaises d'origine a l'octet pres : ce sont elles que serialise le mode
+    --format json. Le verdict, lui, reste une valeur machine francaise dans
+    les deux cas."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     rapport = {"fichier": os.path.basename(chemin), "pages_total": None,
               "pages_texte": None, "taux_couverture": None,
               "pages_sans_texte": [], "pages_ancrables": [], "pages_non_ancrables": [],
               "verdict": None, "binaire": {}, "info": [], "avertissements": [], "problemes": []}
     if not os.path.isfile(chemin):
-        rapport["problemes"].append(f"Fichier introuvable : {chemin}")
+        rapport["problemes"].append(lib.t("lecture.m.fichier_introuvable", la,
+                                          chemin=chemin))
         rapport["verdict"] = "lecture non fiable"
         return rapport
     if not chemin.lower().endswith(".pdf"):
-        rapport["avertissements"].append("Extension non .pdf : ce preflight est concu pour un PDF.")
+        rapport["avertissements"].append(lib.t("lecture.m.extension", la))
 
-    binaire = verifier_integrite_binaire(chemin)
+    binaire = verifier_integrite_binaire(chemin, la)
     rapport["binaire"] = binaire
     defectueux = False
     if binaire.get("erreur"):
@@ -160,63 +195,59 @@ def analyser(chemin):
         defectueux = True
     else:
         if not binaire["entete_pdf"]:
-            rapport["problemes"].append(
-                "En-tete %PDF- absent en tete de fichier : non reconnaissable comme PDF.")
+            rapport["problemes"].append(lib.t("lecture.m.entete_absent", la))
             defectueux = True
         if not binaire["eof_present"]:
-            rapport["problemes"].append(
-                f"Marqueur %%EOF absent dans les {TAILLE_QUEUE_EOF} derniers octets : "
-                "fichier tronque ou mal ferme.")
+            rapport["problemes"].append(lib.t("lecture.m.eof_absent", la,
+                                              n=TAILLE_QUEUE_EOF))
             defectueux = True
         if not binaire["xref_present"]:
-            rapport["problemes"].append(
-                "Table xref/startxref introuvable : structure PDF illisible.")
+            rapport["problemes"].append(lib.t("lecture.m.xref_absent", la))
             defectueux = True
         if binaire["chiffre_signale"]:
-            rapport["avertissements"].append(
-                "Marqueur /Encrypt present : PDF chiffre ou protege. Extraction "
-                "potentiellement partielle ou vide. Aucun contournement tente ici.")
-    return _analyser_texte(chemin, rapport, defectueux)
+            rapport["avertissements"].append(lib.t("lecture.m.chiffre", la))
+    return _analyser_texte(chemin, rapport, defectueux, lib, la)
 
 
-def _analyser_texte(chemin, rapport, defectueux):
+def _analyser_texte(chemin, rapport, defectueux, lib, la):
     """Deuxieme moitie de analyser() : mesure de la couverture de texte via
     la cascade de check-presentation.py. Separee pour rester lisible."""
     chkp = _CHKP
     if chkp is None:
-        rapport["problemes"].append(
-            "check-presentation.py introuvable : cascade de backends PDF indisponible.")
+        rapport["problemes"].append(lib.t("lecture.m.chkp_absent", la))
         rapport["verdict"] = _calculer_verdict(None, None, defectueux, True)
         return rapport
 
     n_pages, _dims, backend_pages = chkp.compter_pages_et_taille(chemin)
     rapport["pages_total"] = n_pages
     if backend_pages:
-        rapport["info"].append(f"Pages : {n_pages} (source : {backend_pages}).")
+        rapport["info"].append(lib.t("lecture.m.pages_source", la, n=n_pages,
+                                     backend=backend_pages))
     else:
         rapport["avertissements"].append(
-            "Nombre de pages indetermine : aucun backend disponible pour le compter.")
+            lib.t("lecture.m.pages_indeterminees", la))
 
     textes, backend_texte = chkp.extraire_texte_pages(chemin)
     if textes is None:
         rapport["avertissements"].append(
-            "Texte non extrait : aucun backend disponible (pypdf ou pdftotext). "
-            "Couverture non mesurable, ancrage a refuser par prudence.")
+            lib.t("lecture.m.texte_non_extrait", la))
         rapport["verdict"] = _calculer_verdict(n_pages, None, defectueux, True)
         return rapport
 
-    rapport["info"].append(f"Texte extrait via {backend_texte} sur {len(textes)} page(s).")
+    rapport["info"].append(lib.t("lecture.m.texte_extrait", la,
+                                 backend=backend_texte, n=len(textes)))
     if n_pages is not None and n_pages != len(textes):
-        rapport["avertissements"].append(
-            f"Comptage de pages ({n_pages}, {backend_pages}) et extraction de texte "
-            f"({len(textes)}, {backend_texte}) divergent.")
+        rapport["avertissements"].append(lib.t(
+            "lecture.m.divergence", la, pages=n_pages,
+            backend_pages=backend_pages, textes=len(textes),
+            backend_texte=backend_texte))
     if rapport["pages_total"] is None:
         rapport["pages_total"] = len(textes)
 
-    return _classer_pages(rapport, textes, defectueux)
+    return _classer_pages(rapport, textes, defectueux, lib, la)
 
 
-def _classer_pages(rapport, textes, defectueux):
+def _classer_pages(rapport, textes, defectueux, lib, la):
     """Classe chaque page : sans texte (refus d'ancrage), encodage suspect
     (refus d'ancrage), ou ancrable. Calcule le taux de couverture et le
     verdict final."""
@@ -241,51 +272,56 @@ def _classer_pages(rapport, textes, defectueux):
     rapport["taux_couverture"] = taux
 
     if sans_texte:
-        rapport["problemes"].append(
-            f"Pages sans texte extrait, ancrage refuse : {_compacter(sans_texte)}.")
+        rapport["problemes"].append(lib.t(
+            "lecture.m.pages_sans_texte", la,
+            pages=_compacter(sans_texte, langue_affichage=la)))
     if cassees:
-        rapport["problemes"].append(
-            "Pages a l'encodage suspect (mojibake ou caracteres de remplacement), "
-            f"ancrage refuse : {_compacter(cassees)}.")
+        rapport["problemes"].append(lib.t(
+            "lecture.m.pages_cassees", la,
+            pages=_compacter(cassees, langue_affichage=la)))
     if textes and len(sans_texte) == len(textes):
         if rapport["binaire"].get("chiffre_signale"):
             rapport["problemes"].append(
-                "Aucune page ne rend de texte, et le PDF est signale chiffre/protege : "
-                "l'extraction vide vient probablement de la protection, pas d'un scan sans OCR.")
+                lib.t("lecture.m.aucun_texte_chiffre", la))
         else:
-            rapport["problemes"].append(
-                "Aucune page ne rend de texte alors que le fichier a des pages : "
-                "probable PDF scanne sans OCR.")
+            rapport["problemes"].append(lib.t("lecture.m.aucun_texte", la))
 
     n_pages_final = rapport["pages_total"] if rapport["pages_total"] is not None else len(textes)
     rapport["verdict"] = _calculer_verdict(n_pages_final, taux, defectueux, False)
     return rapport
 
 
-def rapport_texte(rapport):
-    """Rendu texte lisible du rapport. Voir analyser() pour la structure."""
-    out = [f"Preflight d'integrite de lecture PDF : {rapport['fichier']}"]
-    out.append(f"  Verdict : {rapport['verdict'].upper()}")
+def rapport_texte(rapport, langue_affichage=None):
+    """Rendu texte lisible du rapport. Voir analyser() pour la structure. Les
+    constats portes par rapport ont ete composes dans la langue d'affichage
+    par analyser() : ils sont repris tels quels."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    out = [lib.t("lecture.titre", la, fichier=rapport["fichier"])]
+    out.append("  " + lib.t("lecture.verdict", la, verdict=lib.valeur(
+        "lecture.verdict", rapport["verdict"], la).upper()))
     if rapport.get("pages_total") is not None:
-        out.append(f"  Pages : {rapport['pages_total']} au total, "
-                   f"{rapport.get('pages_texte')} avec texte extrait.")
+        out.append("  " + lib.t("lecture.pages", la,
+                                total=rapport["pages_total"],
+                                avec_texte=rapport.get("pages_texte")))
     if rapport.get("taux_couverture") is not None:
-        out.append(f"  Taux de couverture texte (pages ancrables) : "
-                   f"{rapport['taux_couverture'] * 100:.1f} %")
+        out.append("  " + lib.t(
+            "lecture.taux", la,
+            taux="%.1f" % (rapport["taux_couverture"] * 100)))
     if rapport.get("pages_ancrables"):
-        out.append(f"  Pages ancrables : {_compacter(rapport['pages_ancrables'])}")
+        out.append("  " + lib.t("lecture.ancrables", la, pages=_compacter(
+            rapport["pages_ancrables"], langue_affichage=la)))
     if rapport.get("pages_non_ancrables"):
-        out.append(f"  Pages NON ancrables (ancrage a refuser) : "
-                   f"{_compacter(rapport['pages_non_ancrables'])}")
-    out.append("Information :" if rapport["info"] else "Information : aucune")
-    for i in rapport["info"]:
-        out.append(f"  - {i}")
-    out.append("Avertissements :" if rapport["avertissements"] else "Avertissements : aucun")
-    for a in rapport["avertissements"]:
-        out.append(f"  - {a}")
-    out.append("Problemes :" if rapport["problemes"] else "Problemes : aucun")
-    for e in rapport["problemes"]:
-        out.append(f"  - {e}")
+        out.append("  " + lib.t("lecture.non_ancrables", la, pages=_compacter(
+            rapport["pages_non_ancrables"], langue_affichage=la)))
+    for cle, cle_vide, entrees in (
+            ("lecture.info", "lecture.info_aucune", rapport["info"]),
+            ("lecture.avertissements", "lecture.avertissements_aucun",
+             rapport["avertissements"]),
+            ("lecture.problemes", "lecture.problemes_aucun",
+             rapport["problemes"])):
+        out.append(lib.t(cle if entrees else cle_vide, la))
+        out += ["  - %s" % x for x in entrees]
     return "\n".join(out)
 
 
@@ -296,12 +332,19 @@ def main(argv=None):
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true",
                    help="code de sortie 1 si un avertissement ou un probleme est releve")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des libelles du rapport texte (defaut fr : un "
+                        "PDF ne porte pas de pragme de langue). La sortie JSON "
+                        "reste francaise quoi qu'il arrive")
     a = p.parse_args(argv)
-    rapport = analyser(a.fichier)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        rapport = analyser(a.fichier)
         print(json.dumps(rapport, ensure_ascii=False, indent=2))
     else:
-        print(rapport_texte(rapport))
+        la = _lib().resoudre_affichage(a.langue_affichage)
+        rapport = analyser(a.fichier, la)
+        print(rapport_texte(rapport, la))
     if a.strict and (rapport["avertissements"] or rapport["problemes"]):
         return 1
     return 0

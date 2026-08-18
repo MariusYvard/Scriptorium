@@ -16,10 +16,16 @@ poppler-utils en repli, sinon degradation propre).
 
 Usage :
     python3 check-presentation.py FICHIER.pdf --duree 15 [--format text|json] [--strict]
+                                              [--langue-affichage fr|en]
 
-Module importable : analyser(chemin, duree) -> dict ; bornes_diapositives(duree) -> (min, max).
+Module importable : analyser(chemin, duree, langue_affichage=None) -> dict ;
+bornes_diapositives(duree) -> (min, max). Sans langue_affichage, les constats sont les
+chaines francaises d'origine a l'octet pres : ce sont elles que serialise --format json.
+Le fichier analyse est un PDF, il ne porte pas de pragme de langue : la langue
+d'affichage par defaut est donc le francais, et seule l'option la change.
 """
 import argparse
+import importlib.util
 import json
 import math
 import os
@@ -28,6 +34,21 @@ import struct
 import subprocess
 import sys
 import tempfile
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit par chemin,
+    aucun sys.path n'est garanti quand le script est lance depuis un dossier quelconque."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles", chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 # Regle de reference : environ 1 a 2 diapositives par minute. Bande volontairement large pour
 # valider des styles divers (d'un rythme assertion-evidence sobre a un style tres visuel dense) ;
@@ -150,53 +171,62 @@ def rendre_pages_basses_res(chemin, dpi=DPI_RENDU):
     return None, None
 
 
-def analyser(chemin, duree=None):
+def analyser(chemin, duree=None, langue_affichage=None):
     """Analyse complete d'un fichier de presentation. Retourne un rapport dict :
-    fichier, info (liste), avertissements (liste), problemes (liste)."""
+    fichier, info (liste), avertissements (liste), problemes (liste).
+
+    Sans langue_affichage, les trois listes portent les chaines francaises d'origine a
+    l'octet pres : ce sont elles que serialise le mode --format json."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     rapport = {"fichier": os.path.basename(chemin), "info": [], "avertissements": [], "problemes": []}
     if not os.path.isfile(chemin):
-        rapport["problemes"].append(f"Fichier introuvable : {chemin}")
+        rapport["problemes"].append(lib.t("presentation.m.fichier_introuvable", la, chemin=chemin))
         return rapport
     if not chemin.lower().endswith(".pdf"):
-        rapport["avertissements"].append("Extension non .pdf : concu pour un deck exporte en PDF (voir livrer, action document).")
+        rapport["avertissements"].append(lib.t("presentation.m.extension", la))
 
     n_pages, dims, backend_pages = compter_pages_et_taille(chemin)
     if n_pages is None:
-        rapport["problemes"].append("Nombre de pages indetermine : aucun backend disponible (installer pypdf, ou poppler-utils pour pdfinfo).")
+        rapport["problemes"].append(lib.t("presentation.m.pages_indeterminees", la))
     else:
-        rapport["info"].append(f"Pages : {n_pages} (source : {backend_pages}).")
+        rapport["info"].append(lib.t("presentation.m.pages", la, n=n_pages, backend=backend_pages))
         if dims and dims[1]:
             l, h = dims
-            rapport["info"].append(f"Dimensions de la premiere page : {l:.0f} x {h:.0f} pts (ratio {l / h:.2f}).")
+            rapport["info"].append(lib.t(
+                "presentation.m.dimensions", la, largeur="%.0f" % l, hauteur="%.0f" % h,
+                ratio="%.2f" % (l / h)))
         if duree:
             lo, hi = bornes_diapositives(duree)
-            rapport["info"].append(f"Repere pour {duree:g} min (regle ~1-2 diapositives/minute) : {lo} a {hi} diapositives.")
+            rapport["info"].append(lib.t("presentation.m.repere", la, duree="%g" % duree,
+                                         lo=lo, hi=hi))
             if n_pages < lo:
-                rapport["avertissements"].append(
-                    f"{n_pages} diapositives pour {duree:g} min : en dessous de {lo}, le temps risque d'etre trop court pour le contenu ou le rythme trop lent.")
+                rapport["avertissements"].append(lib.t(
+                    "presentation.m.trop_peu", la, n=n_pages, duree="%g" % duree, lo=lo))
             elif n_pages > hi:
-                rapport["avertissements"].append(
-                    f"{n_pages} diapositives pour {duree:g} min : au-dessus de {hi}, risque de depassement du temps annonce.")
+                rapport["avertissements"].append(lib.t(
+                    "presentation.m.trop", la, n=n_pages, duree="%g" % duree, hi=hi))
             else:
-                rapport["info"].append("Nombre de diapositives dans le repere de la duree annoncee.")
+                rapport["info"].append(lib.t("presentation.m.dans_le_repere", la))
 
     textes, backend_texte = extraire_texte_pages(chemin)
     if textes is None:
-        rapport["info"].append("Densite de texte non calculee : aucun backend disponible (pypdf ou pdftotext), verification sautee plutot qu'estimee.")
+        rapport["info"].append(lib.t("presentation.m.densite_sautee", la))
     else:
         denses = [(i, len(txt.split())) for i, txt in enumerate(textes, 1) if len(txt.split()) > SEUIL_MOTS_PAR_DIAPO]
-        rapport["info"].append(f"Densite de texte calculee sur {len(textes)} page(s) (source : {backend_texte}), seuil {SEUIL_MOTS_PAR_DIAPO} mots/diapositive.")
+        rapport["info"].append(lib.t("presentation.m.densite_calculee", la, n=len(textes),
+                                     backend=backend_texte, seuil=SEUIL_MOTS_PAR_DIAPO))
         if denses:
-            liste = ", ".join(f"page {i} ({n} mots)" for i, n in denses[:10])
-            suffixe = ", ..." if len(denses) > 10 else ""
-            rapport["avertissements"].append(
-                f"Diapositives au-dessus de {SEUIL_MOTS_PAR_DIAPO} mots : {liste}{suffixe}. "
-                f"Une diapositive de fond porte peu de texte (voir produire/references/genre-presentation.md)."
-            )
+            liste = ", ".join(lib.t("presentation.item.mots", la, page=i, n=n)
+                              for i, n in denses[:10])
+            suite = lib.t("presentation.suite", la) if len(denses) > 10 else ""
+            rapport["avertissements"].append(lib.t(
+                "presentation.m.pages_denses_texte", la, seuil=SEUIL_MOTS_PAR_DIAPO,
+                liste=liste, suite=suite))
 
     rendus, backend_rendu = rendre_pages_basses_res(chemin)
     if rendus is None:
-        rapport["info"].append("Rendu image non effectue : aucun backend disponible (PyMuPDF ou pdftoppm/poppler-utils), verification des pages denses sautee.")
+        rapport["info"].append(lib.t("presentation.m.rendu_saute", la))
     else:
         pages_denses = []
         for i, (l, h, taille) in enumerate(rendus, 1):
@@ -205,29 +235,34 @@ def analyser(chemin, duree=None):
             opp = taille / (l * h)
             if opp > SEUIL_OCTETS_PAR_PIXEL:
                 pages_denses.append((i, opp))
-        rapport["info"].append(f"Rendu bas-DPI ({DPI_RENDU} dpi) de {len(rendus)} page(s) via {backend_rendu}, repere {SEUIL_OCTETS_PAR_PIXEL} octet/pixel.")
+        rapport["info"].append(lib.t("presentation.m.rendu", la, dpi=DPI_RENDU,
+                                     n=len(rendus), backend=backend_rendu,
+                                     seuil=SEUIL_OCTETS_PAR_PIXEL))
         if pages_denses:
-            liste = ", ".join(f"page {i} ({opp:.2f} o/px)" for i, opp in pages_denses[:10])
-            suffixe = ", ..." if len(pages_denses) > 10 else ""
-            rapport["avertissements"].append(
-                f"Pages au rendu dense (repere approximatif par octet/pixel, pas une mesure de "
-                f"lisibilite reelle) : {liste}{suffixe}. Verifier a l'oeil a la distance de projection."
-            )
+            liste = ", ".join(lib.t("presentation.item.octets", la, page=i,
+                                    valeur="%.2f" % opp) for i, opp in pages_denses[:10])
+            suite = lib.t("presentation.suite", la) if len(pages_denses) > 10 else ""
+            rapport["avertissements"].append(lib.t(
+                "presentation.m.pages_denses_rendu", la, liste=liste, suite=suite))
 
     return rapport
 
 
-def _afficher_text(rapport):
-    print(f"Validation de presentation : {rapport['fichier']}")
-    print("Information :" if rapport["info"] else "Information : aucune")
-    for i in rapport["info"]:
-        print(f"  - {i}")
-    print("Avertissements :" if rapport["avertissements"] else "Avertissements : aucun")
-    for w in rapport["avertissements"]:
-        print(f"  - {w}")
-    print("Problemes :" if rapport["problemes"] else "Problemes : aucun")
-    for e in rapport["problemes"]:
-        print(f"  - {e}")
+def rapport_texte(rapport, langue_affichage=None):
+    """Rendu texte lisible. Les constats portes par rapport ont ete composes dans la
+    langue d'affichage par analyser() : ils sont repris tels quels."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    out = [lib.t("presentation.titre", la, fichier=rapport["fichier"])]
+    for cle, cle_vide, entrees in (
+            ("presentation.info", "presentation.info_aucune", rapport["info"]),
+            ("presentation.avertissements", "presentation.avertissements_aucun",
+             rapport["avertissements"]),
+            ("presentation.problemes", "presentation.problemes_aucun",
+             rapport["problemes"])):
+        out.append(lib.t(cle if entrees else cle_vide, la))
+        out += ["  - %s" % x for x in entrees]
+    return "\n".join(out)
 
 
 def main(argv=None):
@@ -236,12 +271,19 @@ def main(argv=None):
     p.add_argument("--duree", "-d", type=float, help="duree annoncee en minutes")
     p.add_argument("--format", choices=["text", "json"], default="text")
     p.add_argument("--strict", action="store_true", help="code de sortie 1 si un avertissement ou un probleme est releve")
+    p.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                   help="langue des libelles du rapport texte (defaut fr : un PDF ne "
+                        "porte pas de pragme de langue). La sortie JSON reste francaise "
+                        "quoi qu'il arrive")
     a = p.parse_args(argv)
-    rapport = analyser(a.fichier, a.duree)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        rapport = analyser(a.fichier, a.duree)
         print(json.dumps(rapport, ensure_ascii=False, indent=2))
     else:
-        _afficher_text(rapport)
+        la = _lib().resoudre_affichage(a.langue_affichage)
+        rapport = analyser(a.fichier, a.duree, la)
+        print(rapport_texte(rapport, la))
     if a.strict and (rapport["avertissements"] or rapport["problemes"]):
         return 1
     return 0

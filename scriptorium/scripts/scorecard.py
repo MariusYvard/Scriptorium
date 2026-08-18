@@ -91,6 +91,7 @@ def _mod(fichier, nom):
     return m
 
 
+lib = _mod("libelles.py", "scriptorium_libelles")
 lint = _mod("lint-style.py", "lint_style")
 read = _mod("readability.py", "readability")
 vsrc = _mod("verify-sources.py", "verify_sources")
@@ -101,16 +102,23 @@ aifp = _mod("ai-fingerprint.py", "ai_fingerprint")
 coh = _mod("coherence.py", "coherence")
 
 
-def _axe(depart, regles):
+def _axe(depart, regles, langue_affichage=None):
     """regles = liste de (compte, penalite_unitaire, plafond, libelle). Retourne
-    (score, deductions). plafond = deduction maximale pour cette regle."""
+    (score, deductions). plafond = deduction maximale pour cette regle.
+
+    Le libelle passe par la table VALEURS de libelles.py : il est affiche, pas
+    compare. Sans langue_affichage, la chaine francaise d'origine est rendue a
+    l'octet pres, ce qui est la sortie JSON."""
+    la = lib.resoudre_affichage(langue_affichage)
     score = depart
     deductions = []
     for compte, pen, plafond, libelle in regles:
         if compte > 0:
             d = min(compte * pen, plafond)
             score -= d
-            deductions.append(f"-{d} {libelle} (x{compte})")
+            deductions.append(
+                f"-{d} {lib.valeur('scorecard.deduction', libelle, la)} "
+                f"(x{compte})")
     return max(0, score), deductions
 
 
@@ -210,14 +218,19 @@ def _forces_faiblesses(axes_out):
     }
 
 
-def _decision_editoriale(axes, total, plancher):
+def _decision_editoriale(axes, total, plancher, langue_affichage=None):
     """Mappe le score sur une decision a quatre valeurs (accepter, revision
     mineure, revision majeure, refus), plafonnee par le pire axe si un axe
     tombe sous le plancher : une seule dimension effondree peut bloquer malgre
     un bon score global. Le sous-type de refus indique en commentaire est une
     proposition, jamais un verdict ferme : seuls les signaux mesurables (total,
     axe effondre) sont mecaniques, le reste (hors perimetre, premature) exige
-    une lecture humaine et n'est jamais deduit du score seul."""
+    une lecture humaine et n'est jamais deduit du score seul.
+
+    La valeur de decision est machine : elle reste francaise dans toutes les
+    langues, run-evals.py la compare litteralement. Seul le commentaire, qui
+    est de la prose, suit la langue d'affichage."""
+    la = lib.resoudre_affichage(langue_affichage)
     effondres = sorted((nom, a["score"]) for nom, a in axes.items()
                        if a.get("score") is not None and a["score"] < plancher)
     if total is None:
@@ -225,8 +238,8 @@ def _decision_editoriale(axes, total, plancher):
             "decision": "non evaluable",
             "plancher": plancher,
             "axes_effondres": [],
-            "commentaire_sous_type": "aucun axe n'a pu etre mesure, aucune "
-                                     "decision editoriale n'est deduite",
+            "commentaire_sous_type": lib.t("scorecard.aucun_axe_mesurable",
+                                           la),
         }
 
     if total >= 85:
@@ -248,13 +261,13 @@ def _decision_editoriale(axes, total, plancher):
     commentaire = None
     if decision == "refus":
         if effondres:
-            noms = ", ".join(nom for nom, _ in effondres)
-            commentaire = (f"sous-type propose : a retravailler en profondeur "
-                            f"(axe effondre sous plancher/2 : {noms})")
+            noms = ", ".join(lib.valeur("scorecard.axe", nom, la)
+                             for nom, _ in effondres)
+            commentaire = lib.t("scorecard.sous_type_axe_effondre", la,
+                                noms=noms)
         else:
-            commentaire = (f"sous-type propose : defaut fondamental (score global {total} "
-                            "tres bas) ; a confirmer en lecture humaine, hors perimetre et "
-                            "premature ne se deduisent pas du score seul")
+            commentaire = lib.t("scorecard.sous_type_defaut_fondamental", la,
+                                total=total)
 
     return {
         "decision": decision,
@@ -265,11 +278,20 @@ def _decision_editoriale(axes, total, plancher):
 
 
 def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
-            langue=None):
+            langue=None, langue_affichage=None):
+    """Note un texte sur cinq axes.
+
+    langue choisit les motifs de mesure, langue_affichage choisit la langue
+    des seules chaines destinees a etre lues (libelles de deduction, motif
+    d'axe non evalue, commentaire de decision). Rien de ce sur quoi du code
+    branche ne change : verdict, decision, noms d'axes et cles de sortie
+    restent francais. Sans langue_affichage, le resultat est celui d'origine a
+    l'octet pres, et c'est lui que serialise --format json."""
     # Une seule resolution, partagee par toutes les mesures qui dependent de
     # la langue. La faire deux fois exposerait au cas ou deux scripts ne
     # trancheraient pas pareil sur le meme texte.
     langue = lint.resoudre_langue(texte, langue)
+    la = lib.resoudre_affichage(langue_affichage)
     axes = {}
 
     c = lint.lint_text(texte, None, langue)
@@ -280,12 +302,12 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
     axes["Style"] = _axe(20, [(crit, 7, 20, "ecart critique de style"),
                               (maj, 3, 9, "ecart majeur"),
                               (mino, 1, 4, "ecart mineur"),
-                              (nsig, 2, 6, "tic d'ecriture IA")])
+                              (nsig, 2, 6, "tic d'ecriture IA")], la)
 
     v = vsrc.analyser(texte)
     axes["Sources"] = _axe(20, [(len(v["urls_a_nettoyer"]), 4, 8, "URL a nettoyer"),
                                 (len(v["doublons"]), 4, 8, "source en double"),
-                                (len(v["dois_invalides"]), 3, 6, "DOI douteux")])
+                                (len(v["dois_invalides"]), 3, 6, "DOI douteux")], la)
 
     t = trac.analyser(texte, langue)
     axes["Tracabilite"] = _axe(20, [
@@ -294,7 +316,7 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
         (len(t["figures_appelees_non_definies"]) + len(t["tableaux_appeles_non_definis"]), 3, 6, "appel sans definition"),
         (len(t["figures_definies_non_appelees"]) + len(t["tableaux_definis_non_appeles"]), 2, 4, "objet jamais appele"),
         (len(coh.analyser(texte, langue=langue)["paragraphes_dupliques"]), 4, 8,
-         "paragraphe duplique")])
+         "paragraphe duplique")], la)
 
     te = term.analyser(texte)
     nu = nums.analyser(texte, langue)
@@ -304,7 +326,7 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
         (len(te["variantes_orthographiques"]), 2, 4, "variante orthographique"),
         (len(nu["pourcentages_impossibles"]), 6, 12, "pourcentage impossible"),
         (len(nu["partitions_incoherentes"]), 3, 6, "partition incoherente"),
-        (1 if nu["separateur_decimal_mixte"] else 0, 2, 2, "separateur decimal mixte")])
+        (1 if nu["separateur_decimal_mixte"] else 0, 2, 2, "separateur decimal mixte")], la)
 
     m = read.mesurer(texte, langue)
     non_evalues = {}
@@ -326,15 +348,15 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
                         "trop de passif"))
         reg.append((1 if m["densite_lexicale"] < 0.35 else 0, 3, 3,
                     "densite lexicale faible"))
-        axes["Lisibilite"] = _axe(20, reg)
+        axes["Lisibilite"] = _axe(20, reg, la)
     else:
         # Sous ce seuil, l'ecart-type de longueur de phrase et l'indice LIX ne
         # veulent rien dire. L'axe sort du calcul plutot que de rendre 20 sur
         # 20 par absence de mesure, ce qui gonflait le total d'un texte court.
         axes["Lisibilite"] = (None, [])
-        non_evalues["Lisibilite"] = (
-            "texte de %d mots, sous le seuil de %d ou la lisibilite se mesure"
-            % (m["mots"], MOTS_MINIMUM_LISIBILITE))
+        non_evalues["Lisibilite"] = lib.t(
+            "scorecard.motif_texte_court", la, mots=m["mots"],
+            seuil=MOTS_MINIMUM_LISIBILITE)
 
     poids_brut = dict(poids) if poids is not None else dict(POIDS_DEFAUT)
     poids_normalise = _normaliser_poids(poids_brut)
@@ -364,7 +386,8 @@ def evaluer(texte, plancher=PLANCHER_DEFAUT, poids=None, seuil_type=None,
         "axes": axes_out,
         "total": total,
         "verdict": verdict,
-        "decision_editoriale": _decision_editoriale(axes_out, total, plancher),
+        "decision_editoriale": _decision_editoriale(axes_out, total, plancher,
+                                                    la),
         "forces_faiblesses": _forces_faiblesses(axes_out),
         "poids": {
             "personnalise": poids is not None,
@@ -434,77 +457,118 @@ def trajectoire(a, b):
     }
 
 
-def rapport_texte(r):
-    tot = r["total"] if r["total"] is not None else "non evaluable"
-    entete = f"Scorecard : {tot}/100, verdict {r['verdict']}" \
-        if r["total"] is not None else f"Scorecard : {r['verdict']}"
+def rapport_texte(r, langue_affichage=None):
+    """Rapport lisible. Les chaines deja portees par r (deductions, motif,
+    commentaire) sont rendues telles quelles : elles ont ete composees dans la
+    langue d'affichage par evaluer(). Ce qui est traduit ici, ce sont les
+    valeurs machine (verdict, decision, noms d'axes) et le decor du rapport."""
+    la = lib.resoudre_affichage(langue_affichage)
+    verdict = lib.valeur("scorecard.verdict", r["verdict"], la)
+    entete = (lib.t("scorecard.entete", la, total=r["total"], verdict=verdict)
+              if r["total"] is not None
+              else lib.t("scorecard.entete_sans_total", la, verdict=verdict))
     if r.get("seuil_type"):
         st = r["seuil_type"]
-        tag = "atteint" if st["atteint"] else "non atteint"
-        entete += f" | seuil {st['type']} {st['seuil']}/100 : {tag}"
-    out = [entete, f"  langue notee : {r.get('langue')}", ""]
+        tag = lib.t("scorecard.seuil_atteint" if st["atteint"]
+                    else "scorecard.seuil_non_atteint", la)
+        entete += lib.t("scorecard.seuil", la, type=st["type"],
+                        seuil=st["seuil"], tag=tag)
+    out = [entete,
+           "  " + lib.t("scorecard.langue_notee", la, langue=r.get("langue")),
+           ""]
     for nom, a in r["axes"].items():
+        libelle_axe = lib.valeur("scorecard.axe", nom, la)
         if a.get("non_evalue"):
-            out.append(f"  {nom:26} non evalue, hors calcul")
+            out.append(f"  {libelle_axe:26} "
+                       + lib.t("scorecard.axe_non_evalue", la))
             out.append(f"      {a.get('motif', '')}")
             continue
-        out.append(f"  {nom:26} {a['score']:>2}/20  {_barre_ascii(a['score'])}")
+        out.append(f"  {libelle_axe:26} {a['score']:>2}/20  "
+                   f"{_barre_ascii(a['score'])}")
         for d in a["deductions"]:
             out.append(f"      {d}")
         for nf in a.get("mesures_non_faites", []):
-            out.append(f"      mesure non faite : {nf['mesure']} ({nf['motif']})")
+            out.append("      " + lib.t(
+                "scorecard.mesure_non_faite", la, mesure=nf["mesure"],
+                motif=lib.motif(nf["motif"], la)))
     out.append("")
 
     ff = r["forces_faiblesses"]
     if ff["egalite_totale"] is None:
-        out.append("  Aucun axe mesure, ni force ni faiblesse a nommer.")
+        out.append("  " + lib.t("scorecard.aucun_axe_mesure", la))
     elif ff["egalite_totale"]:
-        out.append(f"  Tous les axes a egalite ({ff['score_meilleur']}/20).")
+        out.append("  " + lib.t("scorecard.egalite", la,
+                                score=ff["score_meilleur"]))
     else:
-        out.append(f"  Force(s) : {', '.join(ff['meilleurs_axes'])} ({ff['score_meilleur']}/20)")
-        out.append(f"  Faiblesse(s) : {', '.join(ff['pires_axes'])} ({ff['score_pire']}/20)")
+        out.append("  " + lib.t(
+            "scorecard.forces", la, score=ff["score_meilleur"],
+            axes=", ".join(lib.valeur("scorecard.axe", n, la)
+                           for n in ff["meilleurs_axes"])))
+        out.append("  " + lib.t(
+            "scorecard.faiblesses", la, score=ff["score_pire"],
+            axes=", ".join(lib.valeur("scorecard.axe", n, la)
+                           for n in ff["pires_axes"])))
 
     out.append("")
-    out.append("  Calcul : chaque axe part de 20, penalites fixes plafonnees, somme ponderee sur 100.")
+    out.append("  " + lib.t("scorecard.calcul", la))
     p = r["poids"]
     if p["personnalise"]:
-        out.append("  Poids personnalises (renormalisation a somme 1.0, une seule division) :")
+        out.append("  " + lib.t("scorecard.poids_personnalises", la))
         for nom in r["axes"]:
-            out.append(f"      {nom:26} brut {p['brut'][nom]:.3f} -> normalise {p['normalise'][nom]:.3f}")
+            out.append("      %-26s " % lib.valeur("scorecard.axe", nom, la)
+                       + lib.t("scorecard.poids_ligne", la,
+                               brut="%.3f" % p["brut"][nom],
+                               normalise="%.3f" % p["normalise"][nom]))
 
     de = r["decision_editoriale"]
     out.append("")
-    out.append(f"  Decision editoriale (plancher {de['plancher']}/20 par axe) : {de['decision']}")
+    out.append("  " + lib.t(
+        "scorecard.decision_editoriale", la, plancher=de["plancher"],
+        decision=lib.valeur("scorecard.decision", de["decision"], la)))
     if de["axes_effondres"]:
-        out.append(f"      axe(s) sous le plancher : {', '.join(de['axes_effondres'])}")
+        out.append("      " + lib.t(
+            "scorecard.axes_effondres", la,
+            axes=", ".join(lib.valeur("scorecard.axe", n, la)
+                           for n in de["axes_effondres"])))
     if de["commentaire_sous_type"]:
         out.append(f"      {de['commentaire_sous_type']}")
     return "\n".join(out)
 
 
-def rapport_trajectoire_texte(t):
-    out = [f"Trajectoire : {t['total_avant']}/100 vers {t['total_apres']}/100 "
-           f"(delta total {t['delta_total']:+g})", ""]
+def rapport_trajectoire_texte(t, langue_affichage=None):
+    la = lib.resoudre_affichage(langue_affichage)
+
+    def _axes(noms):
+        return ", ".join(lib.valeur("scorecard.axe", n, la) for n in noms)
+
+    out = [lib.t("scorecard.traj_entete", la, avant=t["total_avant"],
+                 apres=t["total_apres"],
+                 delta="%+g" % t["delta_total"]), ""]
     for d in t["deltas"]:
-        marque = "  [REGRESSION]" if d["regression"] else ""
-        out.append(f"  {d['axe']:26} {d['avant']:>2} -> {d['apres']:>2} (delta {d['delta']:+d}){marque}")
+        marque = ("  " + lib.t("scorecard.traj_regression", la)
+                  if d["regression"] else "")
+        out.append("  %-26s %2s -> %2s (delta %+d)%s"
+                   % (lib.valeur("scorecard.axe", d["axe"], la), d["avant"],
+                      d["apres"], d["delta"], marque))
     if t["axes_ignores"]:
         out.append("")
-        out.append(f"  Axes ignores (absents d'un rapport) : {', '.join(t['axes_ignores'])}")
+        out.append("  " + lib.t("scorecard.traj_axes_ignores", la,
+                                axes=_axes(t["axes_ignores"])))
     out.append("")
     if t["regressions"]:
-        out.append(f"  Point de controle : regression de plus de 3 points sur {', '.join(t['regressions'])}.")
-        out.append("  Trois options : accepter le compromis, reviser cible sur l'axe regresse,")
-        out.append("  ou restaurer la version anterieure de la section concernee.")
+        out.append("  " + lib.t("scorecard.traj_point_controle", la,
+                                axes=_axes(t["regressions"])))
+        out.append("  " + lib.t("scorecard.traj_options_regression", la))
     elif t["arret_anticipe"]:
-        out.append(f"  Note d'arret anticipe : le gain total est de {t['delta_total']:+g} point(s), "
-                    "sous le seuil de +3 et sans regression.")
-        out.append("  Continuer a boucler sur la meme correction a peu de chances d'apporter plus.")
-        out.append("  Trois options : accepter l'etat actuel, cibler un seul axe precis avec l'utilisateur,")
-        out.append("  ou revoir le seuil ensemble (voir chemins-defaillance.md, scenario D6).")
+        out.append("  " + lib.t("scorecard.traj_arret", la,
+                                delta="%+g" % t["delta_total"]))
+        out.append("  " + lib.t("scorecard.traj_options_arret", la))
     else:
-        out.append("  Aucune regression de plus de 3 points : trajectoire normale.")
-    out.append(f"  Verdict : {t['verdict_avant']} -> {t['verdict_apres']}")
+        out.append("  " + lib.t("scorecard.traj_normal", la))
+    out.append("  " + lib.t(
+        "scorecard.traj_verdict", la,
+        avant=lib.valeur("scorecard.verdict", t["verdict_avant"], la),
+        apres=lib.valeur("scorecard.verdict", t["verdict_apres"], la)))
     return "\n".join(out)
 
 
@@ -524,20 +588,30 @@ def main(argv=None):
                      help="langue de notation, meme option que lint-style.py. "
                           "Sans l'option : le pragme lint-style:langue du "
                           "document, sinon fr. auto lance la detection")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                     help="langue des libelles du rapport texte. Sans "
+                          "l'option : la langue de notation retenue. La sortie "
+                          "JSON reste francaise quoi qu'il arrive")
     ap.add_argument("--trajectoire", nargs=2, metavar=("RAPPORT_A", "RAPPORT_B"),
                      help="compare deux rapports JSON (sorties de --format json)")
     a = ap.parse_args(argv)
+    la_option = a.langue_affichage
 
     if a.trajectoire:
         chemin_a, chemin_b = a.trajectoire
         rapport_a = json.load(open(chemin_a, encoding="utf-8"))
         rapport_b = json.load(open(chemin_b, encoding="utf-8"))
         t = trajectoire(rapport_a, rapport_b)
-        print(json.dumps(t, ensure_ascii=False, indent=2) if a.format == "json" else rapport_trajectoire_texte(t))
+        # Les deux rapports portent leur propre langue de notation ; celle du
+        # second fait foi, c'est l'etat courant du document.
+        la = lib.resoudre_affichage(la_option, rapport_b.get("langue"))
+        print(json.dumps(t, ensure_ascii=False, indent=2)
+              if a.format == "json" else rapport_trajectoire_texte(t, la))
         return 0
 
     if not a.fichier:
-        print("Erreur : fichier requis (sauf en mode --trajectoire).", file=sys.stderr)
+        print(lib.t("scorecard.err_fichier_requis",
+                    lib.resoudre_affichage(la_option)), file=sys.stderr)
         return 2
 
     poids_brut = None
@@ -545,16 +619,27 @@ def main(argv=None):
         try:
             poids_brut, inconnus = _charger_poids(a.poids)
         except (OSError, ValueError, json.JSONDecodeError) as e:
-            print(f"Erreur de poids : {e}", file=sys.stderr)
+            print(lib.t("scorecard.err_poids",
+                        lib.resoudre_affichage(la_option), erreur=e),
+                  file=sys.stderr)
             return 2
         if inconnus:
-            print(f"Avertissement : axe(s) ignore(s) dans le fichier de poids : {', '.join(inconnus)}",
-                  file=sys.stderr)
+            print(lib.t("scorecard.avert_axes_inconnus",
+                        lib.resoudre_affichage(la_option),
+                        axes=", ".join(inconnus)), file=sys.stderr)
 
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
+    # Le JSON ne se traduit pas : le jeu d'or et les evals le lisent.
+    if a.format == "json":
+        r = evaluer(texte, plancher=a.plancher, poids=poids_brut,
+                    seuil_type=a.seuil_type, langue=a.langue)
+        print(json.dumps(r, ensure_ascii=False, indent=2))
+        return 0
+    la = lib.resoudre_affichage(la_option,
+                                lint.resoudre_langue(texte, a.langue))
     r = evaluer(texte, plancher=a.plancher, poids=poids_brut,
-                seuil_type=a.seuil_type, langue=a.langue)
-    print(json.dumps(r, ensure_ascii=False, indent=2) if a.format == "json" else rapport_texte(r))
+                seuil_type=a.seuil_type, langue=a.langue, langue_affichage=la)
+    print(rapport_texte(r, la))
     return 0
 
 

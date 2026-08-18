@@ -18,7 +18,9 @@ restent donc communes, et le sont declarees ici plutot que dupliquees.
 
 Usage : python3 coherence.py FICHIER [--format text|json]
                                      [--langue fr|en|auto]
-Module importable : analyser(texte, langue=None) -> dict.
+                                     [--langue-affichage fr|en]
+Module importable : analyser(texte, langue=None) -> dict ;
+problemes(d, langue_affichage=None) -> list.
 """
 import argparse
 import json
@@ -47,6 +49,23 @@ PROMESSE_EN = re.compile(
 LANGUES = ("fr", "en")
 
 _LINT = None
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois. Meme raison que
+    pour lint-style.py : le module se lit par chemin, aucun sys.path n'est
+    garanti."""
+    global _LIB
+    if _LIB is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
 
 
 def _lint():
@@ -118,12 +137,22 @@ def analyser(texte, langue=None):
     }
 
 
-def problemes(d):
+def problemes(d, langue_affichage=None):
+    """Constats lisibles tires de l'analyse.
+
+    Sans langue_affichage, les chaines sont celles d'origine a l'octet pres :
+    c'est cette liste que serialise la cle problemes du mode --format json,
+    et que consolide audit-doc.py."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     p = []
     for x in d["paragraphes_dupliques"]:
-        p.append(f"Paragraphes {x['para_a']} et {x['para_b']} quasi identiques (similitude {x['similitude']}).")
+        p.append(lib.t("coherence.p.paragraphes_dupliques", la,
+                       a=x["para_a"], b=x["para_b"],
+                       similitude=x["similitude"]))
     if d["phrases_repetees"]:
-        p.append(f"{d['phrases_repetees']} phrase(s) repetee(s) a l'identique.")
+        p.append(lib.t("coherence.p.phrases_repetees", la,
+                       n=d["phrases_repetees"]))
     return p
 
 
@@ -135,20 +164,29 @@ def main(argv=None):
                     help="langue d'analyse. Sans l'option : le pragme "
                          "lint-style:langue du document, sinon fr. "
                          "auto lance la détection heuristique")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                    help="langue des libelles du rapport texte. Sans "
+                         "l'option : la langue d'analyse retenue. La sortie "
+                         "JSON reste francaise quoi qu'il arrive")
     a = ap.parse_args(argv)
+    lib = _lib()
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     d = analyser(texte, a.langue)
-    p = problemes(d)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        p = problemes(d)
         print(json.dumps({"analyse": d, "problemes": p}, ensure_ascii=False, indent=2))
-    else:
-        print("Coherence interne")
-        if not p:
-            print("  Aucune redite ni duplication detectee.")
-        for x in p:
-            print(f"  - {x}")
-        if d["promesses"]:
-            print(f"  Promesses a verifier ({len(d['promesses'])}) : {d['promesses'][:5]}")
+        return 1 if p else 0
+    la = lib.resoudre_affichage(a.langue_affichage, d["langue"])
+    p = problemes(d, la)
+    print(lib.t("coherence.titre", la))
+    if not p:
+        print("  " + lib.t("coherence.aucune_redite", la))
+    for x in p:
+        print(f"  - {x}")
+    if d["promesses"]:
+        print("  " + lib.t("coherence.promesses", la, n=len(d["promesses"]),
+                           exemples=d["promesses"][:5]))
     return 1 if p else 0
 
 

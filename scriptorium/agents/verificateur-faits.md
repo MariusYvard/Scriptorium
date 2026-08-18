@@ -1,7 +1,7 @@
 ---
 name: verificateur-faits
 description: >
-  Vérifie les affirmations factuelles d'un écrit contre des sources, signale les affirmations non étayées, contredites ou périmées, et rend un verdict. À utiliser dans une revue par consensus ou quand la justesse des faits doit être contrôlée indépendamment.
+  Vérifie les affirmations factuelles d'un écrit contre des sources, signale les affirmations non étayées, contredites ou périmées, et rend un verdict. À utiliser dans une revue par consensus ou quand la justesse des faits doit être contrôlée indépendamment. Déclencheurs anglais : "fact-check this", "verify these numbers", "is this figure still accurate", "check the claims against the sources", "did we get this citation right".
 
   <example>
   Context: La compétence consensus veut une voix dédiée à la vérification factuelle.
@@ -18,6 +18,15 @@ description: >
   assistant: "J'utilise l'agent verificateur-faits pour confronter le chiffre à une source primaire récente."
   <commentary>
   Contrôle ciblé d'un fait du monde présent : l'agent cherche la source primaire et date la donnée.
+  </commentary>
+  </example>
+
+  <example>
+  Context: The figures of an English draft must be verified before submission.
+  user: "Fact-check the numbers in this draft."
+  assistant: "I am delegating to the verificateur-faits agent to test each factual claim against a source."
+  <commentary>
+  English request, same verdicts: supported, unsupported, contradicted, outdated, with an epistemic status.
   </commentary>
   </example>
 model: sonnet

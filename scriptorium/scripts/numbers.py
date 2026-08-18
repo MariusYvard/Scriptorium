@@ -20,9 +20,17 @@ caracteres :
     quoi tout grand nombre anglais passerait pour un melange.
 
 Usage : python3 numbers.py FICHIER [--format text|json] [--langue fr|en|auto]
-Module importable : analyser(texte, langue=None) -> dict.
+                                   [--langue-affichage fr|en]
+Module importable : analyser(texte, langue=None) -> dict ;
+problemes(d, langue_affichage=None) -> list. La langue de MESURE (--langue)
+et la langue d'AFFICHAGE (--langue-affichage) sont deux choses : la premiere
+choisit la convention numerique appliquee au texte, la seconde la langue des
+constats rendus. Sans langue_affichage, les constats sont les chaines
+francaises d'origine a l'octet pres : ce sont elles que serialise
+--format json.
 """
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -48,6 +56,21 @@ PCT_COLLE = re.compile(r'\d%')
 PCT_ESPACE = re.compile(r'\d[ \t   ]+%')
 
 _LINT = None
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
 
 
 def _lint():
@@ -122,20 +145,30 @@ def analyser(texte, langue=None):
     }
 
 
-def problemes(d):
+def problemes(d, langue_affichage=None):
+    """Constats lisibles tires de l'analyse.
+
+    Sans langue_affichage, les chaines sont celles d'origine a l'octet pres :
+    c'est cette liste que serialise la cle problemes du mode --format json.
+    La convention rappelee dans le constat d'espacement est celle de la
+    langue MESUREE, elle ne suit pas la langue d'affichage : c'est la regle
+    appliquee au texte, pas un libelle."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     p = []
     if d["pourcentages_impossibles"]:
-        p.append(f"Pourcentages superieurs a 100 : {d['pourcentages_impossibles']}")
+        p.append(lib.t("numbers.p.impossibles", la,
+                       n=d["pourcentages_impossibles"]))
     for part in d["partitions_incoherentes"]:
-        p.append(f"Partition de pourcentages qui ne somme pas a 100 : {part['valeurs']} (somme {part['somme']})")
+        p.append(lib.t("numbers.p.partition", la, valeurs=part["valeurs"],
+                       somme=part["somme"]))
     if d["separateur_decimal_mixte"]:
-        p.append("Separateur decimal mixte (virgule et point). Choisir une seule convention.")
+        p.append(lib.t("numbers.p.separateur_mixte", la))
     if d["espacement_pourcent"]:
-        attendu = ("le signe pourcent se colle au nombre en anglais"
-                   if d.get("langue") == "en"
-                   else "une espace precede le signe pourcent en francais")
-        p.append(f"Espacement du signe pourcent contraire a la convention "
-                 f"({attendu}) : {d['espacement_pourcent']}")
+        attendu = lib.t("numbers.attendu_en" if d.get("langue") == "en"
+                        else "numbers.attendu_fr", la)
+        p.append(lib.t("numbers.p.espacement", la, attendu=attendu,
+                       occurrences=d["espacement_pourcent"]))
     return p
 
 
@@ -146,17 +179,25 @@ def main(argv=None):
     ap.add_argument("--langue", choices=["fr", "en", "auto"], default=None,
                      help="convention numerique appliquee. Sans l'option : le "
                           "pragme lint-style:langue du document, sinon fr")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                     help="langue des libelles du rapport texte. Sans "
+                          "l'option : la langue d'analyse retenue. La sortie "
+                          "JSON reste francaise quoi qu'il arrive")
     a = ap.parse_args(argv)
+    lib = _lib()
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
     d = analyser(texte, a.langue)
-    p = problemes(d)
     if a.format == "json":
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        p = problemes(d)
         print(json.dumps({"analyse": d, "problemes": p}, ensure_ascii=False, indent=2))
     else:
-        print("Integrite numerique")
-        print(f"  langue analysee : {d['langue']}")
+        la = lib.resoudre_affichage(a.langue_affichage, d["langue"])
+        p = problemes(d, la)
+        print(lib.t("numbers.titre", la))
+        print("  " + lib.t("numbers.langue_analysee", la, langue=d["langue"]))
         if not p:
-            print("  Aucun probleme numerique detecte.")
+            print("  " + lib.t("numbers.aucun_probleme", la))
         for x in p:
             print(f"  - {x}")
     return 1 if d["pourcentages_impossibles"] else 0

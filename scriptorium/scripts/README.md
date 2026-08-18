@@ -2,18 +2,30 @@
 
 Vingt-sept outils en Python pur (bibliothèque standard, aucune dépendance). Ils déplacent la rigueur du jugement du modèle vers un contrôle mécanique et reproductible. Les compétences `controler`, `produire` et `livrer` les appellent, et le hook les exécute après chaque écriture de document.
 
+Le dossier compte un vingt-huitième fichier Python, `libelles.py`. Il n'entre pas dans le compte des vingt-sept : il ne porte ni sous-commande ni ligne de commande propre, personne ne l'appelle directement, et le catalogue plus bas décrit des outils qu'on invoque, pas les modules qu'ils importent. C'est l'infrastructure d'affichage commune aux vingt-sept, décrite dans sa propre section.
+
 Sur Windows, remplacer `python3` par `python` si nécessaire.
+
+## libelles.py
+
+Couche d'affichage bilingue commune aux vingt-sept scripts. Elle porte les libellés des rapports texte, des messages de ligne de commande et des aides, dans les deux langues, et la résolution qui choisit laquelle imprimer. Elle ne touche à aucune valeur machine : un verdict fermé, une décision, un nom d'axe ou de règle, une sévérité et toute clé JSON restent les chaînes françaises actuelles quelle que soit la langue d'affichage, parce que `emprunts.py` branche sur les verdicts de `check-droits.py`, plusieurs modules de `evals/cas/` les comparent littéralement et `tools/gold.py` les confronte aux étiquettes gelées de `evals/gold/*/manifeste.json`. Traduire ces chaînes en place aurait cassé cette chaîne de dépendances.
+
+Forme retenue : une clé plate à espace de noms par script (`scorecard.entete`, `traceability.titre`), chaque clé portant un dictionnaire langue vers chaîne. L'espace de noms rend le câblage vérifiable script par script, ce que lit la garde de `evals/cas/affichage.py`. Le formatage se fait à paramètres nommés (`{total}`) et non positionnels : l'ordre des mots change d'une langue à l'autre, un format positionnel se casserait à la première inversion. 812 clés au total.
+
+Trois fonctions publiques. `t(cle, langue, **params)` rend le libellé d'affichage : une clé absente de la langue demandée retombe sur le français et le déclare (préfixe de repli), une clé inconnue de la table sort marquée plutôt que de lever une exception ou de fuiter la clé brute. `valeur(espace, machine, langue)` traduit l'affichage d'une valeur machine déjà fixée ailleurs sans jamais la modifier : la valeur reste la clé de recherche. `motif(motif_fr, langue)` relit un motif de mesure non faite porté par les données et réinjecte ses paramètres dans le libellé de la langue demandée. `resoudre_affichage(demandee, langue_analyse)` fixe la langue d'affichage : l'option explicite prime, sinon la langue d'analyse déjà résolue, sinon le français.
+
+Bibliothèque standard seule, aucune dépendance sur les autres scripts : c'est l'inverse, les vingt-sept l'importent par chemin, sur le même mécanisme que `gabarit.py` important `images.py`.
 
 ## lint-style.py
 
 Détecte les écarts au style maison sans jugement de modèle : tiret cadratin, typographie courbe, lexique promotionnel banni, paramètres de suivi dans les URL, virgule d'Oxford, métadiscours, pronom « on », quantificateurs vagues, verbes tics, caractères invisibles. Français par défaut, anglais avec `--langue en` (voir le mode de langue plus bas).
 
 ```
-python3 lint-style.py FICHIER [--format text|json] [--strict] [--quiet] [--langue fr|en|auto]
+python3 lint-style.py FICHIER [--format text|json] [--strict] [--quiet] [--langue fr|en|auto] [--langue-affichage fr|en]
 cat doc.md | python3 lint-style.py -
 ```
 
-Code de sortie 1 si un constat critique est présent (ou majeur avec `--strict`). Pragmas dans le document : une ligne contenant `lint-style:ignore` est sautée, un fichier contenant `lint-style:ignore-file` dans ses cinq premières lignes est ignoré.
+Code de sortie 1 si un constat critique est présent (ou majeur avec `--strict`). Pragmas dans le document : une ligne contenant `lint-style:ignore` est sautée, un fichier contenant `lint-style:ignore-file` dans ses cinq premières lignes est ignoré. `--langue-affichage fr|en` fixe la langue du rapport et des messages, par défaut la langue d'analyse retenue (voir `libelles.py` plus haut) ; la sortie `--format json` reste française quoi qu'il arrive.
 
 ### Mode de langue
 
@@ -36,41 +48,43 @@ Six règles couvrent les caractères invisibles, ce qui ne s'affiche pas à l'é
 Extrait les URL et les DOI, retire les paramètres de suivi, repère les doublons, contrôle la syntaxe des DOI. La résolution réseau est optionnelle, en deux niveaux.
 
 ```
-python3 verify-sources.py FICHIER [--format text|json] [--check-links] [--reseau]
+python3 verify-sources.py FICHIER [--format text|json] [--check-links] [--reseau] [--langue-affichage fr|en]
 ```
 
-`--check-links` vérifie que les URL résolvent. `--reseau` va plus loin : il triangule chaque DOI contre Crossref, OpenAlex et Semantic Scholar (similarité de titre, seuil 0,70), rend un verdict gradué par référence (verifie, plausible, inverifiable, fabrique) et signale les sources potentiellement contaminées (année récente, absente des index interrogés). Un index qui ne répond pas est omis du verdict, jamais compté contre une référence. OpenAlex exige une clé (`--openalex-cle` ou `OPENALEX_API_KEY`), sinon il est simplement omis. Sans réseau, chaque URL reçoit aussi un palier de source (revue à comité, preprint, institutionnel, encyclopédie, presse et blog) par table locale de domaines. Code de sortie 1 si une URL est à nettoyer, un doublon existe, un DOI est douteux ou (réseau actif) un lien ne résout pas.
+`--langue-affichage fr|en` fixe la langue des libellés du rapport, par défaut le français : verify-sources.py ne mesure aucune langue de document, seules les URL et les DOI. `--check-links` vérifie que les URL résolvent. `--reseau` va plus loin : il triangule chaque DOI contre Crossref, OpenAlex et Semantic Scholar (similarité de titre, seuil 0,70), rend un verdict gradué par référence (verifie, plausible, inverifiable, fabrique) et signale les sources potentiellement contaminées (année récente, absente des index interrogés). Un index qui ne répond pas est omis du verdict, jamais compté contre une référence. OpenAlex exige une clé (`--openalex-cle` ou `OPENALEX_API_KEY`), sinon il est simplement omis. Sans réseau, chaque URL reçoit aussi un palier de source (revue à comité, preprint, institutionnel, encyclopédie, presse et blog) par table locale de domaines. Code de sortie 1 si une URL est à nettoyer, un doublon existe, un DOI est douteux ou (réseau actif) un lien ne résout pas.
 
 ## readability.py
 
 Métriques de lisibilité : longueur de phrase moyenne et écart-type, part de phrases longues et courtes, longueur de paragraphe, densité lexicale, approximation du taux de passif, indice LIX. Transforme la règle « varier le rythme » en mesure. Français par défaut, anglais avec `--langue en`, même ordre de priorité que `lint-style.py`.
 
 ```
-python3 readability.py FICHIER [--format text|json] [--langue fr|en|auto]
+python3 readability.py FICHIER [--format text|json] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
 
-Seul le taux de passif dépend réellement de la langue (motif français ou motif anglais de `lint-style.py`, lu et non recopié) ; hors de ces deux langues, ou sans phrase mesurable, la mesure se déclare non faite (`mesures_non_faites`) plutôt que de rendre zéro. L'indice LIX reste agnostique à la langue par construction, mais la bande 30-56 qu'applique `scorecard.py` reste calibrée sur le français faute de calibrage anglais mesuré. Détail dans `skills/produire/references/langue.md`.
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue d'analyse retenue. Seul le taux de passif dépend réellement de la langue (motif français ou motif anglais de `lint-style.py`, lu et non recopié) ; hors de ces deux langues, ou sans phrase mesurable, la mesure se déclare non faite (`mesures_non_faites`) plutôt que de rendre zéro. L'indice LIX reste agnostique à la langue par construction, mais la bande 30-56 qu'applique `scorecard.py` reste calibrée sur le français faute de calibrage anglais mesuré. Détail dans `skills/produire/references/langue.md`.
 
 ## theme.py
 
 Charge et valide une charte graphique (couleurs, polices, accent, palette), contrôle le contraste WCAG entre l'encre et les fonds. Une couleur mal formée est une erreur, un contraste sous 4,5:1 un avertissement.
 
 ```
-python3 theme.py charte.json [--format text|json|css|latex]
+python3 theme.py charte.json [--format text|json|css|latex] [--langue-affichage fr|en]
 ```
 
-`--format latex` émet le préambule de couleurs et de polices consommé par `assets/gabarit-rapport.tex` et `assets/gabarit-poster.tex`. Les palettes nommées `okabe-ito` et `wong` (daltonisme-sûres) s'injectent par la clé `palette` de la charte ; une palette manuelle est passée au crible d'une approximation dichromate (avertissement, jamais une erreur).
+`--langue-affichage fr|en` fixe la langue des messages de validation et du rapport texte, par défaut le français : une charte est un fichier de configuration, elle ne porte pas de langue. Le CSS, le préambule LaTeX et la sortie JSON n'en dépendent pas. `--format latex` émet le préambule de couleurs et de polices consommé par `assets/gabarit-rapport.tex` et `assets/gabarit-poster.tex`. Les palettes nommées `okabe-ito` et `wong` (daltonisme-sûres) s'injectent par la clé `palette` de la charte ; une palette manuelle est passée au crible d'une approximation dichromate (avertissement, jamais une erreur).
 
 ## figures.py
 
 Génère des figures en SVG (sans dépendance) et porte un regard critique déterministe sur la figure avant insertion. Deux familles : les figures stratégiques rangent des éléments dans des cases, les figures de données portent des axes gradués dont chacun reçoit un titre et son unité.
 
 ```
-python3 figures.py TYPE --out fichier.svg [--data data.json|-] [--title "Titre"] [--langue fr|en]
+python3 figures.py TYPE --out fichier.svg [--data data.json|-] [--title "Titre"] [--langue fr|en] [--langue-affichage fr|en]
 python3 figures.py TYPE --data - --audit < data.json
 ```
 
-`--langue fr|en` (défaut fr) fixe la langue des étiquettes écrites dans le code : cases du SWOT, du PESTEL, de la BCG et de l'Ansoff, activités de la chaîne de valeur, phases et boîtes du diagramme PRISMA. Les clés des données JSON et les libellés fournis par l'appelant ne sont jamais traduits, et le regard critique de `--audit` reste en français dans les deux langues. Les libellés anglais de PRISMA viennent des gabarits officiels de la déclaration PRISMA 2020 : trois bandes de phase seulement (Identification, Screening, Included), la bande Eligibility de 2009 a disparu.
+`--langue fr|en` (défaut fr) fixe la langue des étiquettes écrites dans le code : cases du SWOT, du PESTEL, de la BCG et de l'Ansoff, activités de la chaîne de valeur, phases et boîtes du diagramme PRISMA. Les clés des données JSON et les libellés fournis par l'appelant ne sont jamais traduits. Les libellés anglais de PRISMA viennent des gabarits officiels de la déclaration PRISMA 2020 : trois bandes de phase seulement (Identification, Screening, Included), la bande Eligibility de 2009 a disparu.
+
+Deux langues, jamais confondues. `--langue` est la langue de DESSIN, celle des étiquettes tracées dans le SVG livré. `--langue-affichage fr|en` est celle du regard critique de `--audit` et des messages de cette commande au terminal ; sans l'option, elle suit `--langue` plutôt que la langue d'un document, faute de document à analyser. Le SVG produit ne dépend jamais de `--langue-affichage`.
 
 TYPE stratégiques : `swot`, `bcg`, `ansoff`, `pestel`, `chaine-valeur`, `tam-sam-som`. TYPE de données : `courbe`, `nuage`, `histogramme`, `boite`, `flux`, `prisma`. L'option `--audit` liste les défauts structurels (cases vides, surcharge, déséquilibre, valeurs hors bornes, points non étiquetés, axe sans titre ou sans unité, échelle d'histogramme tronquée, quartiles hors ordre, comptes PRISMA qui ne bouclent pas) sans écrire de fichier.
 
@@ -107,23 +121,27 @@ Clés ajoutées à la sortie de `analyser()` : `equations_definies_non_appelees`
 Français par défaut, anglais avec `--langue en` : reconnaît `Table` et `Appendix` en plus de `Figure`, commun aux deux langues. Les clés de sortie restent françaises (figures, tableaux, equations, annexes), seule la forme cherchée dans le texte change.
 
 ```
-python3 traceability.py FICHIER [--format text|json] [--langue fr|en|auto]
+python3 traceability.py FICHIER [--format text|json] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue d'analyse retenue. Les clés de sortie (figures, tableaux, equations, annexes) restent françaises quelle que soit cette langue.
 
 ## terminology.py
 
 Construit le glossaire des sigles, signale un sigle non défini ou employé avant sa définition, et les variantes orthographiques d'un même terme.
 
 ```
-python3 terminology.py FICHIER [--format text|json]
+python3 terminology.py FICHIER [--format text|json] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue du document (pragme `lint-style:langue`), sinon le français.
 
 ## numbers.py
 
 Signale les pourcentages supérieurs à 100, les partitions de pourcentages qui ne somment pas à cent, un séparateur décimal mixte et un espacement du signe pourcent contraire à la convention de la langue. Français par défaut, anglais avec `--langue en`.
 
 ```
-python3 numbers.py FICHIER [--format text|json] [--langue fr|en|auto]
+python3 numbers.py FICHIER [--format text|json] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
 
 Le séparateur décimal mixte ignore d'abord les groupes de milliers anglais bien formés (`1,234,567.89`) avant de chercher un mélange réel, sans quoi tout grand nombre anglais serait signalé à tort. L'espacement du signe pourcent se contrôle contre la convention de la langue : collé au nombre en anglais (APA 7, Chicago), précédé d'une espace en français (Imprimerie nationale, BIPM).
@@ -133,12 +151,12 @@ Le séparateur décimal mixte ignore d'abord les groupes de milliers anglais bie
 Lit du BibTeX, formate en APA 7, Vancouver, Chicago (auteur-date), MLA ou IEEE, déduplique par DOI, bascule une bibliographie d'un format à l'autre. Chaque entrée peut porter une ancre (champ `note` ou `annote` : citation exacte de 25 mots au plus, ou localisation précise type `p. 12`, `section 3.2`) ; le rapport d'ancrage liste les entrées sans ancre exploitable. La récupération d'une référence depuis un DOI (Crossref) est réseau et optionnelle.
 
 ```
-python3 citations.py FICHIER.bib --to apa|vancouver|chicago|mla|ieee [--dedupe] [--exiger-ancres] [--valider] [--trier cle|annee|auteur] [--langue fr|en]
+python3 citations.py FICHIER.bib --to apa|vancouver|chicago|mla|ieee [--dedupe] [--exiger-ancres] [--valider] [--trier cle|annee|auteur] [--langue fr|en] [--langue-affichage fr|en]
 python3 citations.py FICHIER.bib --bascule apa ieee
 python3 citations.py --doi 10.xxxx/yyyy | --pmid N | --arxiv ID
 ```
 
-`--langue fr|en` (défaut fr) fixe la langue de la bibliographie, uniquement par cette option : un fichier `.bib` est une suite de champs, pas de la prose, sans échantillon fiable pour une détection heuristique ni pour un pragme. En anglais, APA relie le dernier auteur par l'esperluette (section 9.8) et Chicago par « and » plutôt que par « et » ; les replis de champ manquant deviennent Anonymous, Untitled et n.d.
+`--langue-affichage fr|en` (défaut fr) fixe la langue des messages de la commande : un fichier `.bib` ne porte pas de pragme de langue. Les références formatées suivent `--langue`, la sortie JSON reste française. `--langue fr|en` (défaut fr) fixe la langue de la bibliographie, uniquement par cette option : un fichier `.bib` est une suite de champs, pas de la prose, sans échantillon fiable pour une détection heuristique ni pour un pragme. En anglais, APA relie le dernier auteur par l'esperluette (section 9.8) et Chicago par « and » plutôt que par « et » ; les replis de champ manquant deviennent Anonymous, Untitled et n.d.
 
 `--exiger-ancres` renvoie un code de sortie 1 si une entrée n'a pas d'ancre. `--valider` rapporte les champs obligatoires manquants par type d'entrée, `--pmid` et `--arxiv` résolvent une référence en BibTeX (réseau, NCBI E-utilities et export.arxiv.org).
 
@@ -149,36 +167,40 @@ Ancrage à trois couches (`references/integrite-sources.md`). La couche 1, exist
 Détecte cinq défaillances chronologiques qui survivent à une relecture humaine : date future présentée comme passée, version citée avant sa date connue (glossaire `--versions` optionnel), inversion causale (la cause datée après son effet dans la même phrase), langage à péremption (« le plus récent », « à ce jour », à ancrer par une date), chaîne de dates incohérente dans une référence. Consultatif par défaut, bloquant avec `--strict`. Français par défaut, anglais avec `--langue en` : quatre détections sur cinq lisent des motifs de langue (marqueur de temps passé, connecteur causal, langage à péremption, marqueur de version publiée), le glossaire de versions et le marqueur de preprint restant communs.
 
 ```
-python3 check-temporel.py FICHIER [--date-reference AAAA-MM-JJ] [--versions versions.json] [--format text|json] [--strict] [--langue fr|en|auto]
+python3 check-temporel.py FICHIER [--date-reference AAAA-MM-JJ] [--versions versions.json] [--format text|json] [--strict] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue d'analyse retenue.
 
 ## diff-versions.py
 
 Journal des écarts entre deux versions : sections ajoutées, supprimées, modifiées, avec le compte de mots changés.
 
 ```
-python3 diff-versions.py ANCIEN.md NOUVEAU.md [--format text|json]
+python3 diff-versions.py ANCIEN.md NOUVEAU.md [--format text|json] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue de la nouvelle version (pragme `lint-style:langue`), sinon le français.
 
 ## scorecard.py
 
 Agrège les sorties des scripts en une note de 0 à 100 sur cinq axes (style, sources, traçabilité, terminologie et nombres, lisibilité), pénalités fixes, calcul montré, verdict. Un plancher par axe plafonne la décision éditoriale : un axe effondré bloque malgré un bon total. La décision se rend sur quatre valeurs (accepter, revision mineure, revision majeure, refus). Le mode trajectoire compare deux rapports JSON (revue puis re-revue) : delta par axe, régression signalée sous -3.
 
 ```
-python3 scorecard.py FICHIER [--format text|json] [--plancher N] [--poids POIDS.json] [--seuil-type brouillon|rapport|publication] [--langue fr|en|auto]
+python3 scorecard.py FICHIER [--format text|json] [--plancher N] [--poids POIDS.json] [--seuil-type brouillon|rapport|publication] [--langue fr|en|auto] [--langue-affichage fr|en]
 python3 scorecard.py --trajectoire AVANT.json APRES.json
 ```
 
 Le rapport texte porte une barre ASCII par axe et nomme le meilleur et le pire axe. Les poids externes sont renormalisés à somme 1. La trajectoire signale l'arrêt anticipé quand le gain total reste sous +3 sans régression.
 
-`--langue` résout la langue une seule fois (même ordre de priorité que `lint-style.py`) et la redescend telle quelle dans le linter, la traçabilité, les nombres, la lisibilité, l'empreinte IA et la cohérence : un pragme `lint-style:langue=en` posé dans le document est ainsi honoré par la notation entière sans option supplémentaire. Deux clés s'ajoutent au rapport, `langue` et `mesures_non_faites` (sur l'axe Lisibilité quand le taux de passif n'est pas mesurable) ; les clés antérieures ne changent pas. Détail dans `skills/produire/references/langue.md`.
+`--langue` résout la langue une seule fois (même ordre de priorité que `lint-style.py`) et la redescend telle quelle dans le linter, la traçabilité, les nombres, la lisibilité, l'empreinte IA et la cohérence : un pragme `lint-style:langue=en` posé dans le document est ainsi honoré par la notation entière sans option supplémentaire. `--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue de notation retenue, et se redescend de la même façon dans chaque mesure consultée. Deux clés s'ajoutent au rapport, `langue` et `mesures_non_faites` (sur l'axe Lisibilité quand le taux de passif n'est pas mesurable) ; les clés antérieures ne changent pas. Détail dans `skills/produire/references/langue.md`.
 
 ## ai-fingerprint.py
 
 Mesure les marqueurs d'empreinte IA : variabilité de longueur de phrase, ouvertures répétitives, cadence ternaire, connecteurs suremployés, bigrammes répétés, amplification contrastive. Français par défaut, anglais avec `--langue en`.
 
 ```
-python3 ai-fingerprint.py FICHIER [--format text|json] [--langue fr|en|auto]
+python3 ai-fingerprint.py FICHIER [--format text|json] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
 
 Quatre signaux sur six lisent des motifs de langue (connecteurs, cadence ternaire, amplification contrastive, mots outils qui filtrent les bigrammes) ; l'écart-type de longueur de phrase et la répétition d'ouverture ne lisent aucun mot et ne changent pas. Le vocabulaire en excès mesuré sur les textes assistés par modèle (delve, intricate, meticulous...) reste porté par la règle `lexique-ia-en` de `lint-style.py`, pour ne pas le compter deux fois dans l'axe Style du scorecard.
@@ -188,7 +210,7 @@ Quatre signaux sur six lisent des motifs de langue (connecteurs, cadence ternair
 Repère les paragraphes quasi dupliqués (auto-plagiat), les phrases répétées, et liste les promesses du texte à vérifier. Français par défaut, anglais avec `--langue en`.
 
 ```
-python3 coherence.py FICHIER [--format text|json] [--langue fr|en|auto]
+python3 coherence.py FICHIER [--format text|json] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
 
 Seule la liste des promesses dépend de la langue (tournures d'annonce propres à chaque langue) ; le rapprochement de paragraphes et la répétition de phrases travaillent sur les mots du texte, quels qu'ils soient.
@@ -199,16 +221,20 @@ Génère un tableau Markdown autonome depuis un CSV ou un JSON, et audite les ta
 
 ```
 python3 tables.py gen DATA.csv|.json [--caption "..."] [--source "..."]
-python3 tables.py audit DOCUMENT.md
+python3 tables.py audit DOCUMENT.md [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue des messages de la commande d'audit. Le tableau produit par `gen`, lui, est du contenu de document et ne change pas de langue.
 
 ## plan-check.py
 
 Confronte un plan (plan.json) au document : sections prévues présentes ou manquantes, sections hors plan, couverture.
 
 ```
-python3 plan-check.py PLAN.json DOCUMENT.md [--format text|json]
+python3 plan-check.py PLAN.json DOCUMENT.md [--format text|json] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue du document (pragme `lint-style:langue`), sinon le français.
 
 ## project.py
 
@@ -223,24 +249,30 @@ python3 project.py artefact NOM | frontiere "LIBELLE" | reprendre HASH
 python3 project.py objet figure|tableau|equation|annexe NUMERO "LIBELLE"
 python3 project.py passation [--format text|json]
 python3 project.py reproductibilite --plugin-version X.Y.Z --modele NOM
-python3 project.py status
+python3 project.py status [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue des messages et du tableau de bord, par défaut le français : un projet n'est pas un manuscrit, il ne porte pas de pragme de langue. Le journal écrit dans `projet.json` reste français quelle que soit cette option, pour la raison exposée plus haut à propos de `libelles.py`.
 
 ## check-presentation.py
 
 Valide un deck exporté en PDF : nombre de pages confronté à la durée annoncée (1 à 2 diapositives par minute), densité de texte par page, pages illisibles. L'extraction de texte et le rendu passent par des backends optionnels en cascade (pypdf, pdftotext, pdftoppm) ; un backend absent dégrade proprement (mesure sautée et déclarée, jamais inventée). Consultatif par défaut.
 
 ```
-python3 check-presentation.py DECK.pdf [--duree MINUTES] [--format text|json] [--strict]
+python3 check-presentation.py DECK.pdf [--duree MINUTES] [--format text|json] [--strict] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut le français : un PDF ne porte pas de pragme de langue.
 
 ## audit-doc.py
 
 Audit consolidé d'un document : scorecard, empreinte IA, cohérence, audit de tableaux, en un seul rapport.
 
 ```
-python3 audit-doc.py FICHIER [--format text|json]
+python3 audit-doc.py FICHIER [--format text|json] [--langue fr|en|auto] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue de mesure retenue. Trois des quatre mesures consolidées ici (empreinte IA, cohérence, tableaux) sont produites par des sous-appels qui ne passent pas par la couche de libellés : leurs constats restent français, et le rapport anglais le déclare plutôt que de laisser croire à une traduction complète.
 
 ## images.py
 
@@ -255,9 +287,11 @@ Le calcul de résolution effective (pixels divisés par la largeur en pouces) et
 ```
 python3 images.py extract SOURCE --out DIR [--min-bytes N]
 python3 images.py manifest DIR
-python3 images.py catalogue DIR [--out FICHIER] [--largeur-cm N] [--usage impression|ecran] [--recursif] [--format text|json] [--strict]
-python3 images.py convertir FIGURE.svg --out FIGURE.png [--largeur-px N] [--format text|json]
+python3 images.py catalogue DIR [--out FICHIER] [--largeur-cm N] [--usage impression|ecran] [--recursif] [--format text|json] [--strict] [--langue-affichage fr|en]
+python3 images.py convertir FIGURE.svg --out FIGURE.png [--largeur-px N] [--format text|json] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport texte, par défaut le français : un dossier d'images ne porte pas de pragme de langue. Le catalogue écrit sur le disque et la sortie JSON restent français quelle que soit cette option.
 
 ## gabarit.py
 
@@ -266,21 +300,23 @@ Gabarits de document imposés par un tiers, en quatre familles détectées par l
 Trois actions communes aux familles concernées. `inventorier` extrait la structure d'un gabarit fourni dans un JSON déclaratif qui porte lui-même la liste de ce qu'il ne couvre pas : pour un document texte, styles nommés, hiérarchie de titres, style de corps, marges et format de page, en-têtes et pieds, polices, protection en édition ; pour une diapositive, dispositions nommées, espaces réservés et taille de diapositive en plus ; pour un PDF, nombre de pages, format de page nommé (A4, Letter), orientation, polices et proportion incorporée, chiffrement et version, sans les marges, qui ne sont pas une donnée du fichier. `comparer` confronte un document à cet inventaire et rend un verdict fermé (conforme, écarts mineurs, écarts majeurs) par identifiant stable, jamais par le libellé affiché qu'un Word ou un PowerPoint francisé renomme ; comparer deux familles différentes est refusé. `remplir` injecte le contenu dans le gabarit lui-même, dans ses styles ou ses dispositions existants, plutôt que de générer un fichier neuf qui perdrait filigrane, numérotation liée, masque de diapositive ou thème de couleurs ; l'option `--disposition` choisit la disposition du gabarit dans laquelle les diapositives sont créées. Une nouvelle sous-commande `formats` liste les familles et leurs extensions.
 
 ```
-python3 gabarit.py inventorier GABARIT.docx|.pptx|.odt|.pdf [--out INVENTAIRE.json] [--format text|json]
-python3 gabarit.py comparer INVENTAIRE.json DOCUMENT [--format text|json] [--strict]
+python3 gabarit.py inventorier GABARIT.docx|.pptx|.odt|.pdf [--out INVENTAIRE.json] [--format text|json] [--langue-affichage fr|en]
+python3 gabarit.py comparer INVENTAIRE.json DOCUMENT [--format text|json] [--strict] [--langue-affichage fr|en]
 python3 gabarit.py remplir INVENTAIRE.json CONTENU.md --out SORTIE [--logo FICHIER] [--logo-largeur-cm N] [--disposition NOM]
 python3 gabarit.py formats
 ```
 
-La comparaison des styles se fait par identifiant (`w:styleId` en Word, nom de disposition en PowerPoint, `style:name` en ODF), jamais par le libellé affiché. Le remplissage s'arrête sur un gabarit protégé en édition, ou sur un ODF ou un PDF, plutôt que de produire un fichier douteux, et ajoute le contenu avant la dernière section sans supprimer les paragraphes ou les diapositives de remplissage du gabarit. Code de sortie 1 sur écart majeur.
+`--langue-affichage fr|en` fixe la langue du rapport texte, par défaut le français : un gabarit bureautique ne porte pas de pragme de langue. L'inventaire écrit sur le disque et la sortie JSON restent français quelle que soit cette option. La comparaison des styles se fait par identifiant (`w:styleId` en Word, nom de disposition en PowerPoint, `style:name` en ODF), jamais par le libellé affiché. Le remplissage s'arrête sur un gabarit protégé en édition, ou sur un ODF ou un PDF, plutôt que de produire un fichier douteux, et ajoute le contenu avant la dernière section sans supprimer les paragraphes ou les diapositives de remplissage du gabarit. Code de sortie 1 sur écart majeur.
 
 ## check-lecture-pdf.py
 
 Préflight d'intégrité de lecture, à lancer avant tout ancrage de citation sur une source PDF : un ancrage sur une page suppose que le texte de cette page a réellement été extrait, ce que le script vérifie plutôt que de le supposer. Verdict fermé sur quatre valeurs : lecture fiable, lecture partielle, lecture non fiable, non mesurable, ce dernier ne se confondant jamais avec le troisième (l'absence de tout backend PDF dégrade proprement vers non mesurable). Le rapport liste les pages ancrables et les pages non ancrables, signale les pages sans texte (scan sans OCR), les pages à l'encodage suspect (mojibake) et un fichier chiffré ou protégé, déclaré et jamais contourné. Les contrôles binaires (en-tête `%PDF-`, marqueur `%%EOF`, table xref) restent disponibles sans aucun backend installé, en réutilisant la cascade de backends de check-presentation.py par import de chemin.
 
 ```
-python3 check-lecture-pdf.py FICHIER.pdf [--format text|json] [--strict]
+python3 check-lecture-pdf.py FICHIER.pdf [--format text|json] [--strict] [--langue-affichage fr|en]
 ```
+
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut le français : un PDF ne porte pas de pragme de langue.
 
 Module importable : `analyser(chemin)` renvoie le rapport, `rapport_texte(rapport)` le met en forme.
 
@@ -289,10 +325,10 @@ Module importable : `analyser(chemin)` renvoie le rapport, `rapport_texte(rappor
 Inventaire de ce qu'un livrable trahit de son auteur, à lancer avant de l'envoyer. Quatre familles lues avec la bibliothèque standard seule : texte OOXML (.docx, .dotx, .docm), diapositives OOXML (.pptx, .potx, .pptm), ODF (.odt, .ott, .odp, .otp) et PDF. Le script relève les propriétés de document (auteur d'origine, dernière personne à avoir enregistré, organisation, responsable déclaré, titre, sujet, mots-clés), l'historique d'édition (nombre d'enregistrements successifs, temps d'édition cumulé), les résidus de travail (modifications suivies non acceptées, commentaires avec le nom de leur auteur, texte masqué, notes du présentateur en PowerPoint, dossier customXml, liste des collaborateurs), les chemins locaux fuités par les relations du paquet et, pour un PDF, le dictionnaire Info, le bloc XMP, le chiffrement déclaré, les fichiers embarqués et les annotations.
 
 ```
-python3 check-fuites.py FICHIER [--auteur "Prenom Nom"] [--format text|json] [--strict]
+python3 check-fuites.py FICHIER [--auteur "Prenom Nom"] [--format text|json] [--strict] [--langue-affichage fr|en]
 ```
 
-Chaque constat porte une confiance graduée, parce qu'un champ rempli et un champ présent ne disent pas la même chose : `confirme` (une valeur lisible identifie une personne, une organisation ou une machine), `probable` (une valeur existe et paraît identifiante sans certitude), `informatif` (une structure est présente sans contenu lisible), `douteux` (le constat a de bonnes chances d'être un faux positif, rapporté pour ne rien taire). Le verdict se ferme sur quatre valeurs : fuites confirmees, fuites probables, traces sans identite lisible, rien a signaler. L'option `--auteur` reclasse en `douteux` un champ qui porte l'auteur déclaré du document, déjà public sur la page de garde. Consultatif par défaut, `--strict` renvoie 1 dès le premier constat confirmé.
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut le français : un binaire bureautique ne porte pas de pragme de langue. Chaque constat porte une confiance graduée, parce qu'un champ rempli et un champ présent ne disent pas la même chose : `confirme` (une valeur lisible identifie une personne, une organisation ou une machine), `probable` (une valeur existe et paraît identifiante sans certitude), `informatif` (une structure est présente sans contenu lisible), `douteux` (le constat a de bonnes chances d'être un faux positif, rapporté pour ne rien taire). Le verdict se ferme sur quatre valeurs : fuites confirmees, fuites probables, traces sans identite lisible, rien a signaler. L'option `--auteur` reclasse en `douteux` un champ qui porte l'auteur déclaré du document, déjà public sur la page de garde. Consultatif par défaut, `--strict` renvoie 1 dès le premier constat confirmé.
 
 Le script inspecte et ne nettoie jamais. Supprimer une trace est une décision éditoriale qui appartient à l'auteur, la repérer est une mesure ; un outil qui efface d'office déciderait à sa place et rendrait le geste invisible.
 
@@ -305,12 +341,12 @@ Le rapport se termine par ce que le contrôle ne regarde pas (contenu rédaction
 Droits de réutilisation d'une figure tierce, à contrôler avant de reproduire une image extraite d'une publication. Citer la source règle l'honnêteté intellectuelle, pas le droit de reproduction : une figure est une oeuvre protégée indépendamment du texte de l'article qui la porte. Le script résout la licence déclarée d'une source par son DOI, la classe sur quatre verdicts fermés, écrit la ligne d'attribution conforme puis valide le registre des figures empruntées.
 
 ```
-python3 check-droits.py licence --doi 10.xxxx/yyyy [--reseau] [--openalex-cle CLE] [--format text|json] [--strict]
-python3 check-droits.py registre REGISTRE.json [--reseau] [--format text|json] [--strict]
+python3 check-droits.py licence --doi 10.xxxx/yyyy [--reseau] [--openalex-cle CLE] [--format text|json] [--strict] [--langue-affichage fr|en]
+python3 check-droits.py registre REGISTRE.json [--reseau] [--format text|json] [--strict] [--langue-affichage fr|en]
 python3 check-droits.py credits REGISTRE.json [--sortie texte|html|latex]
 ```
 
-Quatre verdicts : `reutilisable avec attribution` (CC BY, CC0, domaine public), `reutilisable sous conditions` (CC BY-SA impose sa licence au document dérivé, CC BY-NC ferme l'usage commercial, CC BY-ND interdit toute adaptation donc tout recadrage), `autorisation requise` (tous droits réservés, cas ordinaire d'une revue sur abonnement), `licence inconnue` (aucun index n'a répondu ou aucune licence déclarée). Le quatrième ne se confond jamais avec le troisième, comme `non mesurable` ne se confond pas avec `lecture non fiable` dans check-lecture-pdf.py : une absence d'information n'est ni une interdiction, ni une permission.
+`--langue-affichage fr|en` fixe la langue du rapport et de la ligne de crédit, par défaut le français : un registre JSON ne porte pas de pragme de langue. Quatre verdicts : `reutilisable avec attribution` (CC BY, CC0, domaine public), `reutilisable sous conditions` (CC BY-SA impose sa licence au document dérivé, CC BY-NC ferme l'usage commercial, CC BY-ND interdit toute adaptation donc tout recadrage), `autorisation requise` (tous droits réservés, cas ordinaire d'une revue sur abonnement), `licence inconnue` (aucun index n'a répondu ou aucune licence déclarée). Le quatrième ne se confond jamais avec le troisième, comme `non mesurable` ne se confond pas avec `lecture non fiable` dans check-lecture-pdf.py : une absence d'information n'est ni une interdiction, ni une permission.
 
 Le réseau est optionnel derrière `--reseau` et réutilise les fonctions de requête de verify-sources.py, chargées par chemin. Crossref porte un tableau `license` (URL, date d'application, version de contenu visée), OpenAlex porte la licence de la meilleure localisation ouverte plus le statut d'accès ouvert. Un tableau `license` rempli ne vaut pas licence de réutilisation : une revue sur abonnement y déclare souvent ses seules conditions de fouille de textes, qui ne couvrent pas la republication d'une figure. Un index qui ne répond pas sort du calcul et le dit.
 
@@ -325,11 +361,11 @@ Le script rapporte ce que la licence déclare, il ne prononce pas la légalité 
 Contrôle de la déclaration de disponibilité des données et du code, sur le manuscrit source, avant soumission. Les revues la réclament, les financeurs publics en font une obligation contractuelle, et une déclaration qui promet un accès inexistant est une affirmation fausse dans un article, du même ordre qu'un chiffre erroné.
 
 ```
-python3 check-disponibilite.py FICHIER.md [--format text|json] [--strict]
+python3 check-disponibilite.py FICHIER.md [--format text|json] [--strict] [--langue-affichage fr|en]
 cat manuscrit.md | python3 check-disponibilite.py -
 ```
 
-Le script repère la section de disponibilité par son titre (intitulés français et anglais courants), y détecte le régime déclaré dans une liste fermée de six valeurs (`depot-ouvert`, `sur-demande`, `embargo`, `restriction-legale`, `donnees-de-tiers`, `aucune-donnee`), puis contrôle que chaque régime porte la preuve qu'il exige : identifiant pérenne quand l'ouverture est annoncée, date de levée quand un embargo est annoncé, licence nommée quand du code est annoncé, détenteur quand les données viennent d'un tiers, contact avec critères et durée quand l'accès est promis sur demande. Un exemple de déclaration cité dans un bloc de code n'est pas compté comme la déclaration du document.
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut la langue du manuscrit (pragme `lint-style:langue`), sinon le français. Le script repère la section de disponibilité par son titre (intitulés français et anglais courants), y détecte le régime déclaré dans une liste fermée de six valeurs (`depot-ouvert`, `sur-demande`, `embargo`, `restriction-legale`, `donnees-de-tiers`, `aucune-donnee`), puis contrôle que chaque régime porte la preuve qu'il exige : identifiant pérenne quand l'ouverture est annoncée, date de levée quand un embargo est annoncé, licence nommée quand du code est annoncé, détenteur quand les données viennent d'un tiers, contact avec critères et durée quand l'accès est promis sur demande. Un exemple de déclaration cité dans un bloc de code n'est pas compté comme la déclaration du document.
 
 Un identifiant pérenne est un DOI, un handle, un ARK, un SWHID ou un numéro d'accession, jamais une adresse web ordinaire : annoncer des données ouvertes en pointant une page de laboratoire est l'incohérence que ce contrôle sert à rendre visible. De même, un lien vers un dépôt de développement sans version figée ne vaut pas archivage, un dépôt pouvant être renommé, rendu privé, réécrit ou supprimé.
 
@@ -346,13 +382,13 @@ Module importable : `reperer_section`, `detecter_regimes`, `identifiants_perenne
 Chaînon amont de check-droits.py : celui-ci dit ce que la licence permet, celui-là dit de quelle figure il s'agit et d'où le fichier vient. `images.py` sort des images anonymes, que rien ne relie à "Figure 3" ni à sa légende ; `emprunts.py` pose ce lien avec une confiance mesurée et refuse de l'affirmer quand la page est ambiguë.
 
 ```
-python3 emprunts.py inventorier SOURCE.pdf [--out DIR] [--min-bytes N] [--format text|json] [--strict]
-python3 emprunts.py localiser --doi 10.xxxx/yyyy [--reseau] [--openalex-cle CLE] [--format text|json] [--strict]
-python3 emprunts.py recuperer --doi 10.xxxx/yyyy --out FICHIER.pdf [--reseau] [--format text|json] [--strict]
-python3 emprunts.py chainer --doi 10.xxxx/yyyy [--out DIR] [--source FICHIER.pdf] [--figure N] [--modifications TEXTE] [--registre R.json] [--reseau] [--format text|json] [--strict]
+python3 emprunts.py inventorier SOURCE.pdf [--out DIR] [--min-bytes N] [--format text|json] [--strict] [--langue-affichage fr|en]
+python3 emprunts.py localiser --doi 10.xxxx/yyyy [--reseau] [--openalex-cle CLE] [--format text|json] [--strict] [--langue-affichage fr|en]
+python3 emprunts.py recuperer --doi 10.xxxx/yyyy --out FICHIER.pdf [--reseau] [--format text|json] [--strict] [--langue-affichage fr|en]
+python3 emprunts.py chainer --doi 10.xxxx/yyyy [--out DIR] [--source FICHIER.pdf] [--figure N] [--modifications TEXTE] [--registre R.json] [--reseau] [--format text|json] [--strict] [--langue-affichage fr|en]
 ```
 
-`inventorier` extrait les images par `images.py`, lit le texte page par page par la cascade de backends de check-presentation.py (déjà partagée avec check-lecture-pdf.py, chargée par chemin plutôt que redite), repère les légendes en tête de ligne (`Figure 3.`, `Fig. 3`, `Figure 3:`, `Tableau 2.`, plus les formes anglaises `Figure`, `Fig.` et `Table`) puis les apparie aux images de la même page. L'appariement est une heuristique de mise en page et chaque fiche porte son niveau : `elevee` (une image et une légende sur la page), `moyenne` (comptes égaux pour plus d'une image, appariement par ordre de lecture), `faible` (comptes divergents), `nulle` (aucune légende disponible, le libellé restant vide). Cinq verdicts fermés : `inventaire apparie`, `inventaire partiel`, `inventaire sans legende`, `inventaire non apparie`, `extraction impossible`. Sans backend de texte, l'inventaire rend les images sans légende et le déclare, comme check-lecture-pdf.py dégrade vers `non mesurable` : il n'invente aucune légende. Les légendes repérées sans image extraite sont listées à part, signe d'une figure vectorielle tracée dans la page.
+`--langue-affichage fr|en` fixe la langue du rapport, par défaut le français : ni un PDF ni un DOI ne portent de pragme de langue. `inventorier` extrait les images par `images.py`, lit le texte page par page par la cascade de backends de check-presentation.py (déjà partagée avec check-lecture-pdf.py, chargée par chemin plutôt que redite), repère les légendes en tête de ligne (`Figure 3.`, `Fig. 3`, `Figure 3:`, `Tableau 2.`, plus les formes anglaises `Figure`, `Fig.` et `Table`) puis les apparie aux images de la même page. L'appariement est une heuristique de mise en page et chaque fiche porte son niveau : `elevee` (une image et une légende sur la page), `moyenne` (comptes égaux pour plus d'une image, appariement par ordre de lecture), `faible` (comptes divergents), `nulle` (aucune légende disponible, le libellé restant vide). Cinq verdicts fermés : `inventaire apparie`, `inventaire partiel`, `inventaire sans legende`, `inventaire non apparie`, `extraction impossible`. Sans backend de texte, l'inventaire rend les images sans légende et le déclare, comme check-lecture-pdf.py dégrade vers `non mesurable` : il n'invente aucune légende. Les légendes repérées sans image extraite sont listées à part, signe d'une figure vectorielle tracée dans la page.
 
 `localiser` interroge OpenAlex pour l'état d'accès ouvert (`is_oa`, `oa_status`), l'adresse du PDF de la meilleure localisation ouverte et la licence déclarée. État fermé sur quatre valeurs : `acces ouvert confirme`, `acces ouvert sans fichier`, `acces non ouvert`, `localisation inconnue`. Sans `--reseau` ou quand l'index ne répond pas, l'état reste inconnu : une mesure omise, jamais une valeur supposée.
 
@@ -367,11 +403,11 @@ Limite honnête de l'appariement : il lit une mise en page, pas une figure. Une 
 Registre de logos, séparé de la charte graphique parce qu'un logo obéit aux règles de l'organisation qui le possède (zone de respiration, taille minimale, usages autorisés, rang protocolaire) et non à celles du document. `valider` contrôle le format du registre, l'existence des fichiers, le ratio déclaré et la résolution effective de chaque logo à la taille où il sera affiché (calcul et seuils repris de `images.py`, source unique pour toute illustration du plugin). `placer` rend le fragment prêt à insérer pour un usage, en HTML ou en LaTeX ; en docx l'insertion réelle passe par `gabarit.py remplir --logo`, qui écrit aussi la relation et le manifeste de types.
 
 ```
-python3 logos.py valider REGISTRE.json [--format text|json] [--strict]
+python3 logos.py valider REGISTRE.json [--format text|json] [--strict] [--langue-affichage fr|en]
 python3 logos.py placer REGISTRE.json --usage page-garde|en-tete|pied|co-signature --format docx|latex|html
 ```
 
-Format du registre dans `assets/registre-logos.exemple.json`. Un fichier absent est une erreur, une résolution basse un avertissement. Un logo dont le fichier manque est écarté du placement plutôt que référencé à vide.
+`--langue-affichage fr|en` fixe la langue des erreurs, des avertissements et du rapport texte, par défaut le français : un registre de logos est un fichier de configuration, il ne porte pas de langue. Le fragment de placement et la sortie JSON n'en dépendent pas. Format du registre dans `assets/registre-logos.exemple.json`. Un fichier absent est une erreur, une résolution basse un avertissement. Un logo dont le fichier manque est écarté du placement plutôt que référencé à vide.
 
 ## tools/check.py
 

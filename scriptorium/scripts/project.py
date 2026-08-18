@@ -81,17 +81,47 @@ etat, motif) ; enregistrer_artefact(d, nom) ; poser_frontiere(d, libelle,
 decision_attente) ; reprendre(d, hash_) ; journaliser_outrepassement(path,
 libelle, cran, justification) ; prochain_cran(d) ; compter_outrepassements(d) ;
 valider_justification(cran, justification) ; enregistrer_reproductibilite(d,
-plugin_version, modele) ; statut_texte(d) ; enregistrer_objet(d, type_objet,
-numero, libelle) ; prochain_numero(d, type_objet) ; passation_redacteur(d) ;
-passation_texte(d).
+plugin_version, modele) ; statut_texte(d, langue_affichage=None) ;
+enregistrer_objet(d, type_objet, numero, libelle) ; prochain_numero(d,
+type_objet) ; passation_redacteur(d) ; passation_texte(d,
+langue_affichage=None).
+
+LANGUE : le journal de mission ECRIT dans projet.json ne depend d'aucune
+langue d'affichage. Les etats d'etape, les types d'objet, les libelles poses
+par l'utilisateur et la declaration de stochasticite y restent les chaines
+francaises, quelle que soit la langue demandee a la commande qui les a
+ecrits. Sans cela un projet commence en francais et repris en anglais se
+contredirait a la relecture, et le hash de continuite d'une frontiere, qui
+porte sur la serialisation du journal, changerait de valeur sans qu'aucune
+decision n'ait bouge. Seuls le tableau de bord, la passation et les messages
+de la ligne de commande suivent --langue-affichage (defaut fr : un projet
+n'est pas un manuscrit, il ne porte pas de pragme de langue).
 """
 import argparse
 import copy
 import datetime
 import hashlib
+import importlib.util
 import json
 import os
 import sys
+
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois : le module se lit
+    par chemin, aucun sys.path n'est garanti."""
+    global _LIB
+    if _LIB is None:
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
 
 SQUELETTE = {
     "titre": "",
@@ -209,20 +239,27 @@ def _ajouter_journal(d, entree):
     return entree
 
 
-def changer_etat(d, nom, nouveau, motif=None):
+def changer_etat(d, nom, nouveau, motif=None, langue_affichage=None):
+    """Change l'etat d'une etape et le journalise.
+
+    Les etats nommes dans les messages d'erreur restent les chaines tapees
+    sur la ligne de commande : c'est ce que l'utilisateur doit corriger, le
+    traduire l'egarerait. Seule la phrase autour suit la langue demandee."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     if nouveau not in ETATS_VALIDES:
-        raise ValueError(f"etat inconnu : '{nouveau}' (valides : {', '.join(ETATS_VALIDES)}).")
+        raise ValueError(lib.t("project.e.etat_inconnu", la, etat=nouveau,
+                               valides=", ".join(ETATS_VALIDES)))
     etapes = d.setdefault("etapes", {})
     ancien = etapes.get(nom, {}).get("etat", "en_attente")
     motif_propre = (motif or "").strip()
     if nouveau == "saute" and not motif_propre:
-        raise ValueError("La transition vers 'saute' exige un motif (--motif TEXTE).")
+        raise ValueError(lib.t("project.e.motif_requis", la))
     legales = TRANSITIONS_LEGALES.get(ancien, {ancien})
     if nouveau not in legales:
-        raise ValueError(
-            f"Transition illegale : '{nom}' est '{ancien}', passage a '{nouveau}' refuse "
-            f"(autorise depuis '{ancien}' : {', '.join(sorted(legales))})."
-        )
+        raise ValueError(lib.t("project.e.transition", la, nom=nom,
+                               ancien=ancien, nouveau=nouveau,
+                               legales=", ".join(sorted(legales))))
     info = {"etat": nouveau, "maj": _horodatage()}
     if motif_propre:
         info["motif"] = motif_propre
@@ -247,7 +284,7 @@ def enregistrer_artefact(d, nom):
     return nouvelle
 
 
-def enregistrer_objet(d, type_objet, numero, libelle):
+def enregistrer_objet(d, type_objet, numero, libelle, langue_affichage=None):
     """Fixe le numero d'un objet legende pour toute la mission.
 
     Un document long se redige section par section : sans numero fixe, la
@@ -255,27 +292,35 @@ def enregistrer_objet(d, type_objet, numero, libelle):
     le meme couple (type, numero) avec le meme libelle est un no-op accepte,
     avec un libelle different c'est un refus, parce que deux figures 3 dans un
     meme document ne se rattrapent plus a la mise en forme.
+
+    Le type d'objet ENREGISTRE reste la chaine francaise de TYPES_OBJET :
+    c'est une donnee du projet, relue plus tard par la passation. Seuls les
+    messages d'erreur suivent langue_affichage.
     """
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     if type_objet not in TYPES_OBJET:
-        raise ValueError(
-            f"type d'objet inconnu : '{type_objet}' (valides : {', '.join(TYPES_OBJET)}).")
+        raise ValueError(lib.t("project.e.type_objet", la, objet=type_objet,
+                               valides=", ".join(TYPES_OBJET)))
     try:
         numero = int(numero)
     except (TypeError, ValueError):
-        raise ValueError(f"numero non entier : {numero!r}.")
+        raise ValueError(lib.t("project.e.numero_non_entier", la,
+                               numero=repr(numero)))
     if numero < 1:
-        raise ValueError(f"numero hors bornes : {numero} (le premier rang est 1).")
+        raise ValueError(lib.t("project.e.numero_borne", la, numero=numero))
     libelle_propre = (libelle or "").strip()
     if not libelle_propre:
-        raise ValueError("un objet numerote porte un libelle non vide.")
+        raise ValueError(lib.t("project.e.libelle_vide", la))
     objets = d.setdefault("objets_numerotes", [])
     for o in objets:
         if o.get("type") == type_objet and o.get("numero") == numero:
             if o.get("libelle") == libelle_propre:
                 return o
-            raise ValueError(
-                f"{type_objet} {numero} est deja pris par '{o.get('libelle')}' : "
-                f"choisir un autre numero plutot que reaffecter celui-ci.")
+            raise ValueError(lib.t(
+                "project.e.numero_pris", la,
+                objet=lib.valeur("project.type_objet", type_objet, la),
+                numero=numero, libelle=o.get("libelle")))
     objet = {"type": type_objet, "numero": numero, "libelle": libelle_propre,
              "maj": _horodatage()}
     objets.append(objet)
@@ -310,32 +355,47 @@ def passation_redacteur(d):
     }
 
 
-def passation_texte(p):
-    """Passation en texte, a coller dans le prompt du sous-agent redacteur."""
-    lignes = ["=== Passation vers le redacteur ==="]
+def passation_texte(p, langue_affichage=None):
+    """Passation en texte, a coller dans le prompt du sous-agent redacteur.
+
+    Le glossaire et les libelles d'objet viennent du projet : ils sont repris
+    tels quels, jamais traduits, sinon le redacteur emploierait un terme qui
+    ne figure pas dans le glossaire fixe. Seule la charpente du texte suit la
+    langue demandee."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
+    lignes = [lib.t("project.pass.titre", la)]
     if p.get("genre"):
-        lignes.append(f"Genre : {p['genre']}")
+        lignes.append(lib.t("project.genre", la, genre=p["genre"]))
     if p.get("problematique"):
-        lignes.append(f"Problematique : {p['problematique']}")
+        lignes.append(lib.t("project.pass.problematique", la,
+                            problematique=p["problematique"]))
     lignes.append("")
-    lignes.append("Glossaire (termes fixes, a employer tels quels, sans synonyme) :")
+    lignes.append(lib.t("project.pass.glossaire", la))
     if not p["glossaire"]:
-        lignes.append("  (aucun terme fixe)")
+        lignes.append("  " + lib.t("project.pass.aucun_terme", la))
     else:
         for terme in sorted(p["glossaire"]):
-            lignes.append(f"  {terme} : {p['glossaire'][terme]}")
+            lignes.append("  " + lib.t("project.pass.terme", la, terme=terme,
+                                       definition=p["glossaire"][terme]))
     lignes.append("")
-    lignes.append("Objets deja numerotes (ne pas renumeroter, ne pas reutiliser) :")
+    lignes.append(lib.t("project.pass.objets", la))
     if not p["objets_numerotes"]:
-        lignes.append("  (aucun objet numerote)")
+        lignes.append("  " + lib.t("project.pass.aucun_objet", la))
     else:
         for o in sorted(p["objets_numerotes"],
                         key=lambda x: (x.get("type", ""), x.get("numero", 0))):
-            lignes.append(f"  {o.get('type')} {o.get('numero')} : {o.get('libelle')}")
+            lignes.append("  " + lib.t(
+                "project.pass.objet", la,
+                objet=lib.valeur("project.type_objet", o.get("type"), la),
+                numero=o.get("numero"), libelle=o.get("libelle")))
     lignes.append("")
-    lignes.append("Prochain numero libre : "
-                  + ", ".join(f"{t} {p['prochains_numeros'][t]}"
-                              for t in sorted(p["prochains_numeros"])))
+    lignes.append(lib.t(
+        "project.pass.prochain", la,
+        liste=", ".join(
+            "%s %s" % (lib.valeur("project.type_objet", t, la),
+                       p["prochains_numeros"][t])
+            for t in sorted(p["prochains_numeros"]))))
     return "\n".join(lignes)
 
 
@@ -381,15 +441,17 @@ def deja_reprise(d, hash_):
     return None
 
 
-def reprendre(d, hash_):
+def reprendre(d, hash_, langue_affichage=None):
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     fr = trouver_frontiere(d, hash_)
     if fr is None:
-        raise ValueError(f"Aucune frontiere avec le hash '{hash_}'.")
+        raise ValueError(lib.t("project.e.frontiere_absente", la,
+                               hash=hash_))
     deja = deja_reprise(d, hash_)
     if deja is not None:
-        raise ValueError(
-            f"Cette frontiere a deja ete reprise le {deja['horodatage']} (double reprise refusee)."
-        )
+        raise ValueError(lib.t("project.e.double_reprise", la,
+                               horodatage=deja["horodatage"]))
     accuse = {
         "libelle_frontiere": fr["libelle"],
         "horodatage_frontiere": fr["horodatage"],
@@ -410,27 +472,30 @@ def prochain_cran(d):
     return compter_outrepassements(d) + 1
 
 
-def valider_justification(cran, justification):
+def valider_justification(cran, justification, langue_affichage=None):
     """Regle de friction a 3 crans. Cran 1 : aucune justification requise
     (avertissement simple). Cran 2 : justification non vide requise. Cran 3
     et au-dela : justification d'au moins 100 caracteres requise. Leve
     ValueError si la justification manque ou est trop courte pour le cran."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     j = (justification or "").strip()
     if cran <= 1:
         return
     if cran == 2:
         if not j:
-            raise ValueError("cran 2 : --justification \"texte\" est requise.")
+            raise ValueError(lib.t("project.e.cran2", la))
         return
     if len(j) < 100:
-        raise ValueError(f"cran {cran} : justification d'au moins 100 caracteres requise ({len(j)} fournis).")
+        raise ValueError(lib.t("project.e.cran3", la, cran=cran, n=len(j)))
 
 
-def journaliser_outrepassement(path, libelle, cran, justification=None):
+def journaliser_outrepassement(path, libelle, cran, justification=None,
+                               langue_affichage=None):
     """Charge PATH, valide la justification requise pour CRAN, journalise
     l'outrepassement, sauvegarde. Fonction appelee par tools/check.py quand
     un projet.json existe au chemin --projet."""
-    valider_justification(cran, justification)
+    valider_justification(cran, justification, langue_affichage)
     d = charger(path)
     entree = {"type": "outrepassement", "horodatage": _horodatage(), "libelle": libelle, "cran": cran}
     if justification:
@@ -440,73 +505,94 @@ def journaliser_outrepassement(path, libelle, cran, justification=None):
     return entree
 
 
-def statut_texte(d):
+def statut_texte(d, langue_affichage=None):
+    """Tableau de bord lisible.
+
+    Les etats d'etape, les types d'objet et le statut d'une frontiere sont
+    des valeurs machine : le projet les porte en francais, ils sont traduits
+    ici a l'affichage seulement. Les titres, motifs, libelles de frontiere et
+    noms d'artefact viennent de l'utilisateur, ils sont repris tels quels."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     lignes = []
-    titre = d.get("titre") or "(sans titre)"
-    lignes.append(f"=== Tableau de bord : {titre} ===")
+    titre = d.get("titre") or lib.t("project.sans_titre", la)
+    lignes.append(lib.t("project.tableau", la, titre=titre))
     if d.get("genre"):
-        lignes.append(f"Genre : {d['genre']}")
+        lignes.append(lib.t("project.genre", la, genre=d["genre"]))
     lignes.append("")
-    lignes.append("Etapes :")
+    lignes.append(lib.t("project.etapes", la))
     etapes = d.get("etapes", {})
     if not etapes:
-        lignes.append("  (aucune etape suivie)")
+        lignes.append("  " + lib.t("project.aucune_etape", la))
     else:
         for nom in sorted(etapes):
             info = etapes[nom]
             sym = SYMBOLES_ETAT.get(info.get("etat"), "[?]")
-            motif = f" (motif : {info['motif']})" if info.get("motif") else ""
-            lignes.append(f"  {sym} {nom:<20} {info.get('etat')}{motif}")
+            motif = (lib.t("project.etape_motif", la, motif=info["motif"])
+                     if info.get("motif") else "")
+            lignes.append("  " + lib.t(
+                "project.etape_ligne", la, sym=sym, nom=nom,
+                etat=lib.valeur("project.etat", info.get("etat"), la),
+                motif=motif))
     lignes.append("")
-    lignes.append("Artefacts :")
+    lignes.append(lib.t("project.artefacts", la))
     artefacts = d.get("artefacts", {})
     if not artefacts:
-        lignes.append("  (aucun artefact enregistre)")
+        lignes.append("  " + lib.t("project.aucun_artefact", la))
     else:
         for nom in sorted(artefacts):
-            lignes.append(f"  {nom:<20} {artefacts[nom]['version']}")
+            lignes.append("  " + lib.t("project.artefact_ligne", la, nom=nom,
+                                       version=artefacts[nom]["version"]))
     lignes.append("")
-    lignes.append("Objets numerotes :")
+    lignes.append(lib.t("project.objets", la))
     objets = d.get("objets_numerotes") or []
     if not objets:
-        lignes.append("  (aucun)")
+        lignes.append("  " + lib.t("project.aucun", la))
     else:
         for o in sorted(objets, key=lambda x: (x.get("type", ""), x.get("numero", 0))):
-            lignes.append(f"  {o.get('type')} {o.get('numero'):<3} {o.get('libelle')}")
+            lignes.append("  " + lib.t(
+                "project.objet_ligne", la,
+                objet=lib.valeur("project.type_objet", o.get("type"), la),
+                numero=o.get("numero"), libelle=o.get("libelle")))
     lignes.append("")
     repro = [e for e in d.get("journal", []) if e.get("type") == "reproductibilite"]
-    lignes.append("Reproductibilite :")
+    lignes.append(lib.t("project.repro", la))
     if not repro:
-        lignes.append("  (aucune configuration de generation enregistree)")
+        lignes.append("  " + lib.t("project.aucune_repro", la))
     else:
         for e in repro:
-            lignes.append(
-                f"  plugin {e['plugin_version']:<10} modele {e['modele']:<15} "
-                f"{e['horodatage']} (rejeu non garanti)"
-            )
+            lignes.append("  " + lib.t(
+                "project.repro_ligne", la, version=e["plugin_version"],
+                modele=e["modele"], horodatage=e["horodatage"]))
     lignes.append("")
     journal = d.get("journal", [])
     frontieres = [e for e in journal if e.get("type") == "frontiere"]
     reprises = {e["hash_reference"] for e in journal if e.get("type") == "reprise"}
     attente = [f for f in frontieres if f.get("decision_attente") and f["hash"] not in reprises]
-    lignes.append("Decisions en attente :")
+    lignes.append(lib.t("project.decisions_attente", la))
     if not attente:
-        lignes.append("  (aucune)")
+        lignes.append("  " + lib.t("project.aucun", la))
     else:
         for f in attente:
-            lignes.append(f"  [{f['hash']}] {f['decision_attente']}")
+            lignes.append("  " + lib.t("project.decision_ligne", la,
+                                       hash=f["hash"],
+                                       decision=f["decision_attente"]))
     lignes.append("")
-    lignes.append("Frontieres :")
+    lignes.append(lib.t("project.frontieres", la))
     if not frontieres:
-        lignes.append("  (aucune)")
+        lignes.append("  " + lib.t("project.aucun", la))
     else:
         for f in frontieres:
             statut = "reprise" if f["hash"] in reprises else "non reprise"
-            lignes.append(f"  [{f['hash']}] {f['libelle']} ({f['horodatage']}) - {statut}")
+            lignes.append("  " + lib.t(
+                "project.frontiere_ligne", la, hash=f["hash"],
+                libelle=f["libelle"], horodatage=f["horodatage"],
+                statut=lib.valeur("project.statut_frontiere", statut, la)))
     lignes.append("")
     n = compter_outrepassements(d)
-    suffixe = f" (cran courant : {min(n, 3)})" if n else ""
-    lignes.append(f"Outrepassements : {n}{suffixe}")
+    suffixe = (lib.t("project.cran_courant", la, cran=min(n, 3))
+               if n else "")
+    lignes.append(lib.t("project.outrepassements", la, n=n, suffixe=suffixe))
     return "\n".join(lignes)
 
 
@@ -514,75 +600,89 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Memoire de projet.")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    i = sub.add_parser("init")
+    # Option commune a toutes les sous-commandes : posee sur un parent, elle
+    # s'ecrit apres la sous-commande comme dans les dix-sept scripts deja
+    # cables. Elle ne touche que l'affichage : ce que projet.json enregistre
+    # ne change pas de langue.
+    commun = argparse.ArgumentParser(add_help=False)
+    commun.add_argument("--langue-affichage", choices=("fr", "en"),
+                        default=None,
+                        help="langue des messages et du tableau de bord "
+                             "(defaut fr : un projet n'est pas un manuscrit, "
+                             "il ne porte pas de pragme de langue). Le "
+                             "journal ecrit dans projet.json reste francais")
+
+    i = sub.add_parser("init", parents=[commun])
     i.add_argument("--out", default="projet.json")
 
-    sh = sub.add_parser("show")
+    sh = sub.add_parser("show", parents=[commun])
     sh.add_argument("--file", default="projet.json")
 
-    g = sub.add_parser("get")
+    g = sub.add_parser("get", parents=[commun])
     g.add_argument("cle")
     g.add_argument("--file", default="projet.json")
 
-    s = sub.add_parser("set")
+    s = sub.add_parser("set", parents=[commun])
     s.add_argument("cle")
     s.add_argument("valeur")
     s.add_argument("--file", default="projet.json")
 
-    et = sub.add_parser("etape")
+    et = sub.add_parser("etape", parents=[commun])
     et.add_argument("nom")
     et.add_argument("etat", choices=list(ETATS_VALIDES))
     et.add_argument("--motif", default="")
     et.add_argument("--file", default="projet.json")
 
-    ar = sub.add_parser("artefact")
+    ar = sub.add_parser("artefact", parents=[commun])
     ar.add_argument("nom")
     ar.add_argument("--file", default="projet.json")
 
-    fr = sub.add_parser("frontiere")
+    fr = sub.add_parser("frontiere", parents=[commun])
     fr.add_argument("libelle")
     fr.add_argument("--decision-attente", default="", dest="decision_attente")
     fr.add_argument("--file", default="projet.json")
 
-    rp = sub.add_parser("reprendre")
+    rp = sub.add_parser("reprendre", parents=[commun])
     rp.add_argument("hash")
     rp.add_argument("--file", default="projet.json")
 
-    dc = sub.add_parser("decision")
+    dc = sub.add_parser("decision", parents=[commun])
     dc.add_argument("libelle")
     dc.add_argument("--file", default="projet.json")
 
-    ob = sub.add_parser("objet")
+    ob = sub.add_parser("objet", parents=[commun])
     ob.add_argument("type_objet", choices=list(TYPES_OBJET))
     ob.add_argument("numero", type=int)
     ob.add_argument("libelle")
     ob.add_argument("--file", default="projet.json")
 
-    ps = sub.add_parser("passation")
+    ps = sub.add_parser("passation", parents=[commun])
     ps.add_argument("--format", choices=("text", "json"), default="text")
     ps.add_argument("--file", default="projet.json")
 
-    op = sub.add_parser("outrepasser")
+    op = sub.add_parser("outrepasser", parents=[commun])
     op.add_argument("libelle")
     op.add_argument("--justification", default="")
     op.add_argument("--file", default="projet.json")
 
-    rc = sub.add_parser("reproductibilite")
+    rc = sub.add_parser("reproductibilite", parents=[commun])
     rc.add_argument("--plugin-version", required=True, dest="plugin_version")
     rc.add_argument("--modele", required=True)
     rc.add_argument("--file", default="projet.json")
 
-    st = sub.add_parser("status")
+    st = sub.add_parser("status", parents=[commun])
     st.add_argument("--file", default="projet.json")
 
     a = ap.parse_args(argv)
+    lib = _lib()
+    la = lib.resoudre_affichage(a.langue_affichage)
 
     if a.cmd == "init":
         if os.path.exists(a.out):
-            print(f"{a.out} existe deja, inchange.")
+            print(lib.t("project.existe", la, fichier=a.out))
             return 0
         sauver(a.out, _squelette_v2())
-        print(f"Memoire de projet creee : {a.out}")
+        print(lib.t("project.creee", la, fichier=a.out))
         return 0
 
     if a.cmd == "show":
@@ -595,7 +695,7 @@ def main(argv=None):
 
     if a.cmd == "set":
         if a.cle == "journal":
-            print("Refuse : 'journal' est append-only. Utiliser etape/artefact/frontiere/reprendre/decision/outrepasser.")
+            print(lib.t("project.journal_refuse", la))
             return 1
         d = charger(a.file)
         try:
@@ -604,51 +704,62 @@ def main(argv=None):
             val = a.valeur
         d[a.cle] = val
         sauver(a.file, d)
-        print(f"{a.cle} mis a jour dans {a.file}.")
+        print(lib.t("project.maj", la, cle=a.cle, fichier=a.file))
         return 0
 
     if a.cmd == "etape":
         d = charger(a.file)
         try:
-            ancien, nouveau = changer_etat(d, a.nom, a.etat, a.motif)
+            ancien, nouveau = changer_etat(d, a.nom, a.etat, a.motif, la)
         except ValueError as e:
-            print(f"Erreur : {e}")
+            print(lib.t("project.erreur", la, erreur=e))
             return 1
         sauver(a.file, d)
-        print(f"Etape '{a.nom}' : {ancien} -> {nouveau}.")
+        print(lib.t("project.etape_changee", la, nom=a.nom,
+                    ancien=lib.valeur("project.etat", ancien, la),
+                    nouveau=lib.valeur("project.etat", nouveau, la)))
         return 0
 
     if a.cmd == "artefact":
         d = charger(a.file)
         version = enregistrer_artefact(d, a.nom)
         sauver(a.file, d)
-        print(f"Artefact '{a.nom}' enregistre : {version}.")
+        print(lib.t("project.artefact_enregistre", la, nom=a.nom,
+                    version=version))
         return 0
 
     if a.cmd == "frontiere":
         d = charger(a.file)
         entree = poser_frontiere(d, a.libelle, a.decision_attente or None)
         sauver(a.file, d)
-        print(f"Frontiere posee : {entree['hash']} - {a.libelle}")
+        print(lib.t("project.frontiere_posee", la, hash=entree["hash"],
+                    libelle=a.libelle))
         if entree.get("decision_attente"):
-            print(f"Decision en attente rattachee : {entree['decision_attente']}")
+            print(lib.t("project.decision_rattachee", la,
+                        decision=entree["decision_attente"]))
         return 0
 
     if a.cmd == "reprendre":
         d = charger(a.file)
         try:
-            accuse = reprendre(d, a.hash)
+            accuse = reprendre(d, a.hash, la)
         except ValueError as e:
-            print(f"Erreur : {e}")
+            print(lib.t("project.erreur", la, erreur=e))
             return 1
         sauver(a.file, d)
-        print(f"Reprise de la frontiere '{accuse['libelle_frontiere']}' ({accuse['horodatage_frontiere']}).")
-        print(f"Etapes : {json.dumps(accuse['etapes'], ensure_ascii=False)}")
-        print(f"Artefacts : {json.dumps(accuse['artefacts'], ensure_ascii=False)}")
+        print(lib.t("project.reprise", la,
+                    libelle=accuse["libelle_frontiere"],
+                    horodatage=accuse["horodatage_frontiere"]))
+        print(lib.t("project.reprise_etapes", la,
+                    etapes=json.dumps(accuse["etapes"], ensure_ascii=False)))
+        print(lib.t("project.reprise_artefacts", la,
+                    artefacts=json.dumps(accuse["artefacts"],
+                                         ensure_ascii=False)))
         if accuse["decision_attente"]:
-            print(f"Decision en attente, a reposer a l'utilisateur : {accuse['decision_attente']}")
+            print(lib.t("project.reprise_decision", la,
+                        decision=accuse["decision_attente"]))
         else:
-            print("Aucune decision en attente.")
+            print(lib.t("project.aucune_decision", la))
         return 0
 
     if a.cmd == "decision":
@@ -656,49 +767,59 @@ def main(argv=None):
         entree = {"type": "decision", "horodatage": _horodatage(), "libelle": a.libelle}
         _ajouter_journal(d, entree)
         sauver(a.file, d)
-        print(f"Decision journalisee : {a.libelle}")
+        print(lib.t("project.decision_journalisee", la, libelle=a.libelle))
         return 0
 
     if a.cmd == "objet":
         d = charger(a.file)
         try:
-            objet = enregistrer_objet(d, a.type_objet, a.numero, a.libelle)
+            objet = enregistrer_objet(d, a.type_objet, a.numero, a.libelle,
+                                      la)
         except ValueError as e:
-            print(f"Erreur : {e}")
+            print(lib.t("project.erreur", la, erreur=e))
             return 1
         sauver(a.file, d)
-        print(f"{objet['type']} {objet['numero']} : {objet['libelle']}")
+        print(lib.t("project.objet_pose", la,
+                    objet=lib.valeur("project.type_objet", objet["type"], la),
+                    numero=objet["numero"], libelle=objet["libelle"]))
         return 0
 
     if a.cmd == "passation":
         p = passation_redacteur(charger(a.file))
+        # Le JSON ne se traduit pas : c'est le contrat lu par le parent.
         print(json.dumps(p, ensure_ascii=False, indent=2)
-              if a.format == "json" else passation_texte(p))
+              if a.format == "json" else passation_texte(p, la))
         return 0
 
     if a.cmd == "outrepasser":
         d = charger(a.file)
         cran = prochain_cran(d)
         try:
-            journaliser_outrepassement(a.file, a.libelle, cran, a.justification or None)
+            journaliser_outrepassement(a.file, a.libelle, cran,
+                                       a.justification or None, la)
         except ValueError as e:
-            print(f"Erreur : {e}")
+            print(lib.t("project.erreur", la, erreur=e))
             return 1
-        print(f"Outrepassement journalise (cran {cran}) : {a.libelle}")
+        print(lib.t("project.outrepassement", la, cran=cran,
+                    libelle=a.libelle))
         return 0
 
     if a.cmd == "reproductibilite":
         d = charger(a.file)
         entree = enregistrer_reproductibilite(d, a.plugin_version, a.modele)
         sauver(a.file, d)
-        print(f"Reproductibilite enregistree : plugin {entree['plugin_version']}, "
-              f"modele {entree['modele']}, {entree['horodatage']}.")
-        print(f"Rappel : {STOCHASTICITE_DECLAREE}")
+        print(lib.t("project.repro_enregistree", la,
+                    version=entree["plugin_version"], modele=entree["modele"],
+                    horodatage=entree["horodatage"]))
+        # L'entree du journal porte la declaration francaise ; le rappel a
+        # l'ecran est le meme texte, dans la langue demandee.
+        print(lib.t("project.rappel", la,
+                    declaration=lib.t("project.stochasticite", la)))
         return 0
 
     if a.cmd == "status":
         d = charger(a.file)
-        print(statut_texte(d))
+        print(statut_texte(d, la))
         return 0
 
     return 2

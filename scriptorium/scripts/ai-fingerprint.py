@@ -28,7 +28,9 @@ scorecard, qui additionne les constats du linter et les signaux d'ici.
 
 Usage : python3 ai-fingerprint.py FICHIER [--format text|json]
                                           [--langue fr|en|auto]
-Module importable : analyser(texte, langue=None) -> dict.
+                                          [--langue-affichage fr|en]
+Module importable : analyser(texte, langue=None, langue_affichage=None)
+-> dict.
 """
 import argparse
 import json
@@ -141,7 +143,34 @@ def _ecart_type(vals):
     return math.sqrt(sum((v - m) ** 2 for v in vals) / (len(vals) - 1))
 
 
-def analyser(texte, langue=None):
+_LIB = None
+
+
+def _lib():
+    """Charge libelles.py par son chemin, une seule fois. Meme raison que
+    pour lint-style.py : le module se lit par chemin, aucun sys.path n'est
+    garanti."""
+    global _LIB
+    if _LIB is None:
+        import importlib.util
+        chemin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "libelles.py")
+        spec = importlib.util.spec_from_file_location("scriptorium_libelles",
+                                                      chemin)
+        _LIB = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_LIB)
+    return _LIB
+
+
+def analyser(texte, langue=None, langue_affichage=None):
+    """Signaux d'empreinte IA du texte.
+
+    Sans langue_affichage, les signaux sont les chaines francaises d'origine
+    a l'octet pres : c'est cette liste que serialise le mode --format json,
+    et que consolide audit-doc.py. La langue d'ANALYSE, elle, choisit les
+    motifs cherches et ne se confond pas avec celle de l'affichage."""
+    lib = _lib()
+    la = lib.resoudre_affichage(langue_affichage)
     langue = resoudre_langue(texte, langue)
     connecteurs, triple_re, ampli_re, stop = _motifs(langue)
     phrases = [p.strip() for p in SENT.findall(texte) if p.strip()]
@@ -166,18 +195,25 @@ def analyser(texte, langue=None):
     et = round(_ecart_type(longueurs), 1)
     signaux = []
     if nph >= 8 and et < 5:
-        signaux.append(f"Variabilite de longueur faible (ecart-type {et}), rythme uniforme.")
+        signaux.append(lib.t("aifp.s.variabilite_faible", la, ecart_type=et))
     if len(premiers) >= 8 and pct_ouverture > 25:
-        signaux.append(f"Ouvertures repetitives ({pct_ouverture}% commencent par « {top[0]} »).")
+        signaux.append(lib.t("aifp.s.ouvertures_repetitives", la,
+                             pct=pct_ouverture, mot=top[0]))
     if dens_conn > 0.5:
-        signaux.append(f"Connecteurs suremployes ({dens_conn} par phrase).")
+        signaux.append(lib.t("aifp.s.connecteurs", la, densite=dens_conn))
     if dens_triple > 6:
-        signaux.append(f"Cadence ternaire dense ({dens_triple} enumerations triples / 1000 mots).")
+        signaux.append(lib.t("aifp.s.cadence_ternaire", la,
+                             densite=dens_triple))
     if bigr[1] >= 4:
-        signaux.append(f"Bigramme repete {bigr[1]} fois : « {bigr[0][0]} {bigr[0][1]} ».")
+        signaux.append(lib.t("aifp.s.bigramme", la, n=bigr[1],
+                             bigramme="%s %s" % (bigr[0][0], bigr[0][1])))
     if nampli >= 1:
+        # La forme citee est celle des motifs cherches : elle suit la langue
+        # d'ANALYSE, pas celle de l'affichage. Un rapport anglais sur un
+        # texte francais doit nommer la tournure francaise reperee.
         forme = "not only ... but" if langue == "en" else "non seulement ... mais"
-        signaux.append(f"Amplification contrastive (« {forme} ») x{nampli}.")
+        signaux.append(lib.t("aifp.s.amplification", la, forme=forme,
+                             n=nampli))
     return {
         "phrases": nph, "ecart_type_longueur": et, "ouverture_max_pct": pct_ouverture,
         "densite_connecteurs": dens_conn, "densite_triples": dens_triple,
@@ -195,19 +231,31 @@ def main(argv=None):
                     help="langue d'analyse. Sans l'option : le pragme "
                          "lint-style:langue du document, sinon fr. "
                          "auto lance la détection heuristique")
+    ap.add_argument("--langue-affichage", choices=["fr", "en"], default=None,
+                    help="langue des libelles du rapport texte. Sans "
+                         "l'option : la langue d'analyse retenue. La sortie "
+                         "JSON reste francaise quoi qu'il arrive")
     a = ap.parse_args(argv)
+    lib = _lib()
     texte = sys.stdin.read() if a.fichier == "-" else open(a.fichier, encoding="utf-8").read()
-    d = analyser(texte, a.langue)
     if a.format == "json":
-        print(json.dumps(d, ensure_ascii=False, indent=2))
-    else:
-        print("Empreinte IA")
-        print(f"  ecart-type longueur={d['ecart_type_longueur']} | ouverture max={d['ouverture_max_pct']}%"
-              f" | connecteurs/phrase={d['densite_connecteurs']} | triples/1000={d['densite_triples']}")
-        if not d["signaux"]:
-            print("  Aucun signal marque d'empreinte IA.")
-        for s in d["signaux"]:
-            print(f"  - {s}")
+        # Le JSON ne se traduit pas : les evals et le jeu d'or le lisent.
+        print(json.dumps(analyser(texte, a.langue), ensure_ascii=False,
+                         indent=2))
+        return 0
+    la = lib.resoudre_affichage(a.langue_affichage,
+                                resoudre_langue(texte, a.langue))
+    d = analyser(texte, a.langue, la)
+    print(lib.t("aifp.titre", la))
+    print("  " + lib.t("aifp.mesures", la,
+                       ecart_type=d["ecart_type_longueur"],
+                       ouverture=d["ouverture_max_pct"],
+                       connecteurs=d["densite_connecteurs"],
+                       triples=d["densite_triples"]))
+    if not d["signaux"]:
+        print("  " + lib.t("aifp.aucun_signal", la))
+    for s in d["signaux"]:
+        print(f"  - {s}")
     return 1 if len(d["signaux"]) >= 2 else 0
 
 

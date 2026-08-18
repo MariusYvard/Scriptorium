@@ -14,6 +14,10 @@ Dégager une idée unificatrice répondant à "ma partie doit l'emporter parce q
 
 Ouvrir sur les arguments les plus forts, leur consacrer la plus grande part. Traiter les contre-arguments sans les mettre au centre. Soigner les intertitres argumentatifs, premiers éléments lus par le juge. Réserver la conclusion à la demande précise, souvent en une phrase.
 
+## Transposition en anglais
+
+La structure décrite plus haut est celle du mémoire d'appel de la procédure américaine, dont les deux sources de ce playbook sont les guides. Ses intitulés d'origine : Questions Presented, Statement of the Case, Summary of Argument, Argument, Prayer for Relief, puis en appel Standard of Review. Les conclusions de la procédure civile française sont un autre écrit, articulé en prétentions, moyens de fait puis de droit, avec un dispositif récapitulatif qui fixe la saisine du juge, sans correspondant du Standard of Review. Établir la procédure applicable avant d'appliquer cette structure : elle n'est ni interdite ni suffisante devant une juridiction française. Détail dans `genres-anglais.md`.
+
 ## Barre de qualité
 
 - Une théorie de l'affaire claire, tissée partout.

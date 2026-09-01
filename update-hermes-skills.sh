@@ -113,10 +113,20 @@ if [ "$DO_HOOK" = "1" ] && [ -f "$HOOK_SRC" ]; then
     CURRENT_HOOK_CMD="$(printf '%s' "$HOOKS_DUMP" | grep -c "scriptorium-lint-hook" || true)"
     if [ "${CURRENT_HOOK_CMD:-0}" = "0" ]; then
       HOOK_DEST_WIN="$(cygpath -w "$HOOK_DEST" 2>/dev/null || echo "$HOOK_DEST")"
-      HOOK_JSON="$(python3 -c "import json,sys; print(json.dumps([{'command': 'python3 ' + json.dumps(sys.argv[1]), 'timeout': 20}]))" "$HOOK_DEST_WIN")"
-      hermes config set 'hooks.pre_verify' "$HOOK_JSON" \
+      # `hermes config set` avec une valeur JSON stringifiee est parfois
+      # stockee comme string brute plutot que comme liste (avertissement
+      # "looks like a list/mapping but is not valid YAML/JSON"), et une
+      # gateway active en arriere-plan peut de toute facon reecrire
+      # config.yaml depuis sa copie en memoire pendant l'operation. La
+      # syntaxe YAML flow ([{clé: valeur}]) est parsee correctement dans
+      # tous les cas observes.
+      hermes config set 'hooks.pre_verify' "[{command: 'python3 \"${HOOK_DEST_WIN}\"', timeout: 20}]" \
         && log "hook enregistré dans config.yaml (hooks.pre_verify)" \
         || err "échec de l'enregistrement du hook dans config.yaml."
+      if command -v tasklist >/dev/null 2>&1 && tasklist 2>/dev/null | grep -qi "^Hermes.exe"; then
+        log "Gateway/app Hermes active détectée : redémarrage pour que le hook persiste (hermes gateway restart)."
+        hermes gateway restart >/dev/null 2>&1 || err "redémarrage de la gateway échoué, vérifier 'hermes hooks doctor' manuellement."
+      fi
     else
       log "hook déjà enregistré dans config.yaml."
     fi

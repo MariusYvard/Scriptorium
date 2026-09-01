@@ -104,6 +104,10 @@ Les compétences rechargées prennent effet à la session suivante, ou immédiat
 
 Le dépôt suit la disposition des marketplaces à plusieurs plugins : `.claude-plugin/marketplace.json` à la racine déclare le plugin dans son sous-dossier `scriptorium/`, et le numéro de version vit dans le seul `scriptorium/.claude-plugin/plugin.json`. Un fichier `.plugin` reste attaché à chaque release pour une installation hors ligne, mais un marketplace ajouté depuis le dépôt reçoit les versions suivantes sans réinstallation.
 
+### Sur Hermes Agent
+
+Scriptorium tourne aussi sous [Hermes Agent](https://github.com/NousResearch/hermes-agent), en plus de Claude Code. Le portage vit dans [`hermes-agent/`](hermes-agent/) et ne modifie rien dans `scriptorium/` : les deux plugins cohabitent depuis le même dépôt. Les 5 sous-agents délégués sont reformulés en compétences Agent Skills, et le hook `PostToolUse` de style est porté en hook `pre_verify`. Installation et détail des différences dans [`hermes-agent/README.md`](hermes-agent/README.md).
+
 ---
 
 ## Comment ça marche

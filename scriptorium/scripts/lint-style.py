@@ -174,6 +174,29 @@ REGLES = [
      MINEUR, "quantif-vague", "Quantificateur vague. Chiffrer."),
     (re.compile(r"\b(reflète|souligne|met en avant)\b", re.I),
      MINEUR, "verbe-tic", "Verbe tic fréquent à l'écrit IA. Vérifier qu'il porte un fait."),
+    # Surconfiance modale : presenter une affirmation comme absolument
+    # etablie sans laisser place au statut epistemique reel (voir
+    # controler/references/sophismes-causalite.md section 3). Le defaut de
+    # rigueur le plus frequent en ecriture qui s'appuie sur des sources.
+    (re.compile(r"\b(il est prouvé que|il est démontré que|"
+                r"il ne fait aucun doute que|sans aucun doute,?\s|"
+                r"à coup sûr,?\s|il est certain que|nul doute que|"
+                r"on sait avec certitude que)", re.I),
+     MAJEUR, "surconfiance-modale",
+     "Certitude absolue affirmée sans statut épistémique déclaré. Poser le "
+     "vrai statut (établi, soutenu, préliminaire, spéculatif, contesté) : "
+     "voir controler/references/sophismes-causalite.md section 3."),
+    # Modalisateurs empiles : un seul degre de reserve par affirmation,
+    # sinon la reserve ne dit plus rien (symetrique de hedge-empile en
+    # anglais, ci-dessous dans REGLES_EN).
+    (re.compile(r"\b(pourrait|pourraient)\s+(?:potentiellement|peut-être|"
+                r"éventuellement)\b"
+                r"|\b(?:peut-être|potentiellement|éventuellement)\s+"
+                r"(pourrait|pourraient)\b"
+                r"|\bil (?:se peut|semblerait) que.{0,20}\bpeut-être\b", re.I),
+     MAJEUR, "hedge-empile",
+     "Modalisateurs empilés. Un seul degré de réserve par affirmation, sinon "
+     "la réserve ne dit plus rien."),
     # Caractères invisibles : ils survivent au copier-coller, cassent la
     # recherche plein texte, l'appariement de citations et les diffs, et
     # certaines revues rejettent les fichiers qui en portent.
@@ -226,6 +249,8 @@ FAMILLE = {
     "pronom-on": "fr",
     "quantif-vague": "fr",
     "verbe-tic": "fr",
+    "surconfiance-modale": "fr",
+    "hedge-empile": "fr",
 }
 
 # Contexte statistique explicite. Sa presence sur la ligne rend legitime

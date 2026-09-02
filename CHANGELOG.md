@@ -7,6 +7,10 @@ Format : [Keep a Changelog](https://keepachangelog.com) ; versionnage [SemVer](h
 
 ## [Unreleased]
 
+### Added
+- `references/veille-academique.md` (produire) : recherche académique ciblée arXiv + Semantic Scholar, en complément de `sourcer.md` pour un genre scientifique ou une affirmation qui s'appuie sur la littérature de recherche. Couvre recherche par identifiant/titre, chaîne de version prépublication → version revue, détection de retrait, et usage du compte de citations (`citationCount`, `influentialCitationCount`) comme signal de priorisation et de consensus, jamais comme substitut au niveau de preuve individuel de `hierarchie-preuve.md`. Relié depuis `sourcer.md`, `revue-litterature.md` et l'agent `synthese-sources`.
+- Deux règles de `scripts/lint-style.py` (français uniquement, familles `surconfiance-modale` et `hedge-empile`) : `surconfiance-modale` (sévérité majeure) signale une certitude absolue affirmée sans statut épistémique déclaré (« il est prouvé que », « sans aucun doute ») et renvoie vers les cinq statuts épistémiques de `controler/references/sophismes-causalite.md` section 3 ; `hedge-empile` en français est le symétrique de la règle anglaise homonyme déjà existante (modalisateurs empilés, un seul degré de réserve par affirmation). Vérifié sans faux positif sur le corpus gelé `evals/gold/lint-style` (757/757 cas toujours au vert).
+
 <!-- Les changements à venir s'ajoutent ici avant la prochaine version. -->
 
 ---

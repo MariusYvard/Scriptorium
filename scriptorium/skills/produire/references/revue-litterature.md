@@ -14,7 +14,7 @@ Tracer le schéma de sélection de type PRISMA : nombre de références identifi
 
 ## 2. Extraire les faits par source
 
-Pour chaque source retenue, déléguer à l'agent `synthese-sources` l'extraction des faits, chiffres et conclusions, chacun daté et attribué. Pondérer par fiabilité et récence (voir `produire` (sourcer)).
+Pour chaque source retenue, déléguer à l'agent `synthese-sources` l'extraction des faits, chiffres et conclusions, chacun daté et attribué. Pondérer par fiabilité et récence (voir `produire` (sourcer)). Pour une revue de littérature scientifique, chercher et évaluer les sources d'abord avec `references/veille-academique.md` (arXiv, impact par citation, chaîne de version) avant l'extraction.
 
 ## 3. Construire le tableau de preuves
 
